@@ -13,11 +13,12 @@
 - `POST /v1/rooms/{roomId}/reconnect`
 - `POST /v1/rooms/{roomId}/start-player`
 - `POST /v1/rooms/{roomId}/start`
+- `POST /v1/rooms/{roomId}/rounds/{roundIndex}/submit`
 
 は実装済みです。
 
 このうち room 系は DynamoDB を使う本実装です。  
-一方で、ゲーム開始以降の進行 API はまだ `501 NOT_IMPLEMENTED` を返します。
+一方で、投票以降の進行 API はまだ `501 NOT_IMPLEMENTED` を返します。
 
 ## 目的
 

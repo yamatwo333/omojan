@@ -51,7 +51,7 @@ flowchart LR
    - ローカルで画面と API 契約を固める
 2. `backend/lambda/api`
    - Lambda / API Gateway の入口を固める
-   - 先に `room create / join / get / reconnect / start-player / start` を DynamoDB へ寄せる
+   - 先に `room create / join / get / reconnect / start-player / start / submit` を DynamoDB へ寄せる
 3. `DynamoDB 接続`
    - 残りのゲーム進行 API を順に永続化する
 

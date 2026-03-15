@@ -142,6 +142,40 @@ async function setupRoundVoteRoom() {
   return { roomId, hostToken };
 }
 
+async function createTwoPlayerRoom(browser) {
+  const hostContext = await browser.newContext();
+  const guestContext = await browser.newContext();
+  const host = await hostContext.newPage();
+  const guest = await guestContext.newPage();
+
+  await host.goto(STATIC_URL);
+  await host.fill("#createDisplayName", "HostFlowTest");
+  await host.getByRole("button", { name: "2人" }).click();
+  await host.getByRole("button", { name: "ルームを作る" }).click();
+  await expect(host.getByRole("heading", { name: "ルーム待機中" })).toBeVisible();
+
+  const inviteCode = ((await host.locator(".room-code").textContent()) || "").trim();
+
+  await guest.goto(`${STATIC_URL}&invite=${encodeURIComponent(inviteCode)}`);
+  await guest.fill("#joinDisplayName", "GuestFlowTest");
+  await guest.getByRole("button", { name: "参加する" }).click();
+  await expect(guest.getByRole("heading", { name: "ルーム待機中" })).toBeVisible();
+
+  return { hostContext, guestContext, host, guest };
+}
+
+async function submitCurrentDraft(page) {
+  const submitButton = page.locator('button[data-action="submit-word"]');
+  await expect(submitButton).toBeEnabled();
+  await submitButton.click();
+  await expect(page.locator("#revealOverlay")).toBeHidden({ timeout: 5000 });
+}
+
+async function reconnect(page) {
+  await page.reload();
+  await expect(page.locator("#statusLabel")).toContainText("接続中");
+}
+
 test.beforeAll(async () => {
   await startServers();
 });
@@ -166,4 +200,56 @@ test("app vote card selection enables submit button", async ({ page }) => {
 
   await expect(voteCandidate).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator('button[data-action="submit-vote"]')).toBeEnabled();
+});
+
+test("app can complete create, join, start, submit, vote, host decision, and show round result", async ({ browser }) => {
+  const { hostContext, guestContext, host, guest } = await createTwoPlayerRoom(browser);
+
+  await host.getByRole("button", { name: "この順で開始" }).click();
+
+  await expect(host.locator("body")).toContainText("HostFlowTest の手番");
+  await expect(guest.locator("body")).toContainText("HostFlowTest の手番");
+
+  await submitCurrentDraft(host);
+
+  await reconnect(guest);
+  await expect(guest.locator("body")).toContainText("GuestFlowTest の手番", { timeout: 10000 });
+  await submitCurrentDraft(guest);
+
+  await reconnect(host);
+  await reconnect(guest);
+  await expect(host.getByRole("heading", { name: "このラウンドで一番おもしろいワードに投票" })).toBeVisible({ timeout: 10000 });
+  await expect(guest.getByRole("heading", { name: "このラウンドで一番おもしろいワードに投票" })).toBeVisible({ timeout: 10000 });
+
+  const hostVoteCandidate = host.locator("[data-vote-id]:not([disabled])").first();
+  const guestVoteCandidate = guest.locator("[data-vote-id]:not([disabled])").first();
+  await hostVoteCandidate.click();
+  await guestVoteCandidate.click();
+  await host.locator('button[data-action="submit-vote"]').click();
+  await guest.locator('button[data-action="submit-vote"]').click();
+
+  await reconnect(host);
+  await reconnect(guest);
+  await expect(host.getByRole("heading", { name: "再投票" })).toBeVisible({ timeout: 10000 });
+  await expect(guest.getByRole("heading", { name: "再投票" })).toBeVisible({ timeout: 10000 });
+
+  await host.locator("[data-revote-id]:not([disabled])").first().click();
+  await guest.locator("[data-revote-id]:not([disabled])").first().click();
+  await host.locator('button[data-action="submit-revote"]').click();
+  await guest.locator('button[data-action="submit-revote"]').click();
+
+  await reconnect(host);
+  await expect(host.getByRole("heading", { name: "ホスト裁定" })).toBeVisible({ timeout: 10000 });
+  await host.locator("[data-host-pick-id]").first().click();
+  await host.locator('button[data-action="submit-host-pick"]').click();
+
+  await reconnect(host);
+  await reconnect(guest);
+  await expect(host.getByRole("heading", { name: "ラウンド1" })).toBeVisible({ timeout: 10000 });
+  await expect(guest.getByRole("heading", { name: "ラウンド1" })).toBeVisible({ timeout: 10000 });
+  await expect(host.locator("body")).toContainText("票数内訳");
+  await expect(guest.locator("body")).toContainText("票数内訳");
+
+  await hostContext.close();
+  await guestContext.close();
 });

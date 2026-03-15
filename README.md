@@ -12,8 +12,19 @@
   - 全体ワイヤーフレーム
 - `omojan_wireframe_notes.md`
   - ルールや画面設計の補足メモ
-- `omojan_state_flow.md`
-  - ゲーム状態の持ち方と画面遷移の設計メモ
+
+## 開発ドキュメント
+
+- `omojan_game_rules.md`
+  - ゲーム企画・ルール定義書
+- `omojan_requirements.md`
+  - 要件定義書
+- `omojan_screen_flow.md`
+  - 画面要件・画面遷移書
+- `omojan_basic_design.md`
+  - 基本設計書
+- `omojan_test_plan.md`
+  - テスト計画書
 
 ## 開き方
 

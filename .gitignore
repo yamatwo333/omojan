@@ -1,4 +1,5 @@
 .DS_Store
+node_modules/
 
 # Generated review and browser-check screenshots
 .tmp_*.png

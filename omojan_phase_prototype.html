@@ -102,6 +102,13 @@
         line-height: 1.6;
       }
 
+      .control-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
       .scenario-grid {
         display: grid;
         gap: 8px;
@@ -489,6 +496,7 @@
           <h2>シナリオ切り替え</h2>
           <p>ロビー、提出、自分以外の手番待ち、投票、再投票、ホスト裁定、結果、最終投票、最終結果を切り替えて確認できます。</p>
           <div id="dataStatus" class="data-status">接続先を確認中です。</div>
+          <div id="liveControls" class="control-row"></div>
           <div id="scenarioGrid" class="scenario-grid"></div>
         </section>
 
@@ -532,6 +540,8 @@
       const DEFAULT_ROOM_ID = "room_omo_2048";
       const DEFAULT_API_BASE_URL = "http://127.0.0.1:8787/v1";
       const DATA_MODES = new Set(["auto", "api", "fixture"]);
+      const LIVE_ROOM_ID_KEY = "omojan-live-room-id";
+      const LIVE_PLAYER_TOKEN_KEY = "omojan-live-player-token";
 
       const state = {
         fixtureScenarios: null,
@@ -539,12 +549,17 @@
         room: null,
         recentChampions: [],
         selectedScenarioId: "lobby",
+        liveRoomId: "",
+        livePlayerToken: "",
+        liveRoomActive: false,
+        selectedStartPlayerId: "player_you",
         dataMode: "auto",
         dataSource: "loading",
         dataStatusText: "接続先を確認中です。",
         apiBaseUrl: DEFAULT_API_BASE_URL,
         errorMessage: "",
         isLoading: true,
+        pendingAction: false,
         loadRequestId: 0,
         draftSelectedTileIds: [],
         draftFontId: "broadcast",
@@ -557,6 +572,7 @@
       const els = {
         scenarioGrid: document.getElementById("scenarioGrid"),
         dataStatus: document.getElementById("dataStatus"),
+        liveControls: document.getElementById("liveControls"),
         screenName: document.getElementById("screenName"),
         phaseLabel: document.getElementById("phaseLabel"),
         phaseTitle: document.getElementById("phaseTitle"),
@@ -578,6 +594,27 @@
 
       function getRoom() {
         return state.room;
+      }
+
+      function canUseLiveApi() {
+        return state.dataMode !== "fixture";
+      }
+
+      function hasStoredLiveSession() {
+        return Boolean(window.localStorage.getItem(LIVE_ROOM_ID_KEY) && window.localStorage.getItem(LIVE_PLAYER_TOKEN_KEY));
+      }
+
+      function persistLiveSession() {
+        if (!state.liveRoomId || !state.livePlayerToken) {
+          return;
+        }
+        window.localStorage.setItem(LIVE_ROOM_ID_KEY, state.liveRoomId);
+        window.localStorage.setItem(LIVE_PLAYER_TOKEN_KEY, state.livePlayerToken);
+      }
+
+      function clearStoredLiveSession() {
+        window.localStorage.removeItem(LIVE_ROOM_ID_KEY);
+        window.localStorage.removeItem(LIVE_PLAYER_TOKEN_KEY);
       }
 
       function getCurrentRound(room = getRoom()) {
@@ -698,6 +735,20 @@
 
       function renderScenarioGrid() {
         els.dataStatus.textContent = state.dataStatusText;
+        if (!canUseLiveApi()) {
+          els.liveControls.innerHTML = `<span class="muted">fixture 固定のため、ライブデモは利用しません。</span>`;
+        } else {
+          const primaryLabel = state.liveRoomActive ? "ライブデモをやり直す" : "ライブデモを始める";
+          const restoreButton = hasStoredLiveSession()
+            ? `<button class="chip" type="button" data-action="restore-live-demo" ${state.pendingAction ? "disabled" : ""}>ライブデモへ戻る</button>`
+            : "";
+          els.liveControls.innerHTML = `
+            <button class="chip active" type="button" data-action="start-live-demo" ${state.pendingAction ? "disabled" : ""}>
+              ${primaryLabel}
+            </button>
+            ${restoreButton}
+          `;
+        }
         els.scenarioGrid.innerHTML = Object.entries(scenarioLabels)
           .map(
             ([scenarioId, meta]) => `
@@ -722,16 +773,43 @@
             ${renderPlayerList(room)}
             <section class="summary-panel">
               <h4>開始条件</h4>
-              <div class="summary-stack">
-                <div class="history-card">
-                  <strong>参加人数</strong>
-                  <span>${room.playerCount}人</span>
-                </div>
-                <div class="history-card">
-                  <strong>開始順</strong>
-                  <span>${room.startPlayerId ? "設定済み" : "未設定"}</span>
-                </div>
-              </div>
+              ${
+                state.liveRoomActive
+                  ? `
+                    <div class="chip-row">
+                      ${room.game.players
+                        .map(
+                          (player) => `
+                            <button
+                              class="chip${state.selectedStartPlayerId === player.playerId ? " active" : ""}"
+                              type="button"
+                              data-start-player-id="${player.playerId}"
+                            >
+                              ${escapeHtml(player.displayName)}
+                            </button>
+                          `
+                        )
+                        .join("")}
+                    </div>
+                    <div class="button-row">
+                      <button class="btn primary" type="button" data-action="start-live-game" ${state.pendingAction ? "disabled" : ""}>
+                        この順で開始
+                      </button>
+                    </div>
+                  `
+                  : `
+                    <div class="summary-stack">
+                      <div class="history-card">
+                        <strong>参加人数</strong>
+                        <span>${room.playerCount}人</span>
+                      </div>
+                      <div class="history-card">
+                        <strong>開始順</strong>
+                        <span>${room.startPlayerId ? "設定済み" : "未設定"}</span>
+                      </div>
+                    </div>
+                  `
+              }
             </section>
           </section>
           <section class="summary-panel">
@@ -829,6 +907,11 @@
             <div class="button-row">
               <button class="btn subtle" type="button" data-action="swap-selection" ${selectedTiles.length === 2 ? "" : "disabled"}>順番入替</button>
               <button class="btn subtle" type="button" data-action="clear-selection">選択をクリア</button>
+              ${
+                state.liveRoomActive
+                  ? `<button class="btn primary" type="button" data-action="submit-live-word" ${selectedTiles.length === 2 && !state.pendingAction ? "" : "disabled"}>この見た目で提出</button>`
+                  : ""
+              }
             </div>
           </section>
         `;
@@ -929,6 +1012,19 @@
                 : ""
             }
             ${renderVoteCards(candidates, selectedId, dataAttr, room.me.playerId)}
+            ${
+              state.liveRoomActive
+                ? `
+                  <div class="button-row">
+                    <button class="btn primary" type="button" data-action="${mode === "revote" ? "confirm-live-revote" : "confirm-live-vote"}" ${
+                      selectedId && !state.pendingAction ? "" : "disabled"
+                    }>
+                      ${mode === "revote" ? "このワードに再投票" : "このワードに投票"}
+                    </button>
+                  </div>
+                `
+                : ""
+            }
           </section>
         `;
       }
@@ -963,9 +1059,15 @@
               </div>
             </section>
             ${renderVoteCards(candidates, selectedId, dataAttr, "__none__")}
-            <div class="button-row">
-              <button class="btn primary" type="button" ${selectedId ? "" : "disabled"}>このワードで確定</button>
-            </div>
+            ${
+              state.liveRoomActive
+                ? `
+                  <div class="button-row">
+                    <button class="btn primary" type="button" data-action="${isFinal ? "confirm-live-final-host-pick" : "confirm-live-host-pick"}" ${selectedId && !state.pendingAction ? "" : "disabled"}>このワードで確定</button>
+                  </div>
+                `
+                : ""
+            }
           </section>
         `;
       }
@@ -1000,6 +1102,17 @@
                   .join("")}
               </div>
             </section>
+            ${
+              state.liveRoomActive && room.me.isHost
+                ? `
+                  <div class="button-row">
+                    <button class="btn primary" type="button" data-action="proceed-live-round" ${state.pendingAction ? "disabled" : ""}>
+                      ${room.game.roundIndex === 2 ? "最終投票へ進む" : "次のラウンドへ"}
+                    </button>
+                  </div>
+                `
+                : ""
+            }
           </section>
         `;
       }
@@ -1010,6 +1123,17 @@
           <section class="screen-card">
             <h3>最終投票</h3>
             ${renderVoteCards(finalVote?.candidates || [], state.selectedFinalTarget, "final-vote-id", room.me.playerId)}
+            ${
+              state.liveRoomActive
+                ? `
+                  <div class="button-row">
+                    <button class="btn primary" type="button" data-action="confirm-live-final-vote" ${state.selectedFinalTarget && !state.pendingAction ? "" : "disabled"}>
+                      このワードに投票
+                    </button>
+                  </div>
+                `
+                : ""
+            }
           </section>
         `;
       }
@@ -1059,6 +1183,17 @@
                         .join("")}
                     </div>
                   </section>
+                `
+                : ""
+            }
+            ${
+              state.liveRoomActive && room.me.isHost
+                ? `
+                  <div class="button-row">
+                    <button class="btn primary" type="button" data-action="restart-live-game" ${state.pendingAction ? "disabled" : ""}>
+                      もう一度最初から
+                    </button>
+                  </div>
                 `
                 : ""
             }
@@ -1176,6 +1311,17 @@
         return response.json();
       }
 
+      async function postApi(path, body = {}) {
+        return fetchJson(`${state.apiBaseUrl}${path}`, {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            ...(state.livePlayerToken ? { "X-Omojan-Player-Token": state.livePlayerToken } : {})
+          },
+          body: JSON.stringify(body)
+        });
+      }
+
       async function loadFixtureScenarios() {
         if (!state.fixtureScenarios) {
           state.fixtureScenarios = await fetchJson("./mock_api/room_scenarios.json");
@@ -1216,10 +1362,72 @@
         return clone(payload.data.items || []);
       }
 
+      async function refreshRecentChampions() {
+        if (!canUseLiveApi()) {
+          return;
+        }
+        state.recentChampions = await fetchApiChampions();
+      }
+
+      function setLiveRoom(room, playerToken = state.livePlayerToken) {
+        state.room = room;
+        state.liveRoomActive = true;
+        state.liveRoomId = room.roomId;
+        state.livePlayerToken = playerToken;
+        state.selectedStartPlayerId = room.startPlayerId || room.me.playerId;
+        state.dataSource = "api";
+        state.dataStatusText = `接続先: live mock API (${state.apiBaseUrl}) / ${room.roomId}`;
+        state.isLoading = false;
+        state.errorMessage = "";
+        syncLocalDraft();
+        persistLiveSession();
+      }
+
+      async function restoreLiveDemo() {
+        const roomId = state.liveRoomId || window.localStorage.getItem(LIVE_ROOM_ID_KEY);
+        const playerToken = state.livePlayerToken || window.localStorage.getItem(LIVE_PLAYER_TOKEN_KEY);
+        if (!roomId || !playerToken) {
+          return false;
+        }
+        state.liveRoomId = roomId;
+        state.livePlayerToken = playerToken;
+        const payload = await fetchJson(`${state.apiBaseUrl}/rooms/${encodeURIComponent(roomId)}/reconnect`, {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "X-Omojan-Player-Token": playerToken
+          },
+          body: "{}"
+        });
+        setLiveRoom(clone(payload.data.room), playerToken);
+        await refreshRecentChampions();
+        renderScenarioGrid();
+        renderApp();
+        return true;
+      }
+
+      async function runLiveAction(action) {
+        state.pendingAction = true;
+        state.errorMessage = "";
+        renderScenarioGrid();
+        renderApp();
+        try {
+          await action();
+          await refreshRecentChampions();
+        } catch (error) {
+          state.errorMessage = error instanceof Error ? error.message : "API 呼び出しに失敗しました。";
+        } finally {
+          state.pendingAction = false;
+          renderScenarioGrid();
+          renderApp();
+        }
+      }
+
       async function loadScenarioData(scenarioId) {
         const requestId = ++state.loadRequestId;
         state.isLoading = true;
         state.errorMessage = "";
+        state.liveRoomActive = false;
         renderScenarioGrid();
         renderApp();
 
@@ -1297,6 +1505,18 @@
 
         renderScenarioGrid();
         renderApp();
+        if (canUseLiveApi()) {
+          try {
+            const restored = await restoreLiveDemo();
+            if (restored) {
+              return;
+            }
+          } catch {
+            clearStoredLiveSession();
+            state.liveRoomId = "";
+            state.livePlayerToken = "";
+          }
+        }
         await loadScenarioData(state.selectedScenarioId);
       }
 
@@ -1312,6 +1532,13 @@
           url.searchParams.set("scenario", state.selectedScenarioId);
           window.history.replaceState({}, "", url);
           await loadScenarioData(state.selectedScenarioId);
+          return;
+        }
+
+        const startPlayerButton = event.target.closest("[data-start-player-id]");
+        if (startPlayerButton) {
+          state.selectedStartPlayerId = startPlayerButton.dataset.startPlayerId;
+          renderApp();
           return;
         }
 
@@ -1399,6 +1626,149 @@
         if (actionButton.dataset.action === "clear-selection") {
           state.draftSelectedTileIds = [];
           renderApp();
+          return;
+        }
+
+        if (actionButton.dataset.action === "start-live-demo") {
+          await runLiveAction(async () => {
+            const payload = await fetchJson(`${state.apiBaseUrl}/rooms`, {
+              method: "POST",
+              headers: {
+                "content-type": "application/json"
+              },
+              body: JSON.stringify({
+                displayName: "あなた",
+                playerCount: 4
+              })
+            });
+            setLiveRoom(clone(payload.data.room), payload.data.playerToken);
+          });
+          return;
+        }
+
+        if (actionButton.dataset.action === "restore-live-demo") {
+          await runLiveAction(async () => {
+            const restored = await restoreLiveDemo();
+            if (!restored) {
+              throw new Error("再接続できるライブデモが見つかりません。");
+            }
+          });
+          return;
+        }
+
+        if (actionButton.dataset.action === "start-live-game") {
+          await runLiveAction(async () => {
+            let payload = await postApi(`/rooms/${encodeURIComponent(state.liveRoomId)}/start-player`, {
+              startPlayerId: state.selectedStartPlayerId
+            });
+            setLiveRoom(clone(payload.data.room));
+            payload = await postApi(`/rooms/${encodeURIComponent(state.liveRoomId)}/start`, {
+              deckId: "default"
+            });
+            state.selectedVoteTarget = "";
+            state.selectedHostTarget = "";
+            state.selectedFinalTarget = "";
+            setLiveRoom(clone(payload.data.room));
+          });
+          return;
+        }
+
+        if (actionButton.dataset.action === "submit-live-word") {
+          await runLiveAction(async () => {
+            const room = getRoom();
+            const selectedTiles = getSelectedTiles(room);
+            const payload = await postApi(`/rooms/${encodeURIComponent(state.liveRoomId)}/rounds/${room.game.roundIndex}/submit`, {
+              tileIds: selectedTiles.map((tile) => tile.tileId),
+              tileOrder: [0, 1],
+              phrase: selectedTiles.map((tile) => tile.text).join(""),
+              fontId: state.draftFontId,
+              lineMode: state.draftLineMode,
+              manualBreaks: [],
+              renderedLines: getDraftLines(room)
+            });
+            state.selectedVoteTarget = "";
+            state.selectedHostTarget = "";
+            setLiveRoom(clone(payload.data.room));
+          });
+          return;
+        }
+
+        if (actionButton.dataset.action === "confirm-live-vote") {
+          await runLiveAction(async () => {
+            const room = getRoom();
+            const payload = await postApi(`/rooms/${encodeURIComponent(state.liveRoomId)}/rounds/${room.game.roundIndex}/vote`, {
+              targetPlayerId: state.selectedVoteTarget
+            });
+            state.selectedVoteTarget = "";
+            setLiveRoom(clone(payload.data.room));
+          });
+          return;
+        }
+
+        if (actionButton.dataset.action === "confirm-live-revote") {
+          await runLiveAction(async () => {
+            const room = getRoom();
+            const payload = await postApi(`/rooms/${encodeURIComponent(state.liveRoomId)}/rounds/${room.game.roundIndex}/revote`, {
+              targetPlayerId: state.selectedHostTarget
+            });
+            state.selectedHostTarget = "";
+            setLiveRoom(clone(payload.data.room));
+          });
+          return;
+        }
+
+        if (actionButton.dataset.action === "confirm-live-host-pick") {
+          await runLiveAction(async () => {
+            const room = getRoom();
+            const payload = await postApi(`/rooms/${encodeURIComponent(state.liveRoomId)}/rounds/${room.game.roundIndex}/host-decision`, {
+              winnerPlayerId: state.selectedHostTarget
+            });
+            state.selectedHostTarget = "";
+            setLiveRoom(clone(payload.data.room));
+          });
+          return;
+        }
+
+        if (actionButton.dataset.action === "proceed-live-round") {
+          await runLiveAction(async () => {
+            const room = getRoom();
+            const payload = await postApi(`/rooms/${encodeURIComponent(state.liveRoomId)}/rounds/${room.game.roundIndex}/proceed`, {});
+            setLiveRoom(clone(payload.data.room));
+          });
+          return;
+        }
+
+        if (actionButton.dataset.action === "confirm-live-final-vote") {
+          await runLiveAction(async () => {
+            const payload = await postApi(`/rooms/${encodeURIComponent(state.liveRoomId)}/final-vote`, {
+              candidateId: state.selectedFinalTarget
+            });
+            state.selectedFinalTarget = "";
+            setLiveRoom(clone(payload.data.room));
+          });
+          return;
+        }
+
+        if (actionButton.dataset.action === "confirm-live-final-host-pick") {
+          await runLiveAction(async () => {
+            const payload = await postApi(`/rooms/${encodeURIComponent(state.liveRoomId)}/final-host-decision`, {
+              candidateId: state.selectedFinalTarget
+            });
+            state.selectedFinalTarget = "";
+            setLiveRoom(clone(payload.data.room));
+          });
+          return;
+        }
+
+        if (actionButton.dataset.action === "restart-live-game") {
+          await runLiveAction(async () => {
+            const payload = await postApi(`/rooms/${encodeURIComponent(state.liveRoomId)}/restart`, {});
+            state.selectedVoteTarget = "";
+            state.selectedHostTarget = "";
+            state.selectedFinalTarget = "";
+            setLiveRoom(clone(payload.data.room));
+          });
+          return;
         }
       });
 

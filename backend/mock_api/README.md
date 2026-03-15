@@ -16,8 +16,20 @@
 - `POST /v1/rooms`
 - `POST /v1/rooms/join`
 - `POST /v1/rooms/:roomId/reconnect`
+- `POST /v1/rooms/:roomId/start-player`
+- `POST /v1/rooms/:roomId/start`
+- `POST /v1/rooms/:roomId/rounds/:roundIndex/submit`
+- `POST /v1/rooms/:roomId/rounds/:roundIndex/vote`
+- `POST /v1/rooms/:roomId/rounds/:roundIndex/revote`
+- `POST /v1/rooms/:roomId/rounds/:roundIndex/host-decision`
+- `POST /v1/rooms/:roomId/rounds/:roundIndex/proceed`
+- `POST /v1/rooms/:roomId/final-vote`
+- `POST /v1/rooms/:roomId/final-revote`
+- `POST /v1/rooms/:roomId/final-host-decision`
+- `POST /v1/rooms/:roomId/restart`
 
-その他の更新系 API は、今は `501 NOT_IMPLEMENTED` を返します。
+`scenario=...` 付きの `GET /rooms/:roomId` は、引き続き debug 用の fixture 切り替えに使えます。  
+一方、`POST /rooms` で作る room は in-memory の live demo として進行します。
 
 ## 起動
 

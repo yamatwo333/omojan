@@ -41,6 +41,7 @@
 phase 駆動プロトタイプを mock API 付きで確認したい場合は、別ターミナルで以下を起動します。
 
 ```bash
+npm install
 python3 -m http.server 8000
 npm run start:mock-api
 ```
@@ -51,10 +52,19 @@ npm run start:mock-api
 http://127.0.0.1:8000/omojan_phase_prototype.html
 ```
 
+ページ上部の `ライブデモを始める` から、ロビー -> 提出 -> 投票 -> ホスト裁定 までを API 経由で進められます。
+
 fixture 固定で見たい場合は、以下のように `?data=fixture` を付けます。
 
 ```txt
 http://127.0.0.1:8000/omojan_phase_prototype.html?data=fixture
+```
+
+## テスト
+
+```bash
+npm run test:mock-api
+npm run test:e2e:phase
 ```
 
 ## 補足

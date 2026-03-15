@@ -1316,6 +1316,7 @@
       const state = {
         screen: "lobby",
         roundIndex: 0,
+        playerCount: 4,
         startPlayerId: "host",
         submitTurnIndex: 0,
         waitMode: "submit",
@@ -1355,16 +1356,64 @@
         return state.roundStates[index];
       }
 
+      function getActivePlayers() {
+        return players.slice(0, state.playerCount);
+      }
+
+      function ensureActiveStartPlayer() {
+        if (!getActivePlayers().some((player) => player.id === state.startPlayerId)) {
+          state.startPlayerId = getActivePlayers()[0]?.id || players[0].id;
+        }
+      }
+
+      function getRoundConfig(roundIndex = state.roundIndex) {
+        const round = rounds[roundIndex];
+        const activePlayers = getActivePlayers();
+        const activeIds = new Set(activePlayers.map((player) => player.id));
+        const maxOtherVotes = Math.max(activePlayers.length - 1, 0);
+        const filterVotes = (voteIds = []) =>
+          voteIds
+            .filter((voteId) => voteId === "you" || activeIds.has(voteId))
+            .slice(0, maxOtherVotes);
+
+        const opponents = round.opponents.filter((entry) => activeIds.has(entry.id));
+        const validOpponentIds = new Set(opponents.map((entry) => entry.id));
+        const fallbackChoice = opponents[0]?.id || "you";
+
+        return {
+          ...round,
+          opponents,
+          otherVotes: filterVotes(round.otherVotes),
+          otherRevotes: filterVotes(round.otherRevotes || round.otherVotes),
+          seedVoteId: validOpponentIds.has(round.seedVoteId) || round.seedVoteId === "you" ? round.seedVoteId : fallbackChoice,
+          tieDemoVoteId:
+            validOpponentIds.has(round.tieDemoVoteId) || round.tieDemoVoteId === "you" ? round.tieDemoVoteId : fallbackChoice,
+          tieDemoRevoteId:
+            validOpponentIds.has(round.tieDemoRevoteId) || round.tieDemoRevoteId === "you" ? round.tieDemoRevoteId : fallbackChoice,
+          hostChoice: validOpponentIds.has(round.hostChoice) || round.hostChoice === "you" ? round.hostChoice : fallbackChoice
+        };
+      }
+
+      function getActiveFinalVoteConfig() {
+        const maxOtherVotes = Math.max(getActivePlayers().length - 1, 0);
+        return {
+          ...finalVoteConfig,
+          otherVotes: finalVoteConfig.otherVotes.slice(0, maxOtherVotes),
+          otherRevotes: (finalVoteConfig.otherRevotes || finalVoteConfig.otherVotes).slice(0, maxOtherVotes)
+        };
+      }
+
       function getCurrentRound() {
-        return rounds[state.roundIndex];
+        return getRoundConfig(state.roundIndex);
       }
 
       function getOrderedPlayers() {
-        const startIndex = players.findIndex((player) => player.id === state.startPlayerId);
+        const activePlayers = getActivePlayers();
+        const startIndex = activePlayers.findIndex((player) => player.id === state.startPlayerId);
         if (startIndex < 0) {
-          return [...players];
+          return [...activePlayers];
         }
-        return [...players.slice(startIndex), ...players.slice(0, startIndex)];
+        return [...activePlayers.slice(startIndex), ...activePlayers.slice(0, startIndex)];
       }
 
       function getCurrentSubmitPlayer() {
@@ -1668,7 +1717,7 @@
       }
 
       function getRoundEntries(roundIndex = state.roundIndex) {
-        const round = rounds[roundIndex];
+        const round = getRoundConfig(roundIndex);
         const draft = getRoundState(roundIndex);
         const userEntry = draft.submission || getLiveSubmission(roundIndex);
         return [
@@ -1804,13 +1853,32 @@
       }
 
       function renderLobby() {
+        const activePlayers = getActivePlayers();
         const orderedPlayers = getOrderedPlayers();
         return `
           <section class="screen-card">
             <h3>ルーム待機中</h3>
             <div class="room-code">ROOM / OMO-2048</div>
+            <section class="summary-panel">
+              <h4>参加人数</h4>
+              <div class="order-picker">
+                ${[2, 3, 4]
+                  .map(
+                    (count) => `
+                      <button
+                        class="order-chip${state.playerCount === count ? " active" : ""}"
+                        type="button"
+                        data-player-count="${count}"
+                      >
+                        ${count}人
+                      </button>
+                    `
+                  )
+                  .join("")}
+              </div>
+            </section>
             <div class="player-list">
-              ${players
+              ${activePlayers
                 .map(
                   (player) => `
                     <div class="player-item">
@@ -1827,7 +1895,7 @@
             <section class="summary-panel">
               <h4>最初の順番</h4>
               <div class="order-picker">
-                ${players
+                ${activePlayers
                   .map(
                     (player) => `
                       <button
@@ -1966,6 +2034,7 @@
 
       function renderWait() {
         const orderedPlayers = getOrderedPlayers();
+        const activePlayers = getActivePlayers();
         const currentSubmitPlayer = getCurrentSubmitPlayer();
         const configs = {
           submit: {
@@ -2004,7 +2073,7 @@
               <p class="wait-note">${config.note}</p>
               <section class="summary-panel">
                 <div class="wait-status-grid">
-                  ${(mode === "submit" ? orderedPlayers : players)
+                  ${(mode === "submit" ? orderedPlayers : activePlayers)
                     .map(
                       (player, index) => `
                         <div class="wait-status${
@@ -2532,7 +2601,7 @@
       }
 
       function getVoteOutcome(roundIndex = state.roundIndex, phase = "initial") {
-        const round = rounds[roundIndex];
+        const round = getRoundConfig(roundIndex);
         const roundState = getRoundState(roundIndex);
         const entries = getRoundVoteEntries(roundIndex, phase);
         const validIds = new Set(entries.map((entry) => entry.id));
@@ -2576,10 +2645,11 @@
       }
 
       function getFinalOutcome(phase = "initial") {
+        const finalConfig = getActiveFinalVoteConfig();
         const entries = getFinalVoteEntries(phase);
         const validIds = new Set(entries.map((entry) => entry.id));
         const userVoteId = phase === "initial" ? state.finalVoteId : state.finalRevoteId;
-        const otherVotes = phase === "initial" ? finalVoteConfig.otherVotes : finalVoteConfig.otherRevotes || finalVoteConfig.otherVotes;
+        const otherVotes = phase === "initial" ? finalConfig.otherVotes : finalConfig.otherRevotes || finalConfig.otherVotes;
         const votes = [userVoteId, ...otherVotes].filter((voteId) => validIds.has(voteId));
         return {
           phase,
@@ -2698,6 +2768,7 @@
       }
 
       function startGame() {
+        ensureActiveStartPlayer();
         state.roundIndex = 0;
         state.finalVoteId = null;
         state.finalRevoteId = null;
@@ -2712,6 +2783,7 @@
       }
 
       function restartPrototype() {
+        ensureActiveStartPlayer();
         state.screen = "lobby";
         state.roundIndex = 0;
         state.submitTurnIndex = 0;
@@ -2729,7 +2801,7 @@
 
       function seedRoundTieFlow(roundIndex, stage = "revote") {
         const roundState = getRoundState(roundIndex);
-        const round = rounds[roundIndex];
+        const round = getRoundConfig(roundIndex);
         if (!roundState.submission) {
           roundState.submission = buildFallbackSubmission(roundIndex);
         }
@@ -2740,9 +2812,10 @@
       }
 
       function seedFinalTieFlow(stage = "revote") {
-        state.finalVoteId = finalVoteConfig.tieDemoVoteId || finalVoteConfig.seedVoteId;
+        const finalConfig = getActiveFinalVoteConfig();
+        state.finalVoteId = finalConfig.tieDemoVoteId || finalConfig.seedVoteId;
         if (stage === "host") {
-          state.finalRevoteId = finalVoteConfig.tieDemoRevoteId || state.finalVoteId;
+          state.finalRevoteId = finalConfig.tieDemoRevoteId || state.finalVoteId;
         }
       }
 
@@ -2750,21 +2823,28 @@
         const params = new URLSearchParams(window.location.search);
         const screen = params.get("screen");
         const round = Number(params.get("round"));
+        const count = Number(params.get("count"));
         const submitted = params.get("submitted");
         const popup = params.get("popup");
         const waitMode = params.get("waitMode");
         const first = params.get("first");
         const turn = Number(params.get("turn"));
 
+        if ([2, 3, 4].includes(count)) {
+          state.playerCount = count;
+        }
+
         if (Number.isInteger(round) && round >= 0 && round < rounds.length) {
           state.roundIndex = round;
         }
 
-        if (players.some((player) => player.id === first)) {
+        ensureActiveStartPlayer();
+
+        if (getActivePlayers().some((player) => player.id === first)) {
           state.startPlayerId = first;
         }
 
-        if (Number.isInteger(turn) && turn >= 0 && turn <= players.length) {
+        if (Number.isInteger(turn) && turn >= 0 && turn <= getActivePlayers().length) {
           state.submitTurnIndex = turn;
         }
 
@@ -2798,7 +2878,8 @@
         if (state.screen !== "lobby" && state.roundIndex > 0) {
           for (let i = 0; i < state.roundIndex; i += 1) {
             if (!state.roundStates[i].result) {
-              seedRoundOutcome(i, rounds[i].seedVoteId || rounds[i].otherVotes[0]);
+              const roundConfig = getRoundConfig(i);
+              seedRoundOutcome(i, roundConfig.seedVoteId || roundConfig.otherVotes[0]);
             }
           }
         }
@@ -2827,17 +2908,19 @@
 
         if (["roundResult", "finalVote", "finalRevote", "finalHostDecide", "finalResult"].includes(state.screen)) {
           for (let i = 0; i <= Math.max(state.roundIndex, 0); i += 1) {
-            seedRoundOutcome(i, rounds[i].seedVoteId || rounds[i].otherVotes[0]);
+            const roundConfig = getRoundConfig(i);
+            seedRoundOutcome(i, roundConfig.seedVoteId || roundConfig.otherVotes[0]);
           }
         }
 
         if (["finalVote", "finalRevote", "finalHostDecide", "finalResult"].includes(state.screen)) {
           for (let i = 0; i < rounds.length; i += 1) {
             if (!state.roundStates[i].result) {
-              seedRoundOutcome(i, rounds[i].seedVoteId || rounds[i].otherVotes[0]);
+              const roundConfig = getRoundConfig(i);
+              seedRoundOutcome(i, roundConfig.seedVoteId || roundConfig.otherVotes[0]);
             }
           }
-          state.finalVoteId = params.get("finalVote") || finalVoteConfig.seedVoteId;
+          state.finalVoteId = params.get("finalVote") || getActiveFinalVoteConfig().seedVoteId;
         }
 
         if (state.screen === "finalRevote") {
@@ -2913,7 +2996,7 @@
       }
 
       function decideRoundByHost(winnerId) {
-        const round = rounds[state.roundIndex];
+        const round = getRoundConfig(state.roundIndex);
         const revoteOutcome = getVoteOutcome(state.roundIndex, "revote");
         if (!revoteOutcome.tieIds.includes(winnerId)) {
           return;
@@ -2966,14 +3049,14 @@
         if (!outcome.tieIds.includes(winnerId)) {
           return;
         }
-        state.finalResult = buildFinalResult("host", winnerId || finalVoteConfig.hostChoice);
+        state.finalResult = buildFinalResult("host", winnerId || getActiveFinalVoteConfig().hostChoice);
         state.screen = "finalResult";
         queueFinalPopupTurn();
       }
 
       function seedRoundOutcome(roundIndex, voteId) {
         const roundState = getRoundState(roundIndex);
-        const round = rounds[roundIndex];
+        const round = getRoundConfig(roundIndex);
         if (!roundState.submission) {
           roundState.submission = buildFallbackSubmission(roundIndex);
         }
@@ -3110,6 +3193,14 @@
           return;
         }
 
+        const playerCountButton = event.target.closest("[data-player-count]");
+        if (playerCountButton) {
+          state.playerCount = Number(playerCountButton.dataset.playerCount) || 4;
+          ensureActiveStartPlayer();
+          renderApp();
+          return;
+        }
+
         const finalVoteButton = event.target.closest("[data-final-vote]");
         if (finalVoteButton && !finalVoteButton.disabled) {
           state.finalVoteId = finalVoteButton.dataset.finalVote;
@@ -3183,7 +3274,7 @@
           clearPopup();
           state.waitMode = "submit";
           state.submitTurnIndex = getOrderedPlayers().findIndex((player) => player.id === "you") + 1;
-          state.screen = state.submitTurnIndex >= players.length ? "vote" : "wait";
+          state.screen = state.submitTurnIndex >= getActivePlayers().length ? "vote" : "wait";
           renderApp();
           return;
         }
@@ -3210,7 +3301,7 @@
         if (action === "resolve-wait") {
           if (state.waitMode === "submit") {
             state.submitTurnIndex += 1;
-            if (state.submitTurnIndex >= players.length) {
+            if (state.submitTurnIndex >= getActivePlayers().length) {
               state.screen = "vote";
             } else {
               state.screen = getCurrentSubmitPlayer()?.id === "you" && !getRoundState().submission ? "submit" : "wait";
@@ -3293,6 +3384,7 @@
       });
 
       applyQueryState();
+      ensureActiveStartPlayer();
       renderApp();
     </script>
   </body>

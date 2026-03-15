@@ -43,6 +43,91 @@ async function callJson(method, path, options = {}) {
   return { response, body };
 }
 
+async function advanceToFinalVote(live) {
+  const headers = { "X-Omojan-Player-Token": live.playerToken };
+
+  await callJson("POST", `/v1/rooms/${live.roomId}/start-player`, {
+    headers,
+    body: { startPlayerId: "player_you" }
+  });
+  await callJson("POST", `/v1/rooms/${live.roomId}/start`, {
+    headers,
+    body: { deckId: "default" }
+  });
+
+  await callJson("POST", `/v1/rooms/${live.roomId}/rounds/0/submit`, {
+    headers,
+    body: {
+      tileIds: ["tile_001", "tile_002"],
+      tileOrder: [1, 0],
+      phrase: "謝罪現場猫",
+      fontId: "broadcast",
+      lineMode: "manual",
+      manualBreaks: [2],
+      renderedLines: ["謝罪", "現場猫"]
+    }
+  });
+  await callJson("POST", `/v1/rooms/${live.roomId}/rounds/0/vote`, {
+    headers,
+    body: { targetPlayerId: "player_host" }
+  });
+  await callJson("POST", `/v1/rooms/${live.roomId}/rounds/0/proceed`, {
+    headers,
+    body: {}
+  });
+
+  await callJson("POST", `/v1/rooms/${live.roomId}/rounds/1/submit`, {
+    headers,
+    body: {
+      tileIds: ["tile_003", "tile_004"],
+      tileOrder: [0, 1],
+      phrase: "深夜大反省",
+      fontId: "heavy",
+      lineMode: "single",
+      manualBreaks: [],
+      renderedLines: ["深夜大反省"]
+    }
+  });
+  await callJson("POST", `/v1/rooms/${live.roomId}/rounds/1/vote`, {
+    headers,
+    body: { targetPlayerId: "player_host" }
+  });
+  await callJson("POST", `/v1/rooms/${live.roomId}/rounds/1/revote`, {
+    headers,
+    body: { targetPlayerId: "player_host" }
+  });
+  await callJson("POST", `/v1/rooms/${live.roomId}/rounds/1/host-decision`, {
+    headers,
+    body: { winnerPlayerId: "player_tanaka" }
+  });
+  await callJson("POST", `/v1/rooms/${live.roomId}/rounds/1/proceed`, {
+    headers,
+    body: {}
+  });
+
+  await callJson("POST", `/v1/rooms/${live.roomId}/rounds/2/submit`, {
+    headers,
+    body: {
+      tileIds: ["tile_005", "tile_006"],
+      tileOrder: [0, 1],
+      phrase: "ラーメン薄",
+      fontId: "round",
+      lineMode: "single",
+      manualBreaks: [],
+      renderedLines: ["ラーメン薄"]
+    }
+  });
+  await callJson("POST", `/v1/rooms/${live.roomId}/rounds/2/vote`, {
+    headers,
+    body: { targetPlayerId: "player_host" }
+  });
+
+  return callJson("POST", `/v1/rooms/${live.roomId}/rounds/2/proceed`, {
+    headers,
+    body: {}
+  });
+}
+
 test.afterEach(() => {
   roomStore.clear();
 });
@@ -225,4 +310,36 @@ test("round 2 can enter revote and host decision", async () => {
   assert.equal(result.response.statusCode, 200);
   assert.equal(result.body.data.room.game.phase, "round_result");
   assert.equal(result.body.data.room.game.rounds[1].winner.playerId, "player_tanaka");
+});
+
+test("final vote can enter final_revote and final_host_decide", async () => {
+  const live = await createLiveRoom();
+  const headers = { "X-Omojan-Player-Token": live.playerToken };
+
+  let result = await advanceToFinalVote(live);
+  assert.equal(result.response.statusCode, 200);
+  assert.equal(result.body.data.room.game.phase, "final_vote");
+
+  result = await callJson("POST", `/v1/rooms/${live.roomId}/final-vote`, {
+    headers,
+    body: { candidateId: "final_round2" }
+  });
+  assert.equal(result.response.statusCode, 200);
+  assert.equal(result.body.data.room.game.phase, "final_revote");
+  assert.deepEqual(result.body.data.room.game.finalVote.voteSummary.tiedCandidateIds.sort(), ["final_round2", "final_round3"]);
+
+  result = await callJson("POST", `/v1/rooms/${live.roomId}/final-revote`, {
+    headers,
+    body: { candidateId: "final_round2" }
+  });
+  assert.equal(result.response.statusCode, 200);
+  assert.equal(result.body.data.room.game.phase, "final_host_decide");
+
+  result = await callJson("POST", `/v1/rooms/${live.roomId}/final-host-decision`, {
+    headers,
+    body: { candidateId: "final_round3" }
+  });
+  assert.equal(result.response.statusCode, 200);
+  assert.equal(result.body.data.room.game.phase, "final_result");
+  assert.equal(result.body.data.room.game.champion.playerId, "player_host");
 });

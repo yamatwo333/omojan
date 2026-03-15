@@ -507,6 +507,7 @@ function summarizeRoundVotes(round, targetIds, ballots) {
   return {
     counts,
     topCount,
+    winnerPlayerId: tiedPlayerIds[0] || null,
     tiedPlayerIds: tiedPlayerIds.length > 1 ? tiedPlayerIds : []
   };
 }
@@ -527,6 +528,7 @@ function summarizeFinalVotes(finalVote, targetIds, ballots) {
   return {
     counts,
     topCount,
+    winnerCandidateId: tiedCandidateIds[0] || null,
     tiedCandidateIds: tiedCandidateIds.length > 1 ? tiedCandidateIds : []
   };
 }
@@ -614,7 +616,11 @@ function castBotFinalVotes(store, mode, validTargetIds) {
       continue;
     }
     const preferences = FINAL_BOT_VOTE_PREFERENCES[ballotKey]?.[player.playerId] || [];
-    const targetId = pickPreferredTarget(preferences, validTargetIds, player.playerId);
+    const allowedTargetIds = validTargetIds.filter((candidateId) => {
+      const candidate = store.room.game.finalVote.candidates.find((item) => item.candidateId === candidateId);
+      return candidate && candidate.playerId !== player.playerId;
+    });
+    const targetId = pickPreferredTarget(preferences, allowedTargetIds, player.playerId);
     if (targetId) {
       ballots[player.playerId] = targetId;
     }
@@ -886,7 +892,7 @@ function handleSubmitVote(event, roomId, roundIndexValue, mode = "vote") {
     room.game.phase = mode === "revote" ? "round_host_decide" : "round_revote";
     round.phaseStatus = mode === "revote" ? "host_decide" : "revote";
   } else {
-    setRoundWinner(result.store, summary.counts[0].playerId, mode === "revote" ? "revote" : "initial", summary.counts);
+    setRoundWinner(result.store, summary.winnerPlayerId, mode === "revote" ? "revote" : "initial", summary.counts);
   }
 
   room.revision += 1;
@@ -1003,7 +1009,7 @@ function handleFinalVote(event, roomId, mode = "vote") {
     room.game.phase = mode === "revote" ? "final_host_decide" : "final_revote";
     finalVote.phaseStatus = mode === "revote" ? "host_decide" : "revote";
   } else {
-    setFinalWinner(result.store, summary.counts[0].candidateId, mode === "revote" ? "revote" : "initial", summary.counts);
+    setFinalWinner(result.store, summary.winnerCandidateId, mode === "revote" ? "revote" : "initial", summary.counts);
   }
 
   room.revision += 1;

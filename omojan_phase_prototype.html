@@ -959,7 +959,7 @@
             ${candidates
               .map((candidate) => {
                 const disabled = candidate.playerId === selfId;
-                const value = candidate.playerId || candidate.candidateId;
+                const value = candidate.candidateId ?? candidate.playerId;
                 return `
                   <button
                     class="action-card${selectedId === value ? " selected" : ""}${disabled ? " disabled" : ""}"
@@ -1119,16 +1119,43 @@
 
       function renderFinalVote(room) {
         const finalVote = room.game.finalVote;
+        const isRevote = room.game.phase === "final_revote";
+        const candidates =
+          isRevote && finalVote?.voteSummary?.tiedCandidateIds?.length
+            ? finalVote.candidates.filter((candidate) => finalVote.voteSummary.tiedCandidateIds.includes(candidate.candidateId))
+            : finalVote?.candidates || [];
         return `
           <section class="screen-card">
-            <h3>最終投票</h3>
-            ${renderVoteCards(finalVote?.candidates || [], state.selectedFinalTarget, "final-vote-id", room.me.playerId)}
+            <h3>${isRevote ? "最終再投票" : "最終投票"}</h3>
+            ${
+              isRevote && finalVote?.voteSummary
+                ? `
+                  <section class="summary-panel">
+                    <h4>同率のワード</h4>
+                    <div class="history-list">
+                      ${finalVote.voteSummary.counts
+                        .filter((item) => finalVote.voteSummary.tiedCandidateIds.includes(item.candidateId))
+                        .map(
+                          (item) => `
+                            <div class="history-card">
+                              <strong>${escapeHtml(item.phrase)}</strong>
+                              <span>${item.count}票</span>
+                            </div>
+                          `
+                        )
+                        .join("")}
+                    </div>
+                  </section>
+                `
+                : ""
+            }
+            ${renderVoteCards(candidates, state.selectedFinalTarget, "final-vote-id", room.me.playerId)}
             ${
               state.liveRoomActive
                 ? `
                   <div class="button-row">
                     <button class="btn primary" type="button" data-action="confirm-live-final-vote" ${state.selectedFinalTarget && !state.pendingAction ? "" : "disabled"}>
-                      このワードに投票
+                      ${isRevote ? "このワードに再投票" : "このワードに投票"}
                     </button>
                   </div>
                 `
@@ -1740,7 +1767,9 @@
 
         if (actionButton.dataset.action === "confirm-live-final-vote") {
           await runLiveAction(async () => {
-            const payload = await postApi(`/rooms/${encodeURIComponent(state.liveRoomId)}/final-vote`, {
+            const room = getRoom();
+            const endpoint = room.game.phase === "final_revote" ? "final-revote" : "final-vote";
+            const payload = await postApi(`/rooms/${encodeURIComponent(state.liveRoomId)}/${endpoint}`, {
               candidateId: state.selectedFinalTarget
             });
             state.selectedFinalTarget = "";

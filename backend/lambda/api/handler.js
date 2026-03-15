@@ -5,6 +5,7 @@ const path = require("path");
 const ROOT_DIR = path.resolve(__dirname, "..", "..", "..");
 const MOCK_DIR = path.join(ROOT_DIR, "mock_api");
 const ROOM_TTL_SECONDS = 60 * 60 * 24 * 3;
+const STARTING_HAND_SIZE = 10;
 
 const defaultDeck = readJson("deck_default.json").data;
 const recentChampions = readJson("champions_recent.json").data.items;
@@ -86,7 +87,7 @@ function parseRoute(method, pathname) {
     { method: "GET", pattern: /^\/v1\/rooms\/([^/]+)$/, route: "getRoom" },
     { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/reconnect$/, route: "reconnectRoom" },
     { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/start-player$/, route: "startPlayer" },
-    { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/start$/, route: "notImplemented" },
+    { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/start$/, route: "startGame" },
     { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/rounds\/(\d+)\/submit$/, route: "notImplemented" },
     { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/rounds\/(\d+)\/vote$/, route: "notImplemented" },
     { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/rounds\/(\d+)\/revote$/, route: "notImplemented" },
@@ -117,7 +118,7 @@ function handleHealth() {
     stage: process.env.APP_STAGE || "dev",
     tableName: process.env.APP_TABLE_NAME || "",
     region: process.env.AWS_REGION || "",
-    implementedRoutes: ["rooms:create", "rooms:join", "rooms:get", "rooms:reconnect", "rooms:start-player"]
+    implementedRoutes: ["rooms:create", "rooms:join", "rooms:get", "rooms:reconnect", "rooms:start-player", "rooms:start"]
   });
 }
 
@@ -177,6 +178,82 @@ function createEmptyRounds() {
     { roundIndex: 1, label: "ラウンド2", wind: "東二局", phaseStatus: "pending", submissions: [], voteSummary: null, winner: null },
     { roundIndex: 2, label: "ラウンド3", wind: "東三局", phaseStatus: "pending", submissions: [], voteSummary: null, winner: null }
   ];
+}
+
+function getPlayableDeck(deckId) {
+  if (deckId !== "default") {
+    throw domainError(404, "DECK_NOT_FOUND", "指定されたデッキは存在しません。");
+  }
+
+  const enabledTiles = (defaultDeck.tiles || []).filter((tile) => tile.enabled !== false);
+  if (!enabledTiles.length) {
+    throw domainError(409, "DECK_EMPTY", "使用可能な牌がデッキにありません。");
+  }
+
+  return {
+    deckId: defaultDeck.deckId,
+    version: defaultDeck.version || 1,
+    tiles: enabledTiles
+  };
+}
+
+function dealInitialHands(players, deck) {
+  let cursor = 0;
+  const hands = {};
+
+  for (const player of players) {
+    hands[player.playerId] = Array.from({ length: STARTING_HAND_SIZE }, (_, index) => {
+      const sourceTile = deck.tiles[cursor % deck.tiles.length];
+      cursor += 1;
+      return {
+        tileId: `${sourceTile.tileId}__${player.playerId}_${index + 1}`,
+        text: sourceTile.text,
+        sourceTileId: sourceTile.tileId
+      };
+    });
+  }
+
+  return hands;
+}
+
+function buildStartedRoom(room, deckId) {
+  const deck = getPlayableDeck(deckId);
+  const updatedRoom = clone(room);
+  const playersInSeatOrder = updatedRoom.players.slice().sort((left, right) => left.seatOrder - right.seatOrder);
+  const fallbackStartPlayerId = updatedRoom.hostPlayerId;
+  const playerOrder =
+    Array.isArray(updatedRoom.playerOrder) && updatedRoom.playerOrder.length
+      ? updatedRoom.playerOrder
+      : rotatePlayerOrder(
+          playersInSeatOrder.map((player) => player.playerId),
+          updatedRoom.startPlayerId || fallbackStartPlayerId
+        );
+  const startPlayerId = updatedRoom.startPlayerId || playerOrder[0] || fallbackStartPlayerId;
+
+  updatedRoom.status = "playing";
+  updatedRoom.startPlayerId = startPlayerId;
+  updatedRoom.playerOrder = playerOrder;
+  updatedRoom.game.phase = "round_submit";
+  updatedRoom.game.roundIndex = 0;
+  updatedRoom.game.currentTurnPlayerId = startPlayerId;
+  updatedRoom.game.deckId = deck.deckId;
+  updatedRoom.game.deckVersion = deck.version;
+  updatedRoom.game.initialHands = dealInitialHands(playersInSeatOrder, deck);
+  updatedRoom.game.rounds = createEmptyRounds();
+  updatedRoom.game.rounds[0].phaseStatus = "submit";
+  updatedRoom.game.finalVote = null;
+  updatedRoom.game.champion = null;
+
+  updatedRoom.players = playersInSeatOrder.map((player) => ({
+    ...player,
+    usedTileIds: [],
+    handCount: STARTING_HAND_SIZE
+  }));
+  updatedRoom.updatedAt = nowIso();
+  updatedRoom.expiresAt = Math.floor(Date.now() / 1000) + ROOM_TTL_SECONDS;
+  updatedRoom.revision += 1;
+
+  return updatedRoom;
 }
 
 function createRoomState(params) {
@@ -596,6 +673,40 @@ async function createDynamoRoomRepository(options = {}) {
       }
 
       throw domainError(409, "CONFLICT_RETRY", "開始順の更新が競合しました。もう一度お試しください。", true);
+    },
+
+    async startGame(roomId, playerToken, deckId) {
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        const room = await getRoomItem(roomId);
+        if (!room) {
+          throw domainError(404, "ROOM_NOT_FOUND", "指定された room は存在しません。");
+        }
+        const mePlayer = getPlayerByToken(room, playerToken);
+        if (!mePlayer) {
+          throw domainError(401, "PLAYER_TOKEN_INVALID", "playerToken が必要です。");
+        }
+        if (!mePlayer.isHost) {
+          throw domainError(403, "NOT_HOST", "ホストのみ実行できます。");
+        }
+        if (room.game?.phase !== "lobby") {
+          throw domainError(409, "INVALID_PHASE", "lobby ではないため実行できません。");
+        }
+
+        const updatedRoom = buildStartedRoom(room, deckId);
+
+        try {
+          await putRoomItem(updatedRoom, room.revision);
+          const updatedMePlayer = updatedRoom.players.find((player) => player.playerId === mePlayer.playerId);
+          return { room: updatedRoom, mePlayer: updatedMePlayer };
+        } catch (error) {
+          if (toConditionalFailure(error)) {
+            continue;
+          }
+          throw error;
+        }
+      }
+
+      throw domainError(409, "CONFLICT_RETRY", "ゲーム開始処理が競合しました。もう一度お試しください。", true);
     }
   };
 }
@@ -735,6 +846,28 @@ function createMemoryRoomRepository() {
       return { room: clone(updatedRoom), mePlayer: clone(updatedMePlayer) };
     },
 
+    async startGame(roomId, playerToken, deckId) {
+      const room = rooms.get(roomId);
+      if (!room) {
+        throw domainError(404, "ROOM_NOT_FOUND", "指定された room は存在しません。");
+      }
+      const mePlayer = getPlayerByToken(room, playerToken);
+      if (!mePlayer) {
+        throw domainError(401, "PLAYER_TOKEN_INVALID", "playerToken が必要です。");
+      }
+      if (!mePlayer.isHost) {
+        throw domainError(403, "NOT_HOST", "ホストのみ実行できます。");
+      }
+      if (room.game?.phase !== "lobby") {
+        throw domainError(409, "INVALID_PHASE", "lobby ではないため実行できません。");
+      }
+
+      const updatedRoom = buildStartedRoom(room, deckId);
+      saveRoom(updatedRoom);
+      const updatedMePlayer = updatedRoom.players.find((player) => player.playerId === mePlayer.playerId);
+      return { room: clone(updatedRoom), mePlayer: clone(updatedMePlayer) };
+    },
+
     debugGetStoredRoom(roomId) {
       const room = rooms.get(roomId);
       return room ? clone(room) : null;
@@ -840,6 +973,23 @@ function createHandler(options = {}) {
           }
           const repository = await roomRepositoryPromise;
           const result = await repository.setStartPlayer(matched.params[0], playerToken, startPlayerId);
+          return ok(toRoomPayload(result.room, result.mePlayer));
+        }
+        case "startGame": {
+          const body = parseBody(event);
+          if (!body) {
+            return fail(400, "INVALID_JSON", "JSON の形式が不正です。");
+          }
+          const playerToken = getHeader(event, "X-Omojan-Player-Token");
+          if (!playerToken) {
+            return fail(401, "PLAYER_TOKEN_INVALID", "playerToken が必要です。");
+          }
+          const repository = await roomRepositoryPromise;
+          const result = await repository.startGame(
+            matched.params[0],
+            playerToken,
+            String(body.deckId || "default").trim() || "default"
+          );
           return ok(toRoomPayload(result.room, result.mePlayer));
         }
         case "notImplemented":

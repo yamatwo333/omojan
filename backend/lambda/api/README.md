@@ -12,6 +12,7 @@
 - `GET /v1/rooms/{roomId}`
 - `POST /v1/rooms/{roomId}/reconnect`
 - `POST /v1/rooms/{roomId}/start-player`
+- `POST /v1/rooms/{roomId}/start`
 
 は実装済みです。
 

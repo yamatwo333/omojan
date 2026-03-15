@@ -43,7 +43,8 @@ test("GET /v1/health returns lambda scaffold metadata", async () => {
     "rooms:join",
     "rooms:get",
     "rooms:reconnect",
-    "rooms:start-player"
+    "rooms:start-player",
+    "rooms:start"
   ]);
 });
 
@@ -159,9 +160,59 @@ test("POST /v1/rooms/:roomId/start-player updates start player and rotated order
   assert.equal(startPlayerBody.data.room.playerOrder[0], targetPlayerId);
 });
 
-test("POST /v1/rooms still returns not implemented for round APIs", async () => {
+test("POST /v1/rooms/:roomId/start deals hands and enters round_submit", async () => {
   const handler = createTestHandler();
-  const response = await handler(createEvent("POST", "/v1/rooms/room_x/start", { body: { deckId: "default" } }));
+  const createResponse = await handler(createEvent("POST", "/v1/rooms", { body: { displayName: "ホスト", playerCount: 2 } }));
+  const createBody = await parseResponse(createResponse);
+
+  const guestResponse = await handler(
+    createEvent("POST", "/v1/rooms/join", {
+      body: {
+        inviteCode: createBody.data.room.inviteCode,
+        displayName: "ゲスト"
+      }
+    })
+  );
+  const guestBody = await parseResponse(guestResponse);
+  const guestPlayerId = guestBody.data.room.game.players.find((player) => player.displayName === "ゲスト").playerId;
+
+  await handler(
+    createEvent("POST", `/v1/rooms/${createBody.data.room.roomId}/start-player`, {
+      headers: {
+        "X-Omojan-Player-Token": createBody.data.playerToken
+      },
+      body: {
+        startPlayerId: guestPlayerId
+      }
+    })
+  );
+
+  const response = await handler(
+    createEvent("POST", `/v1/rooms/${createBody.data.room.roomId}/start`, {
+      headers: {
+        "X-Omojan-Player-Token": createBody.data.playerToken
+      },
+      body: {
+        deckId: "default"
+      }
+    })
+  );
+  const body = await parseResponse(response);
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(body.ok, true);
+  assert.equal(body.data.room.status, "playing");
+  assert.equal(body.data.room.game.phase, "round_submit");
+  assert.equal(body.data.room.game.roundIndex, 0);
+  assert.equal(body.data.room.game.currentTurnPlayerId, guestPlayerId);
+  assert.equal(body.data.room.myHand.length, 10);
+  assert.equal(body.data.room.game.players.every((player) => player.handCount === 10), true);
+  assert.equal(body.data.room.game.rounds[0].phaseStatus, "submit");
+});
+
+test("POST round submit still returns not implemented in lambda", async () => {
+  const handler = createTestHandler();
+  const response = await handler(createEvent("POST", "/v1/rooms/room_x/rounds/0/submit", { body: {} }));
   const body = await parseResponse(response);
 
   assert.equal(response.statusCode, 501);

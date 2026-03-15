@@ -91,6 +91,17 @@
         line-height: 1.6;
       }
 
+      .data-status {
+        margin-top: 12px;
+        padding: 10px 12px;
+        border-radius: 14px;
+        border: 1px solid rgba(118, 89, 63, 0.14);
+        background: rgba(255, 255, 255, 0.66);
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.6;
+      }
+
       .scenario-grid {
         display: grid;
         gap: 8px;
@@ -469,14 +480,15 @@
         <header class="page-header">
           <h1>おもじゃん</h1>
           <p>
-            `mock_api/room_scenarios.json` を読み込み、room 状態から画面を導出する phase 駆動の試作です。
-            既存の見た目確認用プロトタイプとは分けて、実装の土台を固める目的で使います。
+            mock API を優先して room 状態を読み込み、使えないときは fixture JSON にフォールバックする
+            phase 駆動の試作です。見た目確認用とは分けて、実装の土台を固める目的で使います。
           </p>
         </header>
 
         <section class="scenario-panel">
           <h2>シナリオ切り替え</h2>
           <p>ロビー、提出、自分以外の手番待ち、投票、再投票、ホスト裁定、結果、最終投票、最終結果を切り替えて確認できます。</p>
+          <div id="dataStatus" class="data-status">接続先を確認中です。</div>
           <div id="scenarioGrid" class="scenario-grid"></div>
         </section>
 
@@ -517,10 +529,23 @@
         round: "font-round"
       };
 
+      const DEFAULT_ROOM_ID = "room_omo_2048";
+      const DEFAULT_API_BASE_URL = "http://127.0.0.1:8787/v1";
+      const DATA_MODES = new Set(["auto", "api", "fixture"]);
+
       const state = {
-        scenarios: null,
+        fixtureScenarios: null,
+        fixtureChampions: null,
+        room: null,
+        recentChampions: [],
         selectedScenarioId: "lobby",
+        dataMode: "auto",
+        dataSource: "loading",
+        dataStatusText: "接続先を確認中です。",
+        apiBaseUrl: DEFAULT_API_BASE_URL,
         errorMessage: "",
+        isLoading: true,
+        loadRequestId: 0,
         draftSelectedTileIds: [],
         draftFontId: "broadcast",
         draftLineMode: "boundary",
@@ -531,6 +556,7 @@
 
       const els = {
         scenarioGrid: document.getElementById("scenarioGrid"),
+        dataStatus: document.getElementById("dataStatus"),
         screenName: document.getElementById("screenName"),
         phaseLabel: document.getElementById("phaseLabel"),
         phaseTitle: document.getElementById("phaseTitle"),
@@ -546,12 +572,12 @@
           .replaceAll("'", "&#39;");
       }
 
-      function getScenario() {
-        return state.scenarios?.scenarios?.[state.selectedScenarioId] || null;
+      function clone(value) {
+        return JSON.parse(JSON.stringify(value));
       }
 
       function getRoom() {
-        return getScenario()?.data?.room || null;
+        return state.room;
       }
 
       function getCurrentRound(room = getRoom()) {
@@ -671,6 +697,7 @@
       }
 
       function renderScenarioGrid() {
+        els.dataStatus.textContent = state.dataStatusText;
         els.scenarioGrid.innerHTML = Object.entries(scenarioLabels)
           .map(
             ([scenarioId, meta]) => `
@@ -706,6 +733,27 @@
                 </div>
               </div>
             </section>
+          </section>
+          <section class="summary-panel">
+            <h4>最近の総合優勝ワード</h4>
+            ${
+              state.recentChampions.length
+                ? `
+                  <div class="history-list">
+                    ${state.recentChampions
+                      .map(
+                        (item) => `
+                          <div class="history-card">
+                            <strong>${escapeHtml(item.phrase)}</strong>
+                            <span>${escapeHtml(item.displayName)}</span>
+                          </div>
+                        `
+                      )
+                      .join("")}
+                  </div>
+                `
+                : `<div class="empty-state">まだ履歴はありません。</div>`
+            }
           </section>
         `;
       }
@@ -1056,6 +1104,11 @@
         }
 
         const room = getRoom();
+        if (state.isLoading) {
+          setBanner(room, "loading");
+          els.app.innerHTML = `<div class="empty-state">room 状態を読み込んでいます。</div>`;
+          return;
+        }
         const screenId = deriveScreen(room);
         setBanner(room, screenId);
 
@@ -1098,40 +1151,167 @@
         }
       }
 
-      async function loadScenarios() {
-        try {
-          const response = await fetch("./mock_api/room_scenarios.json");
-          if (!response.ok) {
-            throw new Error(`mock_api/room_scenarios.json の取得に失敗しました: ${response.status}`);
-          }
-          state.scenarios = await response.json();
-          const params = new URLSearchParams(window.location.search);
-          const scenario = params.get("scenario");
-          if (scenario && state.scenarios.scenarios[scenario]) {
-            state.selectedScenarioId = scenario;
-          }
-          syncLocalDraft();
-          renderScenarioGrid();
-          renderApp();
-        } catch (error) {
-          state.errorMessage = error instanceof Error ? error.message : "シナリオの読み込みに失敗しました。";
-          renderApp();
+      function describeDataSource(source, reason = "") {
+        if (source === "api") {
+          return `接続先: mock API (${state.apiBaseUrl})`;
         }
+        if (source === "fixture") {
+          return reason || "接続先: fixture JSON";
+        }
+        return "接続先を確認中です。";
       }
 
-      document.addEventListener("click", (event) => {
+      async function fetchJson(url, options = {}) {
+        const response = await fetch(url, options);
+        if (!response.ok) {
+          let detail = "";
+          try {
+            const payload = await response.json();
+            detail = payload?.error?.message || payload?.message || "";
+          } catch {
+            detail = "";
+          }
+          throw new Error(detail || `${url} の取得に失敗しました: ${response.status}`);
+        }
+        return response.json();
+      }
+
+      async function loadFixtureScenarios() {
+        if (!state.fixtureScenarios) {
+          state.fixtureScenarios = await fetchJson("./mock_api/room_scenarios.json");
+        }
+        return state.fixtureScenarios;
+      }
+
+      async function loadFixtureChampions() {
+        if (!state.fixtureChampions) {
+          state.fixtureChampions = await fetchJson("./mock_api/champions_recent.json");
+        }
+        return state.fixtureChampions;
+      }
+
+      async function fetchFixtureRoom(scenarioId) {
+        const payload = await loadFixtureScenarios();
+        const room = payload?.scenarios?.[scenarioId]?.data?.room;
+        if (!room) {
+          throw new Error(`fixture に ${scenarioId} シナリオがありません。`);
+        }
+        return clone(room);
+      }
+
+      async function fetchFixtureChampions(limit = 5) {
+        const payload = await loadFixtureChampions();
+        return clone((payload?.data?.items || []).slice(0, limit));
+      }
+
+      async function fetchApiRoom(scenarioId) {
+        const payload = await fetchJson(
+          `${state.apiBaseUrl}/rooms/${encodeURIComponent(DEFAULT_ROOM_ID)}?scenario=${encodeURIComponent(scenarioId)}`
+        );
+        return clone(payload.data.room);
+      }
+
+      async function fetchApiChampions(limit = 5) {
+        const payload = await fetchJson(`${state.apiBaseUrl}/champions/recent?limit=${limit}`);
+        return clone(payload.data.items || []);
+      }
+
+      async function loadScenarioData(scenarioId) {
+        const requestId = ++state.loadRequestId;
+        state.isLoading = true;
+        state.errorMessage = "";
+        renderScenarioGrid();
+        renderApp();
+
+        const sources =
+          state.dataMode === "api" ? ["api"] : state.dataMode === "fixture" ? ["fixture"] : ["api", "fixture"];
+
+        let lastError = null;
+
+        for (const source of sources) {
+          try {
+            const [room, recentChampions] =
+              source === "api"
+                ? await Promise.all([fetchApiRoom(scenarioId), fetchApiChampions()])
+                : await Promise.all([fetchFixtureRoom(scenarioId), fetchFixtureChampions()]);
+
+            if (requestId !== state.loadRequestId) {
+              return;
+            }
+
+            state.room = room;
+            state.recentChampions = recentChampions;
+            state.dataSource = source;
+            state.dataStatusText =
+              source === "api"
+                ? describeDataSource("api")
+                : describeDataSource(
+                    "fixture",
+                    state.dataMode === "auto" && lastError
+                      ? `接続先: fixture JSON (mock API に接続できなかったため自動フォールバック)`
+                      : "接続先: fixture JSON"
+                  );
+            state.isLoading = false;
+            syncLocalDraft();
+            renderScenarioGrid();
+            renderApp();
+            return;
+          } catch (error) {
+            lastError = error;
+          }
+        }
+
+        if (requestId !== state.loadRequestId) {
+          return;
+        }
+
+        state.isLoading = false;
+        state.errorMessage = lastError instanceof Error ? lastError.message : "シナリオの読み込みに失敗しました。";
+        state.dataStatusText = "接続先: 読み込み失敗";
+        renderScenarioGrid();
+        renderApp();
+      }
+
+      async function initializeApp() {
+        const params = new URLSearchParams(window.location.search);
+        const scenario = params.get("scenario");
+        const dataMode = params.get("data");
+        const apiBaseUrl = params.get("apiBaseUrl");
+
+        if (scenario && scenarioLabels[scenario]) {
+          state.selectedScenarioId = scenario;
+        }
+        if (dataMode && DATA_MODES.has(dataMode)) {
+          state.dataMode = dataMode;
+        }
+        if (apiBaseUrl) {
+          state.apiBaseUrl = apiBaseUrl.replace(/\/$/, "");
+        }
+
+        state.dataStatusText =
+          state.dataMode === "api"
+            ? `接続先: mock API を固定 (${state.apiBaseUrl})`
+            : state.dataMode === "fixture"
+              ? "接続先: fixture JSON を固定"
+              : `接続先: mock API を優先 (${state.apiBaseUrl})`;
+
+        renderScenarioGrid();
+        renderApp();
+        await loadScenarioData(state.selectedScenarioId);
+      }
+
+      document.addEventListener("click", async (event) => {
         const scenarioButton = event.target.closest("[data-scenario]");
         if (scenarioButton) {
           state.selectedScenarioId = scenarioButton.dataset.scenario;
           state.selectedVoteTarget = "";
           state.selectedHostTarget = "";
           state.selectedFinalTarget = "";
-          syncLocalDraft();
-          renderScenarioGrid();
+          state.draftSelectedTileIds = [];
           const url = new URL(window.location.href);
           url.searchParams.set("scenario", state.selectedScenarioId);
           window.history.replaceState({}, "", url);
-          renderApp();
+          await loadScenarioData(state.selectedScenarioId);
           return;
         }
 
@@ -1222,7 +1402,7 @@
         }
       });
 
-      loadScenarios();
+      initializeApp();
     </script>
   </body>
 </html>

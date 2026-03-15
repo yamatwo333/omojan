@@ -4,6 +4,11 @@ const { handler } = require("./handler");
 
 const HOST = process.env.HOST || "127.0.0.1";
 const PORT = Number(process.env.PORT || "8787");
+const CORS_HEADERS = {
+  "access-control-allow-origin": "*",
+  "access-control-allow-methods": "GET,POST,OPTIONS",
+  "access-control-allow-headers": "content-type,x-omojan-player-token"
+};
 
 function buildEvent(req, bodyText) {
   const url = new URL(req.url, `http://${req.headers.host}`);
@@ -21,6 +26,12 @@ function buildEvent(req, bodyText) {
 }
 
 const server = http.createServer((req, res) => {
+  if (req.method === "OPTIONS") {
+    res.writeHead(204, CORS_HEADERS);
+    res.end();
+    return;
+  }
+
   let bodyText = "";
 
   req.on("data", (chunk) => {
@@ -30,10 +41,16 @@ const server = http.createServer((req, res) => {
   req.on("end", async () => {
     try {
       const response = await handler(buildEvent(req, bodyText));
-      res.writeHead(response.statusCode || 200, response.headers || {});
+      res.writeHead(response.statusCode || 200, {
+        ...response.headers,
+        ...CORS_HEADERS
+      });
       res.end(response.body || "");
     } catch (error) {
-      res.writeHead(500, { "content-type": "application/json; charset=utf-8" });
+      res.writeHead(500, {
+        "content-type": "application/json; charset=utf-8",
+        ...CORS_HEADERS
+      });
       res.end(
         JSON.stringify(
           {

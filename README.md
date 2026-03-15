@@ -7,7 +7,7 @@
 - `omojan_flow_prototype.html`
   - ロビーから提出、投票、再投票、ホスト裁定、総合優勝まで通して触れる簡易プロトタイプ
 - `omojan_phase_prototype.html`
-  - `mock_api` の room 状態から画面を導出する phase 駆動の試作
+  - mock API を優先しつつ、使えないときは fixture にフォールバックして room 状態から画面を導出する phase 駆動の試作
 - `omojan_submit_prototype.html`
   - ワード提出 UI の集中試作
 - `omojan_wireframe.html`
@@ -36,7 +36,26 @@
 
 ## 開き方
 
-ブラウザで各 HTML ファイルをそのまま開けば確認できます。
+静的確認だけならブラウザで各 HTML ファイルをそのまま開けば見られます。
+
+phase 駆動プロトタイプを mock API 付きで確認したい場合は、別ターミナルで以下を起動します。
+
+```bash
+python3 -m http.server 8000
+npm run start:mock-api
+```
+
+そのうえで以下を開くと、`http://127.0.0.1:8787/v1` の mock API を優先して読み込みます。
+
+```txt
+http://127.0.0.1:8000/omojan_phase_prototype.html
+```
+
+fixture 固定で見たい場合は、以下のように `?data=fixture` を付けます。
+
+```txt
+http://127.0.0.1:8000/omojan_phase_prototype.html?data=fixture
+```
 
 ## 補足
 

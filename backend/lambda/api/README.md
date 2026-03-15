@@ -7,14 +7,19 @@
 - `GET /v1/health`
 - `GET /v1/champions/recent`
 - `GET /v1/admin/decks/default`
+- `POST /v1/rooms`
+- `POST /v1/rooms/join`
+- `GET /v1/rooms/{roomId}`
+- `POST /v1/rooms/{roomId}/reconnect`
+- `POST /v1/rooms/{roomId}/start-player`
 
-のみ返します。
+は実装済みです。
 
-ルーム進行系 API は、今は `501 NOT_IMPLEMENTED` を返します。  
-次の段階で DynamoDB 実装をここへ寄せます。
+このうち room 系は DynamoDB を使う本実装です。  
+一方で、ゲーム開始以降の進行 API はまだ `501 NOT_IMPLEMENTED` を返します。
 
 ## 目的
 
 - API Gateway + Lambda の入口を先に固定する
 - ローカル mock API と本番側の責務を分ける
-- DynamoDB 接続前に AWS 側のデプロイ枠を固める
+- lobby 系から段階的に DynamoDB 本実装へ寄せる

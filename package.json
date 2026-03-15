@@ -1,6 +1,10 @@
 {
   "name": "omojan-prototype",
   "private": true,
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.888.0",
+    "@aws-sdk/lib-dynamodb": "^3.888.0"
+  },
   "scripts": {
     "start:mock-api": "node backend/mock_api/local_server.js",
     "test:mock-api": "node --test backend/mock_api/handler.test.js",

@@ -51,8 +51,9 @@ flowchart LR
    - ローカルで画面と API 契約を固める
 2. `backend/lambda/api`
    - Lambda / API Gateway の入口を固める
+   - 先に `room create / join / get / reconnect / start-player` を DynamoDB へ寄せる
 3. `DynamoDB 接続`
-   - room / invite / deck / champions を永続化する
+   - 残りのゲーム進行 API を順に永続化する
 
 つまり、`ローカル mock -> Lambda 雛形 -> DynamoDB 本実装` の順で寄せます。
 

@@ -33,6 +33,8 @@
   - テスト計画書
 - `mock_api/`
   - API 実装前に使うモックデータ
+- `backend/lambda/api/`
+  - Lambda 本実装の入口。現在は lobby 系 API を DynamoDB で扱う
 - `infra/sam/`
   - Lambda + API Gateway + DynamoDB の AWS 雛形
 

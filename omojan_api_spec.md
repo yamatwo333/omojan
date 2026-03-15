@@ -109,6 +109,7 @@ type RoomResponse = {
     isHost: boolean;
     reconnectTokenIssued: boolean;
   };
+  myHand: MyHandTileView[];
 };
 ```
 
@@ -150,7 +151,93 @@ type PlayerView = {
 };
 ```
 
-### 4-4. SubmissionPayload
+### 4-4. MyHandTileView
+
+```ts
+type MyHandTileView = {
+  tileId: string;
+  text: string;
+  isUsed: boolean;
+};
+```
+
+### 4-5. SubmissionView
+
+```ts
+type SubmissionView = {
+  playerId: string;
+  displayName: string;
+  phrase: string;
+  fontId: string;
+  renderedLines: string[];
+  submittedAt: string;
+};
+```
+
+### 4-6. RoundView
+
+```ts
+type RoundView = {
+  roundIndex: 0 | 1 | 2;
+  label: "ラウンド1" | "ラウンド2" | "ラウンド3";
+  wind: "東一局" | "東二局" | "東三局";
+  phaseStatus: "pending" | "submit" | "vote" | "revote" | "host_decide" | "finished";
+  submissions: SubmissionView[];
+  voteSummary: {
+    counts: Array<{
+      playerId: string;
+      displayName: string;
+      phrase: string;
+      count: number;
+    }>;
+    tiedPlayerIds: string[];
+  } | null;
+  winner: ChampionView | null;
+};
+```
+
+### 4-7. FinalVoteView
+
+```ts
+type FinalVoteView = {
+  phaseStatus: "vote" | "revote" | "host_decide" | "finished";
+  candidates: Array<{
+    candidateId: string;
+    roundIndex: 0 | 1 | 2;
+    playerId: string;
+    displayName: string;
+    phrase: string;
+    fontId: string;
+    renderedLines: string[];
+  }>;
+  voteSummary: {
+    counts: Array<{
+      candidateId: string;
+      displayName: string;
+      phrase: string;
+      count: number;
+    }>;
+    tiedCandidateIds: string[];
+  } | null;
+  winner: ChampionView | null;
+};
+```
+
+### 4-8. ChampionView
+
+```ts
+type ChampionView = {
+  playerId: string;
+  displayName: string;
+  phrase: string;
+  fontId: string;
+  renderedLines: string[];
+  voteCount: number;
+  source: "initial" | "revote" | "host_decide";
+};
+```
+
+### 4-9. SubmissionPayload
 
 ```ts
 type SubmissionPayload = {
@@ -600,3 +687,4 @@ X-Omojan-Player-Token: pt_...
 - 同時更新競合時は `CONFLICT_RETRY` を返す
 - 投票確定や提出確定のレスポンスは、画面差分ではなく最新 room を返す
 - フロントは `phase` と `me` を見て画面を決める
+- モックデータは `mock_api/` 配下を参照する

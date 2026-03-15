@@ -1,0 +1,22 @@
+{
+  "ok": true,
+  "data": {
+    "deckId": "default",
+    "deckName": "default",
+    "version": 3,
+    "status": "active",
+    "tiles": [
+      { "tileId": "tile_001", "text": "現場猫", "enabled": true },
+      { "tileId": "tile_002", "text": "謝罪会見", "enabled": true },
+      { "tileId": "tile_003", "text": "深夜テンション", "enabled": true },
+      { "tileId": "tile_004", "text": "大反省", "enabled": true },
+      { "tileId": "tile_005", "text": "ラーメン", "enabled": true },
+      { "tileId": "tile_006", "text": "薄", "enabled": true },
+      { "tileId": "tile_007", "text": "社長", "enabled": true },
+      { "tileId": "tile_008", "text": "汁", "enabled": true },
+      { "tileId": "tile_009", "text": "雲", "enabled": true },
+      { "tileId": "tile_010", "text": "侍", "enabled": true }
+    ]
+  },
+  "serverTime": "2026-03-15T11:00:00Z"
+}

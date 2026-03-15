@@ -1,0 +1,38 @@
+{
+  "ok": true,
+  "data": {
+    "items": [
+      {
+        "championId": "ch_20260315_005",
+        "phrase": "現場大洪水",
+        "displayName": "やまだ",
+        "wonAt": "2026-03-15T10:59:00Z"
+      },
+      {
+        "championId": "ch_20260314_011",
+        "phrase": "爆ラーメン",
+        "displayName": "さとう",
+        "wonAt": "2026-03-14T21:10:00Z"
+      },
+      {
+        "championId": "ch_20260314_008",
+        "phrase": "寝謝罪会見",
+        "displayName": "みき",
+        "wonAt": "2026-03-14T20:32:00Z"
+      },
+      {
+        "championId": "ch_20260313_004",
+        "phrase": "汁ラッシュ",
+        "displayName": "やまだ",
+        "wonAt": "2026-03-13T22:19:00Z"
+      },
+      {
+        "championId": "ch_20260313_001",
+        "phrase": "薄大反省",
+        "displayName": "たなか",
+        "wonAt": "2026-03-13T20:05:00Z"
+      }
+    ]
+  },
+  "serverTime": "2026-03-15T11:00:00Z"
+}

@@ -1,0 +1,615 @@
+{
+  "meta": {
+    "roomId": "room_omo_2048",
+    "inviteCode": "OMO-2048",
+    "description": "おもじゃん初版の room 状態モック集"
+  },
+  "scenarios": {
+    "lobby": {
+      "ok": true,
+      "data": {
+        "room": {
+          "roomId": "room_omo_2048",
+          "inviteCode": "OMO-2048",
+          "revision": 1,
+          "status": "lobby",
+          "hostPlayerId": "player_host",
+          "playerCount": 4,
+          "startPlayerId": null,
+          "playerOrder": [],
+          "me": {
+            "playerId": "player_you",
+            "displayName": "あなた",
+            "isHost": false,
+            "reconnectTokenIssued": true
+          },
+          "myHand": [],
+          "game": {
+            "phase": "lobby",
+            "roundIndex": null,
+            "currentTurnPlayerId": null,
+            "players": [
+              { "playerId": "player_host", "displayName": "やまだ", "isHost": true, "seatOrder": 1, "isConnected": true, "handCount": 0, "usedTileIds": [] },
+              { "playerId": "player_you", "displayName": "あなた", "isHost": false, "seatOrder": 2, "isConnected": true, "handCount": 0, "usedTileIds": [] },
+              { "playerId": "player_tanaka", "displayName": "たなか", "isHost": false, "seatOrder": 3, "isConnected": true, "handCount": 0, "usedTileIds": [] },
+              { "playerId": "player_miki", "displayName": "みき", "isHost": false, "seatOrder": 4, "isConnected": true, "handCount": 0, "usedTileIds": [] }
+            ],
+            "rounds": [
+              { "roundIndex": 0, "label": "ラウンド1", "wind": "東一局", "phaseStatus": "pending", "submissions": [], "voteSummary": null, "winner": null },
+              { "roundIndex": 1, "label": "ラウンド2", "wind": "東二局", "phaseStatus": "pending", "submissions": [], "voteSummary": null, "winner": null },
+              { "roundIndex": 2, "label": "ラウンド3", "wind": "東三局", "phaseStatus": "pending", "submissions": [], "voteSummary": null, "winner": null }
+            ],
+            "finalVote": null,
+            "champion": null
+          }
+        }
+      },
+      "serverTime": "2026-03-15T11:00:00Z"
+    },
+    "round_submit_you": {
+      "ok": true,
+      "data": {
+        "room": {
+          "roomId": "room_omo_2048",
+          "inviteCode": "OMO-2048",
+          "revision": 7,
+          "status": "playing",
+          "hostPlayerId": "player_host",
+          "playerCount": 4,
+          "startPlayerId": "player_you",
+          "playerOrder": ["player_you", "player_host", "player_tanaka", "player_miki"],
+          "me": {
+            "playerId": "player_you",
+            "displayName": "あなた",
+            "isHost": false,
+            "reconnectTokenIssued": true
+          },
+          "myHand": [
+            { "tileId": "tile_001", "text": "現場猫", "isUsed": false },
+            { "tileId": "tile_002", "text": "謝罪会見", "isUsed": false },
+            { "tileId": "tile_003", "text": "深夜テンション", "isUsed": false },
+            { "tileId": "tile_004", "text": "大反省", "isUsed": false },
+            { "tileId": "tile_005", "text": "ラーメン", "isUsed": false },
+            { "tileId": "tile_006", "text": "薄", "isUsed": false },
+            { "tileId": "tile_007", "text": "社長", "isUsed": false },
+            { "tileId": "tile_008", "text": "汁", "isUsed": false },
+            { "tileId": "tile_009", "text": "雲", "isUsed": false },
+            { "tileId": "tile_010", "text": "侍", "isUsed": false }
+          ],
+          "game": {
+            "phase": "round_submit",
+            "roundIndex": 0,
+            "currentTurnPlayerId": "player_you",
+            "players": [
+              { "playerId": "player_host", "displayName": "やまだ", "isHost": true, "seatOrder": 2, "isConnected": true, "handCount": 10, "usedTileIds": [] },
+              { "playerId": "player_you", "displayName": "あなた", "isHost": false, "seatOrder": 1, "isConnected": true, "handCount": 10, "usedTileIds": [] },
+              { "playerId": "player_tanaka", "displayName": "たなか", "isHost": false, "seatOrder": 3, "isConnected": true, "handCount": 10, "usedTileIds": [] },
+              { "playerId": "player_miki", "displayName": "みき", "isHost": false, "seatOrder": 4, "isConnected": true, "handCount": 10, "usedTileIds": [] }
+            ],
+            "rounds": [
+              { "roundIndex": 0, "label": "ラウンド1", "wind": "東一局", "phaseStatus": "submit", "submissions": [], "voteSummary": null, "winner": null },
+              { "roundIndex": 1, "label": "ラウンド2", "wind": "東二局", "phaseStatus": "pending", "submissions": [], "voteSummary": null, "winner": null },
+              { "roundIndex": 2, "label": "ラウンド3", "wind": "東三局", "phaseStatus": "pending", "submissions": [], "voteSummary": null, "winner": null }
+            ],
+            "finalVote": null,
+            "champion": null
+          }
+        }
+      },
+      "serverTime": "2026-03-15T11:01:00Z"
+    },
+    "round_submit_wait": {
+      "ok": true,
+      "data": {
+        "room": {
+          "roomId": "room_omo_2048",
+          "inviteCode": "OMO-2048",
+          "revision": 8,
+          "status": "playing",
+          "hostPlayerId": "player_host",
+          "playerCount": 4,
+          "startPlayerId": "player_you",
+          "playerOrder": ["player_you", "player_host", "player_tanaka", "player_miki"],
+          "me": {
+            "playerId": "player_you",
+            "displayName": "あなた",
+            "isHost": false,
+            "reconnectTokenIssued": true
+          },
+          "myHand": [
+            { "tileId": "tile_001", "text": "現場猫", "isUsed": true },
+            { "tileId": "tile_002", "text": "謝罪会見", "isUsed": true },
+            { "tileId": "tile_003", "text": "深夜テンション", "isUsed": false },
+            { "tileId": "tile_004", "text": "大反省", "isUsed": false },
+            { "tileId": "tile_005", "text": "ラーメン", "isUsed": false },
+            { "tileId": "tile_006", "text": "薄", "isUsed": false },
+            { "tileId": "tile_007", "text": "社長", "isUsed": false },
+            { "tileId": "tile_008", "text": "汁", "isUsed": false },
+            { "tileId": "tile_009", "text": "雲", "isUsed": false },
+            { "tileId": "tile_010", "text": "侍", "isUsed": false }
+          ],
+          "game": {
+            "phase": "round_submit",
+            "roundIndex": 0,
+            "currentTurnPlayerId": "player_host",
+            "players": [
+              { "playerId": "player_host", "displayName": "やまだ", "isHost": true, "seatOrder": 2, "isConnected": true, "handCount": 10, "usedTileIds": [] },
+              { "playerId": "player_you", "displayName": "あなた", "isHost": false, "seatOrder": 1, "isConnected": true, "handCount": 8, "usedTileIds": ["tile_001", "tile_002"] },
+              { "playerId": "player_tanaka", "displayName": "たなか", "isHost": false, "seatOrder": 3, "isConnected": true, "handCount": 10, "usedTileIds": [] },
+              { "playerId": "player_miki", "displayName": "みき", "isHost": false, "seatOrder": 4, "isConnected": true, "handCount": 10, "usedTileIds": [] }
+            ],
+            "rounds": [
+              {
+                "roundIndex": 0,
+                "label": "ラウンド1",
+                "wind": "東一局",
+                "phaseStatus": "submit",
+                "submissions": [
+                  {
+                    "playerId": "player_you",
+                    "displayName": "あなた",
+                    "phrase": "謝罪現場猫",
+                    "fontId": "broadcast",
+                    "renderedLines": ["謝罪", "現場猫"],
+                    "submittedAt": "2026-03-15T11:01:00Z"
+                  }
+                ],
+                "voteSummary": null,
+                "winner": null
+              },
+              { "roundIndex": 1, "label": "ラウンド2", "wind": "東二局", "phaseStatus": "pending", "submissions": [], "voteSummary": null, "winner": null },
+              { "roundIndex": 2, "label": "ラウンド3", "wind": "東三局", "phaseStatus": "pending", "submissions": [], "voteSummary": null, "winner": null }
+            ],
+            "finalVote": null,
+            "champion": null
+          }
+        }
+      },
+      "serverTime": "2026-03-15T11:01:10Z"
+    },
+    "round_vote": {
+      "ok": true,
+      "data": {
+        "room": {
+          "roomId": "room_omo_2048",
+          "inviteCode": "OMO-2048",
+          "revision": 12,
+          "status": "playing",
+          "hostPlayerId": "player_host",
+          "playerCount": 4,
+          "startPlayerId": "player_you",
+          "playerOrder": ["player_you", "player_host", "player_tanaka", "player_miki"],
+          "me": {
+            "playerId": "player_you",
+            "displayName": "あなた",
+            "isHost": false,
+            "reconnectTokenIssued": true
+          },
+          "myHand": [
+            { "tileId": "tile_001", "text": "現場猫", "isUsed": true },
+            { "tileId": "tile_002", "text": "謝罪会見", "isUsed": true },
+            { "tileId": "tile_003", "text": "深夜テンション", "isUsed": false },
+            { "tileId": "tile_004", "text": "大反省", "isUsed": false },
+            { "tileId": "tile_005", "text": "ラーメン", "isUsed": false },
+            { "tileId": "tile_006", "text": "薄", "isUsed": false },
+            { "tileId": "tile_007", "text": "社長", "isUsed": false },
+            { "tileId": "tile_008", "text": "汁", "isUsed": false },
+            { "tileId": "tile_009", "text": "雲", "isUsed": false },
+            { "tileId": "tile_010", "text": "侍", "isUsed": false }
+          ],
+          "game": {
+            "phase": "round_vote",
+            "roundIndex": 0,
+            "currentTurnPlayerId": null,
+            "players": [
+              { "playerId": "player_host", "displayName": "やまだ", "isHost": true, "seatOrder": 2, "isConnected": true, "handCount": 8, "usedTileIds": ["tile_101", "tile_102"] },
+              { "playerId": "player_you", "displayName": "あなた", "isHost": false, "seatOrder": 1, "isConnected": true, "handCount": 8, "usedTileIds": ["tile_001", "tile_002"] },
+              { "playerId": "player_tanaka", "displayName": "たなか", "isHost": false, "seatOrder": 3, "isConnected": true, "handCount": 8, "usedTileIds": ["tile_201", "tile_202"] },
+              { "playerId": "player_miki", "displayName": "みき", "isHost": false, "seatOrder": 4, "isConnected": true, "handCount": 8, "usedTileIds": ["tile_301", "tile_302"] }
+            ],
+            "rounds": [
+              {
+                "roundIndex": 0,
+                "label": "ラウンド1",
+                "wind": "東一局",
+                "phaseStatus": "vote",
+                "submissions": [
+                  { "playerId": "player_you", "displayName": "あなた", "phrase": "謝罪現場猫", "fontId": "broadcast", "renderedLines": ["謝罪", "現場猫"], "submittedAt": "2026-03-15T11:01:00Z" },
+                  { "playerId": "player_host", "displayName": "やまだ", "phrase": "爆ラーメン", "fontId": "classic", "renderedLines": ["爆ラーメン"], "submittedAt": "2026-03-15T11:01:20Z" },
+                  { "playerId": "player_tanaka", "displayName": "たなか", "phrase": "寝社長", "fontId": "classic", "renderedLines": ["寝社長"], "submittedAt": "2026-03-15T11:01:35Z" },
+                  { "playerId": "player_miki", "displayName": "みき", "phrase": "汁侍", "fontId": "classic", "renderedLines": ["汁侍"], "submittedAt": "2026-03-15T11:01:50Z" }
+                ],
+                "voteSummary": null,
+                "winner": null
+              },
+              { "roundIndex": 1, "label": "ラウンド2", "wind": "東二局", "phaseStatus": "pending", "submissions": [], "voteSummary": null, "winner": null },
+              { "roundIndex": 2, "label": "ラウンド3", "wind": "東三局", "phaseStatus": "pending", "submissions": [], "voteSummary": null, "winner": null }
+            ],
+            "finalVote": null,
+            "champion": null
+          }
+        }
+      },
+      "serverTime": "2026-03-15T11:02:00Z"
+    },
+    "round_revote": {
+      "ok": true,
+      "data": {
+        "room": {
+          "roomId": "room_omo_2048",
+          "inviteCode": "OMO-2048",
+          "revision": 24,
+          "status": "playing",
+          "hostPlayerId": "player_host",
+          "playerCount": 4,
+          "startPlayerId": "player_you",
+          "playerOrder": ["player_you", "player_host", "player_tanaka", "player_miki"],
+          "me": {
+            "playerId": "player_you",
+            "displayName": "あなた",
+            "isHost": false,
+            "reconnectTokenIssued": true
+          },
+          "myHand": [
+            { "tileId": "tile_001", "text": "現場猫", "isUsed": true },
+            { "tileId": "tile_002", "text": "謝罪会見", "isUsed": true },
+            { "tileId": "tile_003", "text": "深夜テンション", "isUsed": true },
+            { "tileId": "tile_004", "text": "大反省", "isUsed": true },
+            { "tileId": "tile_005", "text": "ラーメン", "isUsed": false },
+            { "tileId": "tile_006", "text": "薄", "isUsed": false },
+            { "tileId": "tile_007", "text": "社長", "isUsed": false },
+            { "tileId": "tile_008", "text": "汁", "isUsed": false },
+            { "tileId": "tile_009", "text": "雲", "isUsed": false },
+            { "tileId": "tile_010", "text": "侍", "isUsed": false }
+          ],
+          "game": {
+            "phase": "round_revote",
+            "roundIndex": 1,
+            "currentTurnPlayerId": null,
+            "players": [
+              { "playerId": "player_host", "displayName": "やまだ", "isHost": true, "seatOrder": 2, "isConnected": true, "handCount": 6, "usedTileIds": ["tile_101", "tile_102", "tile_103", "tile_104"] },
+              { "playerId": "player_you", "displayName": "あなた", "isHost": false, "seatOrder": 1, "isConnected": true, "handCount": 6, "usedTileIds": ["tile_001", "tile_002", "tile_003", "tile_004"] },
+              { "playerId": "player_tanaka", "displayName": "たなか", "isHost": false, "seatOrder": 3, "isConnected": true, "handCount": 6, "usedTileIds": ["tile_201", "tile_202", "tile_203", "tile_204"] },
+              { "playerId": "player_miki", "displayName": "みき", "isHost": false, "seatOrder": 4, "isConnected": true, "handCount": 6, "usedTileIds": ["tile_301", "tile_302", "tile_303", "tile_304"] }
+            ],
+            "rounds": [
+              {
+                "roundIndex": 0,
+                "label": "ラウンド1",
+                "wind": "東一局",
+                "phaseStatus": "finished",
+                "submissions": [],
+                "voteSummary": null,
+                "winner": {
+                  "playerId": "player_you",
+                  "displayName": "あなた",
+                  "phrase": "謝罪現場猫",
+                  "fontId": "broadcast",
+                  "renderedLines": ["謝罪", "現場猫"],
+                  "voteCount": 3,
+                  "source": "initial"
+                }
+              },
+              {
+                "roundIndex": 1,
+                "label": "ラウンド2",
+                "wind": "東二局",
+                "phaseStatus": "revote",
+                "submissions": [
+                  { "playerId": "player_you", "displayName": "あなた", "phrase": "深夜大反省", "fontId": "heavy", "renderedLines": ["深夜大反省"], "submittedAt": "2026-03-15T11:05:00Z" },
+                  { "playerId": "player_host", "displayName": "やまだ", "phrase": "雲会見", "fontId": "classic", "renderedLines": ["雲会見"], "submittedAt": "2026-03-15T11:05:15Z" },
+                  { "playerId": "player_tanaka", "displayName": "たなか", "phrase": "薄ラーメン", "fontId": "classic", "renderedLines": ["薄ラーメン"], "submittedAt": "2026-03-15T11:05:25Z" },
+                  { "playerId": "player_miki", "displayName": "みき", "phrase": "社長汁", "fontId": "classic", "renderedLines": ["社長汁"], "submittedAt": "2026-03-15T11:05:40Z" }
+                ],
+                "voteSummary": {
+                  "counts": [
+                    { "playerId": "player_host", "displayName": "やまだ", "phrase": "雲会見", "count": 2 },
+                    { "playerId": "player_tanaka", "displayName": "たなか", "phrase": "薄ラーメン", "count": 2 },
+                    { "playerId": "player_you", "displayName": "あなた", "phrase": "深夜大反省", "count": 0 },
+                    { "playerId": "player_miki", "displayName": "みき", "phrase": "社長汁", "count": 0 }
+                  ],
+                  "tiedPlayerIds": ["player_host", "player_tanaka"]
+                },
+                "winner": null
+              },
+              { "roundIndex": 2, "label": "ラウンド3", "wind": "東三局", "phaseStatus": "pending", "submissions": [], "voteSummary": null, "winner": null }
+            ],
+            "finalVote": null,
+            "champion": null
+          }
+        }
+      },
+      "serverTime": "2026-03-15T11:06:00Z"
+    },
+    "round_host_decide": {
+      "ok": true,
+      "data": {
+        "room": {
+          "roomId": "room_omo_2048",
+          "inviteCode": "OMO-2048",
+          "revision": 25,
+          "status": "playing",
+          "hostPlayerId": "player_host",
+          "playerCount": 4,
+          "startPlayerId": "player_you",
+          "playerOrder": ["player_you", "player_host", "player_tanaka", "player_miki"],
+          "me": {
+            "playerId": "player_host",
+            "displayName": "やまだ",
+            "isHost": true,
+            "reconnectTokenIssued": true
+          },
+          "myHand": [],
+          "game": {
+            "phase": "round_host_decide",
+            "roundIndex": 1,
+            "currentTurnPlayerId": null,
+            "players": [
+              { "playerId": "player_host", "displayName": "やまだ", "isHost": true, "seatOrder": 2, "isConnected": true, "handCount": 6, "usedTileIds": ["tile_101", "tile_102", "tile_103", "tile_104"] },
+              { "playerId": "player_you", "displayName": "あなた", "isHost": false, "seatOrder": 1, "isConnected": true, "handCount": 6, "usedTileIds": ["tile_001", "tile_002", "tile_003", "tile_004"] },
+              { "playerId": "player_tanaka", "displayName": "たなか", "isHost": false, "seatOrder": 3, "isConnected": true, "handCount": 6, "usedTileIds": ["tile_201", "tile_202", "tile_203", "tile_204"] },
+              { "playerId": "player_miki", "displayName": "みき", "isHost": false, "seatOrder": 4, "isConnected": true, "handCount": 6, "usedTileIds": ["tile_301", "tile_302", "tile_303", "tile_304"] }
+            ],
+            "rounds": [
+              { "roundIndex": 0, "label": "ラウンド1", "wind": "東一局", "phaseStatus": "finished", "submissions": [], "voteSummary": null, "winner": { "playerId": "player_you", "displayName": "あなた", "phrase": "謝罪現場猫", "fontId": "broadcast", "renderedLines": ["謝罪", "現場猫"], "voteCount": 3, "source": "initial" } },
+              {
+                "roundIndex": 1,
+                "label": "ラウンド2",
+                "wind": "東二局",
+                "phaseStatus": "host_decide",
+                "submissions": [],
+                "voteSummary": {
+                  "counts": [
+                    { "playerId": "player_host", "displayName": "やまだ", "phrase": "雲会見", "count": 2 },
+                    { "playerId": "player_tanaka", "displayName": "たなか", "phrase": "薄ラーメン", "count": 2 }
+                  ],
+                  "tiedPlayerIds": ["player_host", "player_tanaka"]
+                },
+                "winner": null
+              },
+              { "roundIndex": 2, "label": "ラウンド3", "wind": "東三局", "phaseStatus": "pending", "submissions": [], "voteSummary": null, "winner": null }
+            ],
+            "finalVote": null,
+            "champion": null
+          }
+        }
+      },
+      "serverTime": "2026-03-15T11:06:15Z"
+    },
+    "round_result": {
+      "ok": true,
+      "data": {
+        "room": {
+          "roomId": "room_omo_2048",
+          "inviteCode": "OMO-2048",
+          "revision": 26,
+          "status": "playing",
+          "hostPlayerId": "player_host",
+          "playerCount": 4,
+          "startPlayerId": "player_you",
+          "playerOrder": ["player_you", "player_host", "player_tanaka", "player_miki"],
+          "me": {
+            "playerId": "player_you",
+            "displayName": "あなた",
+            "isHost": false,
+            "reconnectTokenIssued": true
+          },
+          "myHand": [
+            { "tileId": "tile_001", "text": "現場猫", "isUsed": true },
+            { "tileId": "tile_002", "text": "謝罪会見", "isUsed": true },
+            { "tileId": "tile_003", "text": "深夜テンション", "isUsed": true },
+            { "tileId": "tile_004", "text": "大反省", "isUsed": true },
+            { "tileId": "tile_005", "text": "ラーメン", "isUsed": false },
+            { "tileId": "tile_006", "text": "薄", "isUsed": false },
+            { "tileId": "tile_007", "text": "社長", "isUsed": false },
+            { "tileId": "tile_008", "text": "汁", "isUsed": false },
+            { "tileId": "tile_009", "text": "雲", "isUsed": false },
+            { "tileId": "tile_010", "text": "侍", "isUsed": false }
+          ],
+          "game": {
+            "phase": "round_result",
+            "roundIndex": 1,
+            "currentTurnPlayerId": null,
+            "players": [
+              { "playerId": "player_host", "displayName": "やまだ", "isHost": true, "seatOrder": 2, "isConnected": true, "handCount": 6, "usedTileIds": ["tile_101", "tile_102", "tile_103", "tile_104"] },
+              { "playerId": "player_you", "displayName": "あなた", "isHost": false, "seatOrder": 1, "isConnected": true, "handCount": 6, "usedTileIds": ["tile_001", "tile_002", "tile_003", "tile_004"] },
+              { "playerId": "player_tanaka", "displayName": "たなか", "isHost": false, "seatOrder": 3, "isConnected": true, "handCount": 6, "usedTileIds": ["tile_201", "tile_202", "tile_203", "tile_204"] },
+              { "playerId": "player_miki", "displayName": "みき", "isHost": false, "seatOrder": 4, "isConnected": true, "handCount": 6, "usedTileIds": ["tile_301", "tile_302", "tile_303", "tile_304"] }
+            ],
+            "rounds": [
+              {
+                "roundIndex": 0,
+                "label": "ラウンド1",
+                "wind": "東一局",
+                "phaseStatus": "finished",
+                "submissions": [],
+                "voteSummary": null,
+                "winner": {
+                  "playerId": "player_you",
+                  "displayName": "あなた",
+                  "phrase": "謝罪現場猫",
+                  "fontId": "broadcast",
+                  "renderedLines": ["謝罪", "現場猫"],
+                  "voteCount": 3,
+                  "source": "initial"
+                }
+              },
+              {
+                "roundIndex": 1,
+                "label": "ラウンド2",
+                "wind": "東二局",
+                "phaseStatus": "finished",
+                "submissions": [],
+                "voteSummary": {
+                  "counts": [
+                    { "playerId": "player_tanaka", "displayName": "たなか", "phrase": "薄ラーメン", "count": 2 },
+                    { "playerId": "player_host", "displayName": "やまだ", "phrase": "雲会見", "count": 2 }
+                  ],
+                  "tiedPlayerIds": []
+                },
+                "winner": {
+                  "playerId": "player_tanaka",
+                  "displayName": "たなか",
+                  "phrase": "薄ラーメン",
+                  "fontId": "classic",
+                  "renderedLines": ["薄ラーメン"],
+                  "voteCount": 2,
+                  "source": "host_decide"
+                }
+              },
+              { "roundIndex": 2, "label": "ラウンド3", "wind": "東三局", "phaseStatus": "pending", "submissions": [], "voteSummary": null, "winner": null }
+            ],
+            "finalVote": null,
+            "champion": null
+          }
+        }
+      },
+      "serverTime": "2026-03-15T11:06:30Z"
+    },
+    "final_vote": {
+      "ok": true,
+      "data": {
+        "room": {
+          "roomId": "room_omo_2048",
+          "inviteCode": "OMO-2048",
+          "revision": 40,
+          "status": "playing",
+          "hostPlayerId": "player_host",
+          "playerCount": 4,
+          "startPlayerId": "player_you",
+          "playerOrder": ["player_you", "player_host", "player_tanaka", "player_miki"],
+          "me": {
+            "playerId": "player_you",
+            "displayName": "あなた",
+            "isHost": false,
+            "reconnectTokenIssued": true
+          },
+          "myHand": [
+            { "tileId": "tile_001", "text": "現場猫", "isUsed": true },
+            { "tileId": "tile_002", "text": "謝罪会見", "isUsed": true },
+            { "tileId": "tile_003", "text": "深夜テンション", "isUsed": true },
+            { "tileId": "tile_004", "text": "大反省", "isUsed": true },
+            { "tileId": "tile_005", "text": "ラーメン", "isUsed": true },
+            { "tileId": "tile_006", "text": "薄", "isUsed": true },
+            { "tileId": "tile_007", "text": "社長", "isUsed": false },
+            { "tileId": "tile_008", "text": "汁", "isUsed": false },
+            { "tileId": "tile_009", "text": "雲", "isUsed": false },
+            { "tileId": "tile_010", "text": "侍", "isUsed": false }
+          ],
+          "game": {
+            "phase": "final_vote",
+            "roundIndex": 2,
+            "currentTurnPlayerId": null,
+            "players": [
+              { "playerId": "player_host", "displayName": "やまだ", "isHost": true, "seatOrder": 2, "isConnected": true, "handCount": 4, "usedTileIds": ["tile_101", "tile_102", "tile_103", "tile_104", "tile_105", "tile_106"] },
+              { "playerId": "player_you", "displayName": "あなた", "isHost": false, "seatOrder": 1, "isConnected": true, "handCount": 4, "usedTileIds": ["tile_001", "tile_002", "tile_003", "tile_004", "tile_005", "tile_006"] },
+              { "playerId": "player_tanaka", "displayName": "たなか", "isHost": false, "seatOrder": 3, "isConnected": true, "handCount": 4, "usedTileIds": ["tile_201", "tile_202", "tile_203", "tile_204", "tile_205", "tile_206"] },
+              { "playerId": "player_miki", "displayName": "みき", "isHost": false, "seatOrder": 4, "isConnected": true, "handCount": 4, "usedTileIds": ["tile_301", "tile_302", "tile_303", "tile_304", "tile_305", "tile_306"] }
+            ],
+            "rounds": [
+              { "roundIndex": 0, "label": "ラウンド1", "wind": "東一局", "phaseStatus": "finished", "submissions": [], "voteSummary": null, "winner": { "playerId": "player_you", "displayName": "あなた", "phrase": "謝罪現場猫", "fontId": "broadcast", "renderedLines": ["謝罪", "現場猫"], "voteCount": 3, "source": "initial" } },
+              { "roundIndex": 1, "label": "ラウンド2", "wind": "東二局", "phaseStatus": "finished", "submissions": [], "voteSummary": null, "winner": { "playerId": "player_tanaka", "displayName": "たなか", "phrase": "薄ラーメン", "fontId": "classic", "renderedLines": ["薄ラーメン"], "voteCount": 2, "source": "host_decide" } },
+              { "roundIndex": 2, "label": "ラウンド3", "wind": "東三局", "phaseStatus": "finished", "submissions": [], "voteSummary": null, "winner": { "playerId": "player_host", "displayName": "やまだ", "phrase": "現場大洪水", "fontId": "round", "renderedLines": ["現場大洪水"], "voteCount": 3, "source": "initial" } }
+            ],
+            "finalVote": {
+              "phaseStatus": "vote",
+              "candidates": [
+                { "candidateId": "final_round1", "roundIndex": 0, "playerId": "player_you", "displayName": "あなた", "phrase": "謝罪現場猫", "fontId": "broadcast", "renderedLines": ["謝罪", "現場猫"] },
+                { "candidateId": "final_round2", "roundIndex": 1, "playerId": "player_tanaka", "displayName": "たなか", "phrase": "薄ラーメン", "fontId": "classic", "renderedLines": ["薄ラーメン"] },
+                { "candidateId": "final_round3", "roundIndex": 2, "playerId": "player_host", "displayName": "やまだ", "phrase": "現場大洪水", "fontId": "round", "renderedLines": ["現場大洪水"] }
+              ],
+              "voteSummary": null,
+              "winner": null
+            },
+            "champion": null
+          }
+        }
+      },
+      "serverTime": "2026-03-15T11:08:00Z"
+    },
+    "final_result": {
+      "ok": true,
+      "data": {
+        "room": {
+          "roomId": "room_omo_2048",
+          "inviteCode": "OMO-2048",
+          "revision": 45,
+          "status": "finished",
+          "hostPlayerId": "player_host",
+          "playerCount": 4,
+          "startPlayerId": "player_you",
+          "playerOrder": ["player_you", "player_host", "player_tanaka", "player_miki"],
+          "me": {
+            "playerId": "player_you",
+            "displayName": "あなた",
+            "isHost": false,
+            "reconnectTokenIssued": true
+          },
+          "myHand": [
+            { "tileId": "tile_001", "text": "現場猫", "isUsed": true },
+            { "tileId": "tile_002", "text": "謝罪会見", "isUsed": true },
+            { "tileId": "tile_003", "text": "深夜テンション", "isUsed": true },
+            { "tileId": "tile_004", "text": "大反省", "isUsed": true },
+            { "tileId": "tile_005", "text": "ラーメン", "isUsed": true },
+            { "tileId": "tile_006", "text": "薄", "isUsed": true },
+            { "tileId": "tile_007", "text": "社長", "isUsed": false },
+            { "tileId": "tile_008", "text": "汁", "isUsed": false },
+            { "tileId": "tile_009", "text": "雲", "isUsed": false },
+            { "tileId": "tile_010", "text": "侍", "isUsed": false }
+          ],
+          "game": {
+            "phase": "final_result",
+            "roundIndex": 2,
+            "currentTurnPlayerId": null,
+            "players": [
+              { "playerId": "player_host", "displayName": "やまだ", "isHost": true, "seatOrder": 2, "isConnected": true, "handCount": 4, "usedTileIds": ["tile_101", "tile_102", "tile_103", "tile_104", "tile_105", "tile_106"] },
+              { "playerId": "player_you", "displayName": "あなた", "isHost": false, "seatOrder": 1, "isConnected": true, "handCount": 4, "usedTileIds": ["tile_001", "tile_002", "tile_003", "tile_004", "tile_005", "tile_006"] },
+              { "playerId": "player_tanaka", "displayName": "たなか", "isHost": false, "seatOrder": 3, "isConnected": true, "handCount": 4, "usedTileIds": ["tile_201", "tile_202", "tile_203", "tile_204", "tile_205", "tile_206"] },
+              { "playerId": "player_miki", "displayName": "みき", "isHost": false, "seatOrder": 4, "isConnected": true, "handCount": 4, "usedTileIds": ["tile_301", "tile_302", "tile_303", "tile_304", "tile_305", "tile_306"] }
+            ],
+            "rounds": [
+              { "roundIndex": 0, "label": "ラウンド1", "wind": "東一局", "phaseStatus": "finished", "submissions": [], "voteSummary": null, "winner": { "playerId": "player_you", "displayName": "あなた", "phrase": "謝罪現場猫", "fontId": "broadcast", "renderedLines": ["謝罪", "現場猫"], "voteCount": 3, "source": "initial" } },
+              { "roundIndex": 1, "label": "ラウンド2", "wind": "東二局", "phaseStatus": "finished", "submissions": [], "voteSummary": null, "winner": { "playerId": "player_tanaka", "displayName": "たなか", "phrase": "薄ラーメン", "fontId": "classic", "renderedLines": ["薄ラーメン"], "voteCount": 2, "source": "host_decide" } },
+              { "roundIndex": 2, "label": "ラウンド3", "wind": "東三局", "phaseStatus": "finished", "submissions": [], "voteSummary": null, "winner": { "playerId": "player_host", "displayName": "やまだ", "phrase": "現場大洪水", "fontId": "round", "renderedLines": ["現場大洪水"], "voteCount": 3, "source": "initial" } }
+            ],
+            "finalVote": {
+              "phaseStatus": "finished",
+              "candidates": [
+                { "candidateId": "final_round1", "roundIndex": 0, "playerId": "player_you", "displayName": "あなた", "phrase": "謝罪現場猫", "fontId": "broadcast", "renderedLines": ["謝罪", "現場猫"] },
+                { "candidateId": "final_round2", "roundIndex": 1, "playerId": "player_tanaka", "displayName": "たなか", "phrase": "薄ラーメン", "fontId": "classic", "renderedLines": ["薄ラーメン"] },
+                { "candidateId": "final_round3", "roundIndex": 2, "playerId": "player_host", "displayName": "やまだ", "phrase": "現場大洪水", "fontId": "round", "renderedLines": ["現場大洪水"] }
+              ],
+              "voteSummary": {
+                "counts": [
+                  { "candidateId": "final_round3", "displayName": "やまだ", "phrase": "現場大洪水", "count": 2 },
+                  { "candidateId": "final_round2", "displayName": "たなか", "phrase": "薄ラーメン", "count": 1 },
+                  { "candidateId": "final_round1", "displayName": "あなた", "phrase": "謝罪現場猫", "count": 0 }
+                ],
+                "tiedCandidateIds": []
+              },
+              "winner": {
+                "playerId": "player_host",
+                "displayName": "やまだ",
+                "phrase": "現場大洪水",
+                "fontId": "round",
+                "renderedLines": ["現場大洪水"],
+                "voteCount": 2,
+                "source": "initial"
+              }
+            },
+            "champion": {
+              "playerId": "player_host",
+              "displayName": "やまだ",
+              "phrase": "現場大洪水",
+              "fontId": "round",
+              "renderedLines": ["現場大洪水"],
+              "voteCount": 2,
+              "source": "initial"
+            }
+          }
+        }
+      },
+      "serverTime": "2026-03-15T11:08:50Z"
+    }
+  }
+}

@@ -29,6 +29,8 @@
   - DynamoDB テーブル設計書
 - `omojan_test_plan.md`
   - テスト計画書
+- `mock_api/`
+  - API 実装前に使うモックデータ
 
 ## 開き方
 

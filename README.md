@@ -12,6 +12,8 @@
   - 全体ワイヤーフレーム
 - `omojan_wireframe_notes.md`
   - ルールや画面設計の補足メモ
+- `omojan_state_flow.md`
+  - ゲーム状態の持ち方と画面遷移の設計メモ
 
 ## 開き方
 

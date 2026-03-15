@@ -1,0 +1,15 @@
+version: 1
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - echo "No build step required for static prototype"
+    build:
+      commands:
+        - echo "Publishing static files from repository root"
+  artifacts:
+    baseDirectory: .
+    files:
+      - "**/*"
+  cache:
+    paths: []

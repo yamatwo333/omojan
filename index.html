@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>おもじゃん Prototype Hub</title>
+    <style>
+      :root {
+        --paper: #f6efdb;
+        --paper-deep: #ecdfb7;
+        --ink: #1f1812;
+        --green: #24452f;
+        --gold: #b28a32;
+        --red: #b84431;
+        --line: rgba(118, 89, 63, 0.24);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        font-family: "Hiragino Sans", "Yu Gothic", sans-serif;
+        background:
+          radial-gradient(circle at top, rgba(255, 255, 255, 0.7), transparent 34%),
+          repeating-linear-gradient(
+            -35deg,
+            rgba(102, 86, 58, 0.04) 0,
+            rgba(102, 86, 58, 0.04) 2px,
+            transparent 2px,
+            transparent 15px
+          ),
+          linear-gradient(180deg, #f7f1df, #ecdfb7);
+      }
+
+      main {
+        max-width: 920px;
+        margin: 0 auto;
+        padding: 32px 18px 56px;
+      }
+
+      .hero {
+        text-align: center;
+      }
+
+      h1 {
+        margin: 0;
+        color: var(--green);
+        font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+        font-size: clamp(34px, 6vw, 54px);
+      }
+
+      .lead {
+        max-width: 680px;
+        margin: 14px auto 0;
+        line-height: 1.8;
+      }
+
+      .grid {
+        display: grid;
+        gap: 16px;
+        margin-top: 28px;
+      }
+
+      .card {
+        padding: 18px;
+        border-radius: 22px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.62);
+        box-shadow: 0 14px 32px rgba(29, 22, 15, 0.08);
+      }
+
+      .card h2 {
+        margin: 0;
+        color: var(--green);
+        font-size: 20px;
+      }
+
+      .card p {
+        margin: 10px 0 0;
+        line-height: 1.7;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 16px;
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 160px;
+        padding: 13px 16px;
+        border-radius: 16px;
+        text-decoration: none;
+        font-weight: 800;
+      }
+
+      .btn.primary {
+        background: linear-gradient(180deg, #c7523d, #b0402d);
+        color: #fff6ef;
+      }
+
+      .btn.secondary {
+        border: 1px solid rgba(184, 138, 50, 0.38);
+        background: rgba(255, 250, 238, 0.96);
+        color: var(--green);
+      }
+
+      .meta {
+        display: inline-flex;
+        margin-top: 18px;
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: rgba(36, 69, 47, 0.08);
+        color: var(--green);
+        font-size: 13px;
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="hero">
+        <h1>おもじゃん</h1>
+        <p class="lead">
+          手札のワードをくっつけて、いちばんおもしろい造語を競うオンライン対戦ゲームの試作置き場です。
+          ここから最新のプロトタイプやワイヤーフレームをそのまま確認できます。
+        </p>
+        <div class="meta">Amplify Hosting 用の公開入口</div>
+      </section>
+
+      <section class="grid">
+        <article class="card">
+          <h2>メインフロープロトタイプ</h2>
+          <p>ロビー、順番制の提出、投票、再投票、ホスト裁定、総合優勝まで一通り触れる最新の試作です。</p>
+          <div class="actions">
+            <a class="btn primary" href="./omojan_flow_prototype.html">開く</a>
+          </div>
+        </article>
+
+        <article class="card">
+          <h2>提出 UI 試作</h2>
+          <p>改行位置、書体、提出時の見せ方を集中して確認するための単体試作です。</p>
+          <div class="actions">
+            <a class="btn secondary" href="./omojan_submit_prototype.html">開く</a>
+          </div>
+        </article>
+
+        <article class="card">
+          <h2>ワイヤーフレーム</h2>
+          <p>ゲーム全体の画面構成や導線を確認するためのワイヤーフレームです。</p>
+          <div class="actions">
+            <a class="btn secondary" href="./omojan_wireframe.html">ワイヤーを見る</a>
+            <a class="btn secondary" href="./omojan_wireframe_notes.md">補足メモを見る</a>
+          </div>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>

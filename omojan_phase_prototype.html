@@ -1,0 +1,1228 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>おもじゃん phase駆動プロトタイプ</title>
+    <style>
+      :root {
+        --paper: #f6efdb;
+        --paper-deep: #efe3bf;
+        --ink: #1f1812;
+        --green: #24452f;
+        --green-soft: #dfe8db;
+        --gold: #b28a32;
+        --red: #b84431;
+        --red-soft: #fae2da;
+        --line: rgba(118, 89, 63, 0.24);
+        --muted: #736454;
+        --shadow: 0 18px 38px rgba(38, 27, 18, 0.14);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        font-family: "Hiragino Sans", "Yu Gothic", sans-serif;
+        background:
+          radial-gradient(circle at top, rgba(255, 255, 255, 0.7), transparent 34%),
+          repeating-linear-gradient(
+            -35deg,
+            rgba(102, 86, 58, 0.04) 0,
+            rgba(102, 86, 58, 0.04) 2px,
+            transparent 2px,
+            transparent 15px
+          ),
+          linear-gradient(180deg, #f7f1df, #ecdfb7);
+      }
+
+      main {
+        max-width: 1020px;
+        margin: 0 auto;
+        padding: 24px 18px 56px;
+      }
+
+      .page-shell {
+        display: grid;
+        justify-items: center;
+        gap: 16px;
+      }
+
+      .page-header {
+        text-align: center;
+      }
+
+      .page-header h1 {
+        margin: 0;
+        color: var(--green);
+        font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+        font-size: clamp(30px, 4.6vw, 44px);
+      }
+
+      .page-header p {
+        margin: 8px 0 0;
+        color: var(--muted);
+        line-height: 1.7;
+        font-size: 14px;
+      }
+
+      .scenario-panel {
+        width: min(100%, 920px);
+        padding: 18px;
+        border-radius: 24px;
+        border: 1px solid rgba(118, 89, 63, 0.16);
+        background: rgba(255, 255, 255, 0.54);
+        box-shadow: var(--shadow);
+      }
+
+      .scenario-panel h2 {
+        margin: 0;
+        color: var(--green);
+        font-size: 18px;
+      }
+
+      .scenario-panel p {
+        margin: 8px 0 0;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.6;
+      }
+
+      .scenario-grid {
+        display: grid;
+        gap: 8px;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        margin-top: 14px;
+      }
+
+      .scenario-chip,
+      .chip,
+      .tile,
+      .action-card {
+        appearance: none;
+        border: 1px solid rgba(118, 89, 63, 0.18);
+        background: rgba(255, 255, 255, 0.8);
+        color: var(--ink);
+        cursor: pointer;
+      }
+
+      .scenario-chip {
+        min-height: 52px;
+        padding: 10px 12px;
+        border-radius: 16px;
+        text-align: left;
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .scenario-chip small {
+        display: block;
+        margin-top: 4px;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 500;
+      }
+
+      .scenario-chip.active {
+        border-color: rgba(184, 68, 49, 0.32);
+        background: rgba(248, 220, 210, 0.84);
+        color: #8d2d1d;
+      }
+
+      .phone-shell {
+        display: flex;
+        width: 100%;
+        justify-content: center;
+      }
+
+      .phone {
+        width: min(100%, 420px);
+        min-height: 860px;
+        padding: 16px;
+        border-radius: 34px;
+        border: 3px solid #21170f;
+        background:
+          linear-gradient(180deg, rgba(245, 235, 209, 0.98), rgba(253, 247, 235, 0.98)),
+          var(--paper);
+        box-shadow: 0 20px 40px rgba(29, 22, 15, 0.22);
+      }
+
+      .status {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .screen-card,
+      .summary-panel,
+      .phase-banner {
+        border-radius: 22px;
+        border: 1px solid rgba(118, 89, 63, 0.18);
+        background: rgba(255, 255, 255, 0.46);
+      }
+
+      .phase-banner {
+        margin-top: 12px;
+        padding: 12px 14px;
+        background: linear-gradient(180deg, rgba(36, 69, 47, 0.98), rgba(22, 45, 31, 0.98));
+        color: #f6eddc;
+      }
+
+      .phase-banner small {
+        display: block;
+        color: rgba(246, 237, 220, 0.72);
+        font-size: 12px;
+      }
+
+      .phase-banner strong {
+        display: block;
+        margin-top: 4px;
+        font-size: 18px;
+      }
+
+      .screen-card {
+        margin-top: 14px;
+        padding: 16px;
+      }
+
+      .screen-card h3 {
+        margin: 0;
+        color: var(--green);
+        font-size: 18px;
+      }
+
+      .screen-card p {
+        margin: 8px 0 0;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.65;
+      }
+
+      .room-code {
+        display: inline-flex;
+        margin-top: 14px;
+        padding: 8px 12px;
+        border-radius: 999px;
+        border: 1px solid rgba(184, 138, 50, 0.36);
+        background: rgba(255, 250, 238, 0.96);
+        color: var(--green);
+        font-weight: 700;
+        letter-spacing: 0.08em;
+      }
+
+      .player-list,
+      .summary-stack,
+      .vote-grid,
+      .action-grid,
+      .history-list {
+        display: grid;
+        gap: 10px;
+        margin-top: 14px;
+      }
+
+      .player-item,
+      .history-card,
+      .score-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: flex-start;
+        padding: 13px 14px;
+        border-radius: 18px;
+        border: 1px solid rgba(118, 89, 63, 0.18);
+        background: rgba(255, 255, 255, 0.72);
+      }
+
+      .player-item strong,
+      .history-card strong,
+      .score-row strong {
+        display: block;
+      }
+
+      .player-meta,
+      .muted,
+      .history-card span,
+      .score-row span {
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.5;
+      }
+
+      .seat-chip,
+      .winner-label,
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 5px 10px;
+        border-radius: 999px;
+        background: rgba(36, 69, 47, 0.08);
+        color: var(--green);
+        font-size: 12px;
+      }
+
+      .summary-panel {
+        margin-top: 14px;
+        padding: 14px;
+      }
+
+      .summary-panel h4 {
+        margin: 0;
+        color: var(--green);
+        font-size: 15px;
+      }
+
+      .chip-row,
+      .button-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .chip {
+        padding: 9px 12px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .chip.active {
+        border-color: rgba(184, 68, 49, 0.32);
+        background: rgba(248, 220, 210, 0.84);
+        color: #8d2d1d;
+      }
+
+      .btn {
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 52px;
+        padding: 0 16px;
+        border: 0;
+        border-radius: 16px;
+        font-size: 15px;
+        font-weight: 800;
+      }
+
+      .btn.primary {
+        background: linear-gradient(180deg, #c7523d, #b0402d);
+        color: #fff7ef;
+      }
+
+      .btn.subtle {
+        background: rgba(255, 250, 238, 0.96);
+        border: 1px solid rgba(184, 138, 50, 0.38);
+        color: var(--green);
+      }
+
+      .btn:disabled {
+        opacity: 0.44;
+      }
+
+      .preview-card,
+      .result-stage,
+      .champion-stage {
+        margin-top: 14px;
+        padding: 18px 16px;
+        border-radius: 20px;
+        border: 1px solid rgba(184, 138, 50, 0.22);
+        background:
+          linear-gradient(180deg, rgba(255, 250, 241, 0.95), rgba(251, 244, 227, 0.95)),
+          #fff9ef;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+      }
+
+      .preview-card small,
+      .result-stage small,
+      .champion-stage small {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .word-board {
+        margin-top: 10px;
+        text-align: center;
+      }
+
+      .word-line {
+        display: block;
+      }
+
+      .font-classic {
+        font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+      }
+
+      .font-broadcast,
+      .font-heavy {
+        font-family: "Hiragino Sans", "Yu Gothic", sans-serif;
+        font-weight: 800;
+      }
+
+      .font-playful,
+      .font-round {
+        font-family: "Hiragino Maru Gothic ProN", "Yu Gothic", sans-serif;
+        font-weight: 700;
+      }
+
+      .preview-word {
+        font-size: clamp(26px, 9vw, 40px);
+        line-height: 1.06;
+      }
+
+      .vote-word,
+      .result-word {
+        font-size: clamp(24px, 7.5vw, 34px);
+        line-height: 1.08;
+      }
+
+      .champion-word {
+        font-size: clamp(32px, 10vw, 46px);
+        line-height: 1.04;
+      }
+
+      .tile-grid {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 8px;
+        margin-top: 14px;
+      }
+
+      .tile {
+        min-height: 74px;
+        padding: 8px 4px;
+        border-radius: 14px;
+        background:
+          linear-gradient(180deg, rgba(255, 251, 241, 0.96), rgba(248, 239, 216, 0.94)),
+          #fff7ea;
+        font-size: 14px;
+        line-height: 1.2;
+        word-break: break-word;
+      }
+
+      .tile.selected {
+        border-color: rgba(184, 68, 49, 0.32);
+        background: rgba(250, 230, 222, 0.96);
+        color: #8d2d1d;
+      }
+
+      .tile.used {
+        opacity: 0.36;
+        cursor: default;
+      }
+
+      .action-card {
+        width: 100%;
+        padding: 14px;
+        border-radius: 18px;
+        text-align: left;
+      }
+
+      .action-card.selected {
+        border-color: rgba(184, 68, 49, 0.32);
+        background: rgba(250, 230, 222, 0.92);
+      }
+
+      .action-card.disabled {
+        opacity: 0.38;
+        cursor: default;
+      }
+
+      .action-card .muted {
+        margin-top: 6px;
+      }
+
+      .empty-state,
+      .error-box {
+        margin-top: 14px;
+        padding: 14px;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.74);
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.7;
+      }
+
+      .error-box {
+        border: 1px solid rgba(184, 68, 49, 0.28);
+        color: #8d2d1d;
+        background: rgba(250, 226, 218, 0.8);
+      }
+
+      @media (max-width: 520px) {
+        main {
+          padding-inline: 12px;
+        }
+
+        .scenario-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="page-shell">
+        <header class="page-header">
+          <h1>おもじゃん</h1>
+          <p>
+            `mock_api/room_scenarios.json` を読み込み、room 状態から画面を導出する phase 駆動の試作です。
+            既存の見た目確認用プロトタイプとは分けて、実装の土台を固める目的で使います。
+          </p>
+        </header>
+
+        <section class="scenario-panel">
+          <h2>シナリオ切り替え</h2>
+          <p>ロビー、提出、自分以外の手番待ち、投票、再投票、ホスト裁定、結果、最終投票、最終結果を切り替えて確認できます。</p>
+          <div id="scenarioGrid" class="scenario-grid"></div>
+        </section>
+
+        <section class="phone-shell">
+          <div class="phone">
+            <div class="status">
+              <span>phase駆動</span>
+              <span id="screenName">読み込み中</span>
+            </div>
+            <section class="phase-banner">
+              <small id="phaseLabel"></small>
+              <strong id="phaseTitle"></strong>
+            </section>
+            <section id="app"></section>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <script>
+      const scenarioLabels = {
+        lobby: { title: "ロビー", note: "phase=lobby" },
+        round_submit_you: { title: "あなたの提出", note: "phase=round_submit" },
+        round_submit_wait: { title: "提出待機", note: "phase=round_submit" },
+        round_vote: { title: "ラウンド投票", note: "phase=round_vote" },
+        round_revote: { title: "ラウンド再投票", note: "phase=round_revote" },
+        round_host_decide: { title: "ホスト裁定", note: "phase=round_host_decide" },
+        round_result: { title: "ラウンド結果", note: "phase=round_result" },
+        final_vote: { title: "最終投票", note: "phase=final_vote" },
+        final_result: { title: "最終結果", note: "phase=final_result" }
+      };
+
+      const fontMap = {
+        classic: "font-classic",
+        broadcast: "font-broadcast",
+        playful: "font-playful",
+        heavy: "font-heavy",
+        round: "font-round"
+      };
+
+      const state = {
+        scenarios: null,
+        selectedScenarioId: "lobby",
+        errorMessage: "",
+        draftSelectedTileIds: [],
+        draftFontId: "broadcast",
+        draftLineMode: "boundary",
+        selectedVoteTarget: "",
+        selectedHostTarget: "",
+        selectedFinalTarget: ""
+      };
+
+      const els = {
+        scenarioGrid: document.getElementById("scenarioGrid"),
+        screenName: document.getElementById("screenName"),
+        phaseLabel: document.getElementById("phaseLabel"),
+        phaseTitle: document.getElementById("phaseTitle"),
+        app: document.getElementById("app")
+      };
+
+      function escapeHtml(value) {
+        return String(value)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#39;");
+      }
+
+      function getScenario() {
+        return state.scenarios?.scenarios?.[state.selectedScenarioId] || null;
+      }
+
+      function getRoom() {
+        return getScenario()?.data?.room || null;
+      }
+
+      function getCurrentRound(room = getRoom()) {
+        if (!room || room.game.roundIndex === null) {
+          return null;
+        }
+        return room.game.rounds[room.game.roundIndex] || null;
+      }
+
+      function getFontClass(fontId) {
+        return fontMap[fontId] || "font-classic";
+      }
+
+      function getCurrentSubmissions(room = getRoom()) {
+        return getCurrentRound(room)?.submissions || [];
+      }
+
+      function getMySubmission(room = getRoom()) {
+        if (!room) {
+          return null;
+        }
+        return getCurrentSubmissions(room).find((item) => item.playerId === room.me.playerId) || null;
+      }
+
+      function getSelectedTiles(room = getRoom()) {
+        if (!room) {
+          return [];
+        }
+        const tileMap = new Map(room.myHand.map((tile) => [tile.tileId, tile]));
+        return state.draftSelectedTileIds.map((tileId) => tileMap.get(tileId)).filter(Boolean);
+      }
+
+      function getDraftLines(room = getRoom()) {
+        const selected = getSelectedTiles(room);
+        if (!selected.length) {
+          return ["牌を2つ選ぶ"];
+        }
+        if (state.draftLineMode === "boundary") {
+          return selected.map((tile) => tile.text);
+        }
+        const joined = selected.map((tile) => tile.text).join("");
+        if (state.draftLineMode === "single") {
+          return [joined];
+        }
+        if (selected.length === 2) {
+          const first = selected[0].text;
+          const second = selected[1].text;
+          if ((first + second).length >= 9) {
+            return [first, second];
+          }
+        }
+        return [joined];
+      }
+
+      function deriveScreen(room = getRoom()) {
+        if (!room) {
+          return "loading";
+        }
+        const phase = room.game.phase;
+        if (phase === "lobby") {
+          return "lobby";
+        }
+        if (phase === "round_submit") {
+          return room.game.currentTurnPlayerId === room.me.playerId ? "submit" : "wait";
+        }
+        if (phase === "round_vote") {
+          return "vote";
+        }
+        if (phase === "round_revote") {
+          return "revote";
+        }
+        if (phase === "round_host_decide") {
+          return room.me.isHost ? "hostDecide" : "wait";
+        }
+        if (phase === "round_result") {
+          return "roundResult";
+        }
+        if (phase === "final_vote") {
+          return "finalVote";
+        }
+        if (phase === "final_revote") {
+          return "finalVote";
+        }
+        if (phase === "final_host_decide") {
+          return room.me.isHost ? "finalHostDecide" : "wait";
+        }
+        if (phase === "final_result") {
+          return "finalResult";
+        }
+        return "unknown";
+      }
+
+      function renderWord(lines, fontId, className) {
+        return `<div class="word-board ${className} ${getFontClass(fontId)}">${lines
+          .map((line) => `<span class="word-line">${escapeHtml(line)}</span>`)
+          .join("")}</div>`;
+      }
+
+      function renderPlayerList(room) {
+        return `
+          <div class="player-list">
+            ${room.game.players
+              .map(
+                (player) => `
+                  <div class="player-item">
+                    <div>
+                      <small class="player-meta">${player.playerId === room.me.playerId ? "あなた" : "参加者"}</small>
+                      <strong>${escapeHtml(player.displayName)}</strong>
+                    </div>
+                    <span class="seat-chip">${player.isHost ? "ホスト" : `${player.handCount}枚`}</span>
+                  </div>
+                `
+              )
+              .join("")}
+          </div>
+        `;
+      }
+
+      function renderScenarioGrid() {
+        els.scenarioGrid.innerHTML = Object.entries(scenarioLabels)
+          .map(
+            ([scenarioId, meta]) => `
+              <button
+                class="scenario-chip${state.selectedScenarioId === scenarioId ? " active" : ""}"
+                type="button"
+                data-scenario="${scenarioId}"
+              >
+                ${escapeHtml(meta.title)}
+                <small>${escapeHtml(meta.note)}</small>
+              </button>
+            `
+          )
+          .join("");
+      }
+
+      function renderLobby(room) {
+        return `
+          <section class="screen-card">
+            <h3>ルーム待機中</h3>
+            <div class="room-code">ROOM / ${escapeHtml(room.inviteCode)}</div>
+            ${renderPlayerList(room)}
+            <section class="summary-panel">
+              <h4>開始条件</h4>
+              <div class="summary-stack">
+                <div class="history-card">
+                  <strong>参加人数</strong>
+                  <span>${room.playerCount}人</span>
+                </div>
+                <div class="history-card">
+                  <strong>開始順</strong>
+                  <span>${room.startPlayerId ? "設定済み" : "未設定"}</span>
+                </div>
+              </div>
+            </section>
+          </section>
+        `;
+      }
+
+      function renderSubmit(room) {
+        const selectedTiles = getSelectedTiles(room);
+        const currentRound = getCurrentRound(room);
+        return `
+          <section class="screen-card">
+            <h3>${escapeHtml(currentRound?.wind || "提出")}</h3>
+            <p>${escapeHtml(room.me.displayName)} の手番です。room 状態を見ながら、提出前の下書きだけをローカルで持つ構成を想定しています。</p>
+            <section class="preview-card">
+              <small>提出前プレビュー</small>
+              ${renderWord(getDraftLines(room), state.draftFontId, "preview-word")}
+            </section>
+            <section class="summary-panel">
+              <h4>改行モード</h4>
+              <div class="chip-row">
+                ${[
+                  ["boundary", "ワードの境目で改行"],
+                  ["manual", "手動で改行"],
+                  ["single", "1行で固定"]
+                ]
+                  .map(
+                    ([id, label]) => `
+                      <button class="chip${state.draftLineMode === id ? " active" : ""}" type="button" data-line-mode="${id}">
+                        ${label}
+                      </button>
+                    `
+                  )
+                  .join("")}
+              </div>
+            </section>
+            <section class="summary-panel">
+              <h4>書体</h4>
+              <div class="chip-row">
+                ${[
+                  ["classic", "勝負明朝"],
+                  ["broadcast", "実況ゴシック"],
+                  ["playful", "ゆるポップ"],
+                  ["heavy", "極太ゴシック"],
+                  ["round", "丸ゴシック"]
+                ]
+                  .map(
+                    ([id, label]) => `
+                      <button class="chip${state.draftFontId === id ? " active" : ""}" type="button" data-font-id="${id}">
+                        ${label}
+                      </button>
+                    `
+                  )
+                  .join("")}
+              </div>
+            </section>
+            <section class="summary-panel">
+              <h4>手札</h4>
+              <div class="tile-grid">
+                ${room.myHand
+                  .map(
+                    (tile) => `
+                      <button
+                        class="tile${state.draftSelectedTileIds.includes(tile.tileId) ? " selected" : ""}${tile.isUsed ? " used" : ""}"
+                        type="button"
+                        data-tile-id="${escapeHtml(tile.tileId)}"
+                        ${tile.isUsed ? "disabled" : ""}
+                      >
+                        ${escapeHtml(tile.text)}
+                      </button>
+                    `
+                  )
+                  .join("")}
+              </div>
+            </section>
+            <div class="button-row">
+              <button class="btn subtle" type="button" data-action="swap-selection" ${selectedTiles.length === 2 ? "" : "disabled"}>順番入替</button>
+              <button class="btn subtle" type="button" data-action="clear-selection">選択をクリア</button>
+            </div>
+          </section>
+        `;
+      }
+
+      function renderWait(room) {
+        const currentRound = getCurrentRound(room);
+        const currentPlayer = room.game.players.find((player) => player.playerId === room.game.currentTurnPlayerId);
+        return `
+          <section class="screen-card">
+            <h3>待機</h3>
+            <p>${
+              currentPlayer
+                ? `${escapeHtml(currentPlayer.displayName)} の手番です。`
+                : `${escapeHtml(currentRound?.label || "現在ラウンド")} が進行中です。`
+            }</p>
+            <section class="summary-panel">
+              <h4>公開済みワード</h4>
+              ${
+                getCurrentSubmissions(room).length
+                  ? `
+                    <div class="action-grid">
+                      ${getCurrentSubmissions(room)
+                        .map(
+                          (submission) => `
+                            <article class="action-card disabled">
+                              <span class="winner-label">${escapeHtml(submission.displayName)}</span>
+                              ${renderWord(submission.renderedLines, submission.fontId, "vote-word")}
+                            </article>
+                          `
+                        )
+                        .join("")}
+                    </div>
+                  `
+                  : `<div class="empty-state">まだ公開済みのワードはありません。</div>`
+              }
+            </section>
+          </section>
+        `;
+      }
+
+      function renderVoteCards(candidates, selectedId, dataAttr, selfId) {
+        return `
+          <div class="action-grid">
+            ${candidates
+              .map((candidate) => {
+                const disabled = candidate.playerId === selfId;
+                const value = candidate.playerId || candidate.candidateId;
+                return `
+                  <button
+                    class="action-card${selectedId === value ? " selected" : ""}${disabled ? " disabled" : ""}"
+                    type="button"
+                    data-${dataAttr}="${escapeHtml(value)}"
+                    ${disabled ? "disabled" : ""}
+                  >
+                    <span class="winner-label">${escapeHtml(candidate.displayName)}</span>
+                    ${renderWord(candidate.renderedLines, candidate.fontId, "vote-word")}
+                    <div class="muted">${escapeHtml(candidate.phrase)}</div>
+                  </button>
+                `;
+              })
+              .join("")}
+          </div>
+        `;
+      }
+
+      function renderVote(room, mode = "vote") {
+        const round = getCurrentRound(room);
+        const candidates =
+          mode === "revote" && round?.voteSummary?.tiedPlayerIds?.length
+            ? round.submissions.filter((item) => round.voteSummary.tiedPlayerIds.includes(item.playerId))
+            : round.submissions;
+        const selectedId = mode === "revote" ? state.selectedHostTarget : state.selectedVoteTarget;
+        const dataAttr = mode === "revote" ? "revote-id" : "vote-id";
+        return `
+          <section class="screen-card">
+            <h3>${mode === "revote" ? "再投票" : "このラウンドで一番おもしろいワードに投票"}</h3>
+            ${
+              mode === "revote" && round?.voteSummary
+                ? `
+                  <section class="summary-panel">
+                    <h4>同率のワード</h4>
+                    <div class="history-list">
+                      ${round.voteSummary.counts
+                        .filter((item) => round.voteSummary.tiedPlayerIds.includes(item.playerId))
+                        .map(
+                          (item) => `
+                            <div class="history-card">
+                              <strong>${escapeHtml(item.phrase)}</strong>
+                              <span>${item.count}票</span>
+                            </div>
+                          `
+                        )
+                        .join("")}
+                    </div>
+                  </section>
+                `
+                : ""
+            }
+            ${renderVoteCards(candidates, selectedId, dataAttr, room.me.playerId)}
+          </section>
+        `;
+      }
+
+      function renderHostDecide(room, isFinal = false) {
+        const source = isFinal ? room.game.finalVote : getCurrentRound(room);
+        const counts = source?.voteSummary?.counts || [];
+        const tiedIds = isFinal ? source?.voteSummary?.tiedCandidateIds || [] : source?.voteSummary?.tiedPlayerIds || [];
+        const candidates = isFinal
+          ? source.candidates.filter((candidate) => tiedIds.includes(candidate.candidateId))
+          : getCurrentSubmissions(room).filter((candidate) => tiedIds.includes(candidate.playerId));
+        const selectedId = isFinal ? state.selectedFinalTarget : state.selectedHostTarget;
+        const dataAttr = isFinal ? "final-pick-id" : "host-pick-id";
+
+        return `
+          <section class="screen-card">
+            <h3>${isFinal ? "最終ホスト裁定" : "ホスト裁定"}</h3>
+            <section class="summary-panel">
+              <h4>同率の候補</h4>
+              <div class="history-list">
+                ${counts
+                  .filter((item) => tiedIds.includes(item.playerId || item.candidateId))
+                  .map(
+                    (item) => `
+                      <div class="history-card">
+                        <strong>${escapeHtml(item.phrase)}</strong>
+                        <span>${item.count}票</span>
+                      </div>
+                    `
+                  )
+                  .join("")}
+              </div>
+            </section>
+            ${renderVoteCards(candidates, selectedId, dataAttr, "__none__")}
+            <div class="button-row">
+              <button class="btn primary" type="button" ${selectedId ? "" : "disabled"}>このワードで確定</button>
+            </div>
+          </section>
+        `;
+      }
+
+      function renderRoundResult(room) {
+        const round = getCurrentRound(room);
+        const winner = round?.winner;
+        return `
+          <section class="screen-card">
+            <h3>${escapeHtml(round?.label || "ラウンド結果")}</h3>
+            <section class="result-stage">
+              <small>勝利ワード</small>
+              ${winner ? renderWord(winner.renderedLines, winner.fontId, "result-word") : `<div class="empty-state">勝者未確定</div>`}
+              ${
+                winner
+                  ? `<p><strong>${escapeHtml(winner.displayName)}</strong> / ${winner.voteCount}票</p>`
+                  : ""
+              }
+            </section>
+            <section class="summary-panel">
+              <h4>票数内訳</h4>
+              <div class="history-list">
+                ${(round?.voteSummary?.counts || [])
+                  .map(
+                    (item) => `
+                      <div class="history-card">
+                        <strong>${escapeHtml(item.phrase)}</strong>
+                        <span>${item.count}票 / ${escapeHtml(item.displayName)}</span>
+                      </div>
+                    `
+                  )
+                  .join("")}
+              </div>
+            </section>
+          </section>
+        `;
+      }
+
+      function renderFinalVote(room) {
+        const finalVote = room.game.finalVote;
+        return `
+          <section class="screen-card">
+            <h3>最終投票</h3>
+            ${renderVoteCards(finalVote?.candidates || [], state.selectedFinalTarget, "final-vote-id", room.me.playerId)}
+          </section>
+        `;
+      }
+
+      function renderFinalResult(room) {
+        const champion = room.game.champion;
+        const finalVote = room.game.finalVote;
+        return `
+          <section class="screen-card">
+            <h3>総合優勝</h3>
+            <section class="champion-stage">
+              <small>総合優勝</small>
+              ${champion ? renderWord(champion.renderedLines, champion.fontId, "champion-word") : `<div class="empty-state">未確定</div>`}
+              ${champion ? `<p><strong>${escapeHtml(champion.displayName)}</strong></p>` : ""}
+            </section>
+            <section class="summary-panel">
+              <h4>各ラウンドの勝ちワード</h4>
+              <div class="history-list">
+                ${room.game.rounds
+                  .filter((round) => round.winner)
+                  .map(
+                    (round) => `
+                      <div class="history-card">
+                        <strong>${escapeHtml(round.label)}</strong>
+                        <span>${escapeHtml(round.winner.phrase)} / ${escapeHtml(round.winner.displayName)}</span>
+                      </div>
+                    `
+                  )
+                  .join("")}
+              </div>
+            </section>
+            ${
+              finalVote?.voteSummary
+                ? `
+                  <section class="summary-panel">
+                    <h4>最終投票の票数内訳</h4>
+                    <div class="history-list">
+                      ${finalVote.voteSummary.counts
+                        .map(
+                          (item) => `
+                            <div class="history-card">
+                              <strong>${escapeHtml(item.phrase)}</strong>
+                              <span>${item.count}票 / ${escapeHtml(item.displayName)}</span>
+                            </div>
+                          `
+                        )
+                        .join("")}
+                    </div>
+                  </section>
+                `
+                : ""
+            }
+          </section>
+        `;
+      }
+
+      function renderUnknown(room) {
+        return `
+          <section class="screen-card">
+            <h3>未対応の phase</h3>
+            <div class="empty-state">
+              ${room ? escapeHtml(room.game.phase) : "room が未読み込みです。"}
+            </div>
+          </section>
+        `;
+      }
+
+      function setBanner(room, screenId) {
+        const titleMap = {
+          lobby: "ロビー",
+          submit: "あなたの提出",
+          wait: "待機",
+          vote: "ラウンド投票",
+          revote: "ラウンド再投票",
+          hostDecide: "ホスト裁定",
+          roundResult: "ラウンド結果",
+          finalVote: "最終投票",
+          finalHostDecide: "最終ホスト裁定",
+          finalResult: "最終結果",
+          loading: "読み込み中",
+          unknown: "未対応"
+        };
+        els.screenName.textContent = titleMap[screenId] || screenId;
+        els.phaseLabel.textContent = room ? `phase = ${room.game.phase}` : "phase = loading";
+        els.phaseTitle.textContent = room ? `${titleMap[screenId] || screenId} を導出` : "データを読み込み中";
+      }
+
+      function renderApp() {
+        if (state.errorMessage) {
+          els.app.innerHTML = `<div class="error-box">${escapeHtml(state.errorMessage)}</div>`;
+          return;
+        }
+
+        const room = getRoom();
+        const screenId = deriveScreen(room);
+        setBanner(room, screenId);
+
+        if (!room) {
+          els.app.innerHTML = `<div class="empty-state">シナリオを読み込んでいます。</div>`;
+          return;
+        }
+
+        const screens = {
+          lobby: () => renderLobby(room),
+          submit: () => renderSubmit(room),
+          wait: () => renderWait(room),
+          vote: () => renderVote(room, "vote"),
+          revote: () => renderVote(room, "revote"),
+          hostDecide: () => renderHostDecide(room, false),
+          roundResult: () => renderRoundResult(room),
+          finalVote: () => renderFinalVote(room),
+          finalHostDecide: () => renderHostDecide(room, true),
+          finalResult: () => renderFinalResult(room)
+        };
+
+        els.app.innerHTML = (screens[screenId] || (() => renderUnknown(room)))();
+      }
+
+      function syncLocalDraft() {
+        const room = getRoom();
+        if (!room) {
+          return;
+        }
+
+        const available = room.myHand.filter((tile) => !tile.isUsed);
+        const firstTwo = available.slice(0, 2).map((tile) => tile.tileId);
+
+        if (!firstTwo.length) {
+          state.draftSelectedTileIds = [];
+        } else if (!state.draftSelectedTileIds.every((tileId) => room.myHand.some((tile) => tile.tileId === tileId && !tile.isUsed))) {
+          state.draftSelectedTileIds = firstTwo;
+        } else if (state.draftSelectedTileIds.length === 0) {
+          state.draftSelectedTileIds = firstTwo;
+        }
+      }
+
+      async function loadScenarios() {
+        try {
+          const response = await fetch("./mock_api/room_scenarios.json");
+          if (!response.ok) {
+            throw new Error(`mock_api/room_scenarios.json の取得に失敗しました: ${response.status}`);
+          }
+          state.scenarios = await response.json();
+          const params = new URLSearchParams(window.location.search);
+          const scenario = params.get("scenario");
+          if (scenario && state.scenarios.scenarios[scenario]) {
+            state.selectedScenarioId = scenario;
+          }
+          syncLocalDraft();
+          renderScenarioGrid();
+          renderApp();
+        } catch (error) {
+          state.errorMessage = error instanceof Error ? error.message : "シナリオの読み込みに失敗しました。";
+          renderApp();
+        }
+      }
+
+      document.addEventListener("click", (event) => {
+        const scenarioButton = event.target.closest("[data-scenario]");
+        if (scenarioButton) {
+          state.selectedScenarioId = scenarioButton.dataset.scenario;
+          state.selectedVoteTarget = "";
+          state.selectedHostTarget = "";
+          state.selectedFinalTarget = "";
+          syncLocalDraft();
+          renderScenarioGrid();
+          const url = new URL(window.location.href);
+          url.searchParams.set("scenario", state.selectedScenarioId);
+          window.history.replaceState({}, "", url);
+          renderApp();
+          return;
+        }
+
+        const tileButton = event.target.closest("[data-tile-id]");
+        if (tileButton) {
+          const tileId = tileButton.dataset.tileId;
+          const room = getRoom();
+          const tile = room?.myHand.find((item) => item.tileId === tileId);
+          if (!tile || tile.isUsed) {
+            return;
+          }
+          if (state.draftSelectedTileIds.includes(tileId)) {
+            state.draftSelectedTileIds = state.draftSelectedTileIds.filter((id) => id !== tileId);
+          } else if (state.draftSelectedTileIds.length >= 2) {
+            state.draftSelectedTileIds = [state.draftSelectedTileIds[1], tileId];
+          } else {
+            state.draftSelectedTileIds = [...state.draftSelectedTileIds, tileId];
+          }
+          renderApp();
+          return;
+        }
+
+        const fontButton = event.target.closest("[data-font-id]");
+        if (fontButton) {
+          state.draftFontId = fontButton.dataset.fontId;
+          renderApp();
+          return;
+        }
+
+        const lineModeButton = event.target.closest("[data-line-mode]");
+        if (lineModeButton) {
+          state.draftLineMode = lineModeButton.dataset.lineMode;
+          renderApp();
+          return;
+        }
+
+        const voteButton = event.target.closest("[data-vote-id]");
+        if (voteButton) {
+          state.selectedVoteTarget = voteButton.dataset.voteId;
+          renderApp();
+          return;
+        }
+
+        const revoteButton = event.target.closest("[data-revote-id]");
+        if (revoteButton) {
+          state.selectedHostTarget = revoteButton.dataset.revoteId;
+          renderApp();
+          return;
+        }
+
+        const hostPickButton = event.target.closest("[data-host-pick-id]");
+        if (hostPickButton) {
+          state.selectedHostTarget = hostPickButton.dataset.hostPickId;
+          renderApp();
+          return;
+        }
+
+        const finalVoteButton = event.target.closest("[data-final-vote-id]");
+        if (finalVoteButton) {
+          state.selectedFinalTarget = finalVoteButton.dataset.finalVoteId;
+          renderApp();
+          return;
+        }
+
+        const finalPickButton = event.target.closest("[data-final-pick-id]");
+        if (finalPickButton) {
+          state.selectedFinalTarget = finalPickButton.dataset.finalPickId;
+          renderApp();
+          return;
+        }
+
+        const actionButton = event.target.closest("[data-action]");
+        if (!actionButton) {
+          return;
+        }
+
+        if (actionButton.dataset.action === "swap-selection") {
+          if (state.draftSelectedTileIds.length === 2) {
+            state.draftSelectedTileIds = [state.draftSelectedTileIds[1], state.draftSelectedTileIds[0]];
+            renderApp();
+          }
+          return;
+        }
+
+        if (actionButton.dataset.action === "clear-selection") {
+          state.draftSelectedTileIds = [];
+          renderApp();
+        }
+      });
+
+      loadScenarios();
+    </script>
+  </body>
+</html>

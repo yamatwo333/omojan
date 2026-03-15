@@ -6,6 +6,8 @@
 
 - `omojan_flow_prototype.html`
   - ロビーから提出、投票、再投票、ホスト裁定、総合優勝まで通して触れる簡易プロトタイプ
+- `omojan_phase_prototype.html`
+  - `mock_api` の room 状態から画面を導出する phase 駆動の試作
 - `omojan_submit_prototype.html`
   - ワード提出 UI の集中試作
 - `omojan_wireframe.html`

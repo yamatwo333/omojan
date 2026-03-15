@@ -23,6 +23,10 @@
   - 画面要件・画面遷移書
 - `omojan_basic_design.md`
   - 基本設計書
+- `omojan_api_spec.md`
+  - API 仕様書
+- `omojan_dynamodb_design.md`
+  - DynamoDB テーブル設計書
 - `omojan_test_plan.md`
   - テスト計画書
 

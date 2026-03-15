@@ -1,6 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { createHandler, createMemoryRoomRepository } = require("./handler");
+const { createHandler, createMemoryRoomRepository, normalizePathname } = require("./handler");
 
 function createEvent(method, path, options = {}) {
   return {
@@ -361,6 +361,23 @@ test("GET /v1/health returns lambda scaffold metadata", async () => {
     "final:host-decision",
     "rooms:restart"
   ]);
+});
+
+test("normalizePathname strips API Gateway stage prefix", () => {
+  assert.equal(
+    normalizePathname({
+      rawPath: "/dev/v1/health",
+      requestContext: { stage: "dev" }
+    }),
+    "/v1/health"
+  );
+  assert.equal(
+    normalizePathname({
+      rawPath: "/v1/health",
+      requestContext: { stage: "$default" }
+    }),
+    "/v1/health"
+  );
 });
 
 test("GET /v1/champions/recent returns recent items", async () => {

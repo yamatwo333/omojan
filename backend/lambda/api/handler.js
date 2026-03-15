@@ -111,6 +111,23 @@ function parseRoute(method, pathname) {
   return null;
 }
 
+function normalizePathname(event) {
+  const rawPath = event.rawPath || event.path || "/";
+  const stage = String(event.requestContext?.stage || "").trim();
+  if (!stage || stage === "$default") {
+    return rawPath;
+  }
+
+  const stagePrefix = `/${stage}`;
+  if (rawPath === stagePrefix) {
+    return "/";
+  }
+  if (rawPath.startsWith(`${stagePrefix}/`)) {
+    return rawPath.slice(stagePrefix.length);
+  }
+  return rawPath;
+}
+
 function handleHealth() {
   return ok({
     service: "omojan-api",
@@ -1746,7 +1763,7 @@ function createHandler(options = {}) {
 
   return async function lambdaHandler(event) {
     const method = event.requestContext?.http?.method || event.httpMethod || "GET";
-    const pathname = event.rawPath || event.path || "/";
+    const pathname = normalizePathname(event);
 
     if (method === "OPTIONS") {
       return {
@@ -2024,5 +2041,6 @@ module.exports = {
   createHandler,
   createMemoryRoomRepository,
   createDynamoRoomRepository,
-  parseRoute
+  parseRoute,
+  normalizePathname
 };

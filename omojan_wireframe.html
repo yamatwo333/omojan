@@ -1,0 +1,1243 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>おもじゃん - ワイヤーフレーム</title>
+    <style>
+      :root {
+        --bg: #ddd0ad;
+        --bg-deep: #244734;
+        --panel: #f8f1de;
+        --panel-2: #efe2bd;
+        --ink: #20160f;
+        --muted: #6a5b49;
+        --green: #355d43;
+        --red: #8f2219;
+        --gold: #b88d31;
+        --line: #72553b;
+        --shadow: 0 18px 36px rgba(32, 22, 15, 0.16);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        font-family: "Hiragino Mincho ProN", "Yu Mincho", "Times New Roman", serif;
+        background:
+          radial-gradient(circle at top, rgba(255, 255, 255, 0.24), transparent 32%),
+          linear-gradient(180deg, #e5d5b1 0%, #d0bc90 52%, #c2ab7f 100%);
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        opacity: 0.12;
+        background:
+          repeating-linear-gradient(
+            45deg,
+            rgba(53, 93, 67, 0.35) 0,
+            rgba(53, 93, 67, 0.35) 2px,
+            transparent 2px,
+            transparent 18px
+          );
+      }
+
+      main {
+        max-width: 1380px;
+        margin: 0 auto;
+        padding: 32px 20px 72px;
+      }
+
+      .hero {
+        position: relative;
+        overflow: hidden;
+        padding: 28px;
+        border: 2px solid var(--line);
+        border-radius: 28px;
+        background:
+          linear-gradient(135deg, rgba(36, 71, 52, 0.96), rgba(24, 39, 28, 0.92)),
+          var(--bg-deep);
+        color: #f7eed8;
+        box-shadow: var(--shadow);
+      }
+
+      .hero::after {
+        content: "";
+        position: absolute;
+        inset: 14px;
+        border: 1px solid rgba(247, 238, 216, 0.22);
+        border-radius: 20px;
+      }
+
+      .eyebrow {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 999px;
+        border: 1px solid rgba(247, 238, 216, 0.38);
+        font-size: 12px;
+        letter-spacing: 0.12em;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        margin-top: 14px;
+        font-size: clamp(30px, 6vw, 58px);
+        line-height: 1.08;
+      }
+
+      .hero p {
+        max-width: 860px;
+        margin-top: 14px;
+        color: rgba(247, 238, 216, 0.88);
+        font-size: 16px;
+        line-height: 1.7;
+      }
+
+      .summary {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 12px;
+        margin-top: 22px;
+      }
+
+      .summary-card {
+        padding: 14px 16px;
+        border: 1px solid rgba(247, 238, 216, 0.24);
+        border-radius: 18px;
+        background: rgba(247, 238, 216, 0.08);
+      }
+
+      .summary-card strong {
+        display: block;
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        color: rgba(247, 238, 216, 0.72);
+      }
+
+      .summary-card span {
+        display: block;
+        margin-top: 6px;
+        font-size: 18px;
+      }
+
+      .section {
+        margin-top: 28px;
+        padding: 24px;
+        border: 2px solid rgba(114, 85, 59, 0.6);
+        border-radius: 26px;
+        background: rgba(248, 241, 222, 0.9);
+        box-shadow: var(--shadow);
+      }
+
+      .section h2 {
+        font-size: 26px;
+      }
+
+      .section-intro {
+        margin-top: 10px;
+        color: var(--muted);
+        line-height: 1.7;
+      }
+
+      .flow {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 12px;
+        margin-top: 20px;
+      }
+
+      .flow-step {
+        padding: 16px;
+        border-radius: 18px;
+        border: 1px solid rgba(114, 85, 59, 0.34);
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.42), rgba(239, 226, 189, 0.64));
+      }
+
+      .flow-step strong {
+        display: block;
+        margin-bottom: 8px;
+        color: var(--red);
+        font-size: 13px;
+        letter-spacing: 0.08em;
+      }
+
+      .wire-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(308px, 1fr));
+        gap: 22px;
+        margin-top: 24px;
+      }
+
+      .wire-nav {
+        position: sticky;
+        top: 12px;
+        z-index: 5;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 18px;
+        padding: 12px;
+        border: 1px solid rgba(114, 85, 59, 0.24);
+        border-radius: 18px;
+        background: rgba(248, 241, 222, 0.86);
+        backdrop-filter: blur(10px);
+      }
+
+      .wire-link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 8px 12px;
+        border-radius: 999px;
+        border: 1px solid rgba(114, 85, 59, 0.28);
+        background: rgba(255, 255, 255, 0.54);
+        color: var(--ink);
+        font-size: 13px;
+        text-decoration: none;
+        white-space: nowrap;
+      }
+
+      .wire-link:hover {
+        background: rgba(53, 93, 67, 0.12);
+      }
+
+      .screen {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .screen-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .screen-title h3 {
+        font-size: 18px;
+      }
+
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: rgba(53, 93, 67, 0.12);
+        border: 1px solid rgba(53, 93, 67, 0.28);
+        font-size: 12px;
+        color: var(--green);
+      }
+
+      .phone {
+        width: 100%;
+        min-height: 660px;
+        padding: 16px;
+        border: 3px solid #23180f;
+        border-radius: 30px;
+        background:
+          linear-gradient(180deg, rgba(239, 226, 189, 0.9), rgba(248, 241, 222, 0.98)),
+          var(--panel);
+        box-shadow: 0 14px 28px rgba(32, 22, 15, 0.18);
+      }
+
+      .status {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .topbar {
+        margin-top: 12px;
+        padding: 14px;
+        border-radius: 18px;
+        background: linear-gradient(180deg, rgba(53, 93, 67, 0.96), rgba(36, 71, 52, 0.98));
+        color: #f7eed8;
+      }
+
+      .topbar small {
+        display: block;
+        color: rgba(247, 238, 216, 0.74);
+        margin-bottom: 4px;
+      }
+
+      .panel {
+        margin-top: 12px;
+        padding: 14px;
+        border-radius: 18px;
+        border: 1px solid rgba(114, 85, 59, 0.32);
+        background: rgba(255, 255, 255, 0.48);
+      }
+
+      .subtle {
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.6;
+      }
+
+      .stack {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .row {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .seat {
+        flex: 1 1 120px;
+        padding: 12px;
+        border-radius: 14px;
+        border: 1px solid rgba(114, 85, 59, 0.28);
+        background: rgba(239, 226, 189, 0.58);
+      }
+
+      .seat strong,
+      .choice strong,
+      .result strong {
+        display: block;
+      }
+
+      .button-row {
+        display: flex;
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      .button-row.single .button {
+        width: 100%;
+        flex: none;
+      }
+
+      .button {
+        flex: 1;
+        padding: 12px 14px;
+        border-radius: 14px;
+        border: 1px solid rgba(114, 85, 59, 0.38);
+        background: #fff7e6;
+        font-size: 14px;
+        text-align: center;
+      }
+
+      .button.primary {
+        border-color: rgba(143, 34, 25, 0.45);
+        background: linear-gradient(180deg, #c24a37, #9c2d20);
+        color: #fff9ef;
+      }
+
+      .format-panel {
+        margin-top: 12px;
+        padding: 14px;
+        border-radius: 18px;
+        border: 1px solid rgba(114, 85, 59, 0.28);
+        background: rgba(255, 255, 255, 0.44);
+      }
+
+      .format-panel h4 {
+        margin: 0;
+        font-size: 13px;
+        letter-spacing: 0.06em;
+        color: var(--muted);
+      }
+
+      .format-panel + .format-panel {
+        margin-top: 10px;
+      }
+
+      .option-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 10px;
+      }
+
+      .option-pill {
+        padding: 8px 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(114, 85, 59, 0.3);
+        background: rgba(255, 247, 230, 0.9);
+        font-size: 12px;
+        line-height: 1.2;
+      }
+
+      .option-pill.active {
+        border-color: rgba(143, 34, 25, 0.4);
+        background: rgba(194, 74, 55, 0.12);
+        color: var(--red);
+      }
+
+      .font-classic {
+        font-family: "Hiragino Mincho ProN", "Yu Mincho", "Times New Roman", serif;
+      }
+
+      .font-broadcast {
+        font-family: "Hiragino Sans", "Yu Gothic", sans-serif;
+        font-weight: 800;
+        letter-spacing: -0.04em;
+      }
+
+      .font-playful {
+        font-family: "Marker Felt", "Hiragino Maru Gothic ProN", "Yu Gothic", sans-serif;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+      }
+
+      .tiles {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .tile {
+        min-height: 78px;
+        padding: 8px 6px;
+        border-radius: 12px;
+        border: 1px solid rgba(114, 85, 59, 0.4);
+        background: linear-gradient(180deg, #fffdfa, #efe6cf);
+        font-size: 14px;
+        line-height: 1.15;
+        letter-spacing: 0.01em;
+        text-align: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        word-break: keep-all;
+      }
+
+      .tile.selected {
+        border: 2px solid var(--red);
+        background: linear-gradient(180deg, #fff8ec, #f7d1bb);
+      }
+
+      .tile.hidden {
+        background:
+          linear-gradient(180deg, rgba(53, 93, 67, 0.96), rgba(36, 71, 52, 1)),
+          var(--green);
+        color: #f7eed8;
+        font-size: 12px;
+      }
+
+      .phrase-preview {
+        margin-top: 12px;
+        padding: 18px 18px 20px;
+        border-radius: 18px;
+        border: 1px solid rgba(184, 141, 49, 0.46);
+        background: linear-gradient(180deg, rgba(255, 248, 232, 0.88), rgba(248, 236, 196, 0.86));
+        text-align: center;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.34);
+      }
+
+      .phrase-preview strong {
+        display: block;
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+      }
+
+      .phrase-preview span {
+        display: block;
+        margin-top: 8px;
+        font-size: clamp(32px, 4.2vw, 48px);
+        line-height: 1.06;
+        word-break: keep-all;
+      }
+
+      .phrase-preview em {
+        display: block;
+        margin-top: 10px;
+        font-style: normal;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .announce {
+        margin-top: 12px;
+        padding: 20px 16px 22px;
+        border-radius: 22px;
+        border: 1px solid rgba(184, 141, 49, 0.34);
+        background:
+          radial-gradient(circle at top, rgba(255, 251, 238, 0.16), transparent 46%),
+          linear-gradient(180deg, #8f2219, #5d130d 100%);
+        color: #fff8ef;
+        text-align: center;
+        box-shadow: 0 16px 30px rgba(93, 19, 13, 0.22);
+      }
+
+      .announce strong {
+        display: block;
+        font-size: 12px;
+        letter-spacing: 0.12em;
+        color: rgba(255, 248, 239, 0.8);
+      }
+
+      .announce .word {
+        margin-top: 10px;
+        font-size: clamp(34px, 5vw, 50px);
+        line-height: 1.02;
+        word-break: keep-all;
+      }
+
+      .announce .meta {
+        margin-top: 10px;
+        font-size: 13px;
+        line-height: 1.5;
+        color: rgba(255, 248, 239, 0.82);
+      }
+
+      .board {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      .choice,
+      .result {
+        padding: 16px;
+        border-radius: 16px;
+        border: 1px solid rgba(114, 85, 59, 0.28);
+        background: rgba(255, 255, 255, 0.58);
+      }
+
+      .result.primary {
+        border: 1px solid rgba(184, 141, 49, 0.46);
+        background: linear-gradient(180deg, rgba(255, 248, 232, 0.94), rgba(248, 236, 196, 0.88));
+      }
+
+      .choice.locked {
+        opacity: 0.48;
+      }
+
+      .choice .word,
+      .result .word {
+        margin-top: 8px;
+        font-size: clamp(28px, 3.3vw, 40px);
+        line-height: 1.05;
+        word-break: keep-all;
+      }
+
+      .popup-stage {
+        position: relative;
+        margin-top: 12px;
+        padding: 14px;
+        border-radius: 18px;
+        border: 1px solid rgba(114, 85, 59, 0.24);
+        background: rgba(255, 255, 255, 0.28);
+        overflow: hidden;
+      }
+
+      .popup-stage .board,
+      .popup-stage .panel {
+        filter: blur(1px);
+        opacity: 0.28;
+      }
+
+      .popup-stage::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: rgba(32, 22, 15, 0.22);
+      }
+
+      .popup-card {
+        position: absolute;
+        left: 16px;
+        right: 16px;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 1;
+        padding: 20px 16px 22px;
+        border-radius: 22px;
+        border: 3px solid rgba(36, 71, 52, 0.9);
+        background:
+          linear-gradient(180deg, rgba(255, 255, 252, 0.98), rgba(246, 239, 223, 0.98));
+        color: var(--ink);
+        text-align: center;
+        box-shadow:
+          0 0 0 5px rgba(184, 141, 49, 0.46),
+          0 18px 34px rgba(32, 22, 15, 0.2);
+      }
+
+      .popup-card::before {
+        content: "";
+        position: absolute;
+        inset: 8px;
+        border-radius: 14px;
+        border: 1px solid rgba(184, 141, 49, 0.55);
+        pointer-events: none;
+      }
+
+      .popup-card strong {
+        display: block;
+        font-size: 12px;
+        letter-spacing: 0.12em;
+        color: rgba(36, 71, 52, 0.88);
+      }
+
+      .popup-card .word {
+        margin-top: 12px;
+        font-size: clamp(38px, 6vw, 58px);
+        line-height: 0.96;
+        word-break: keep-all;
+        color: var(--ink);
+        text-shadow: 0 1px 0 rgba(255, 255, 255, 0.7);
+      }
+
+      .popup-card .meta {
+        margin-top: 12px;
+        font-size: 12px;
+        line-height: 1.5;
+        color: rgba(106, 91, 73, 0.92);
+      }
+
+      .score {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 10px 12px;
+        border-radius: 14px;
+        border: 1px solid rgba(114, 85, 59, 0.28);
+        background: rgba(239, 226, 189, 0.66);
+      }
+
+      .score span:last-child {
+        text-align: right;
+      }
+
+      .tag {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 999px;
+        border: 1px solid rgba(143, 34, 25, 0.24);
+        background: rgba(143, 34, 25, 0.08);
+        color: var(--red);
+        font-size: 11px;
+      }
+
+      .notes {
+        font-size: 13px;
+        line-height: 1.7;
+        color: var(--muted);
+      }
+
+      @media (max-width: 720px) {
+        main {
+          padding: 20px 14px 48px;
+        }
+
+        .hero,
+        .section {
+          padding: 18px;
+          border-radius: 22px;
+        }
+
+        h1 {
+          font-size: 31px;
+          line-height: 1.12;
+        }
+
+        .hero p,
+        .section-intro {
+          font-size: 14px;
+        }
+
+        .summary {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .summary-card {
+          min-height: 96px;
+        }
+
+        .tile {
+          font-size: 13px;
+        }
+
+        .popup-card {
+          left: 12px;
+          right: 12px;
+          padding: 18px 14px 20px;
+        }
+
+        .popup-card .word {
+          font-size: 42px;
+        }
+
+        .wire-nav {
+          top: 8px;
+          overflow-x: auto;
+          flex-wrap: nowrap;
+        }
+
+        .wire-link {
+          flex: 0 0 auto;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="hero">
+        <span class="eyebrow">OMOJAN / WIREFRAME v0.1</span>
+        <h1>おもじゃん<br />スマホ向けワイヤーフレーム</h1>
+        <p>
+          麻雀の卓を囲む空気感で、ことばの牌をぶつけ合う「おもじゃん」の初期ワイヤーです。
+          まずは 1 試合を迷わず進められることと、笑いどころが気持ちよく見えることを優先しています。
+        </p>
+        <div class="summary">
+          <div class="summary-card">
+            <strong>対応人数</strong>
+            <span>2〜4人</span>
+          </div>
+          <div class="summary-card">
+            <strong>基本構成</strong>
+            <span>3ラウンド + 最終投票</span>
+          </div>
+          <div class="summary-card">
+            <strong>入力の主役</strong>
+            <span>10枚の手牌から2枚選択</span>
+          </div>
+          <div class="summary-card">
+            <strong>世界観</strong>
+            <span>本格麻雀の卓 / 牌 / 勝負感</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>進行フロー</h2>
+        <p class="section-intro">
+          ワイヤーフレーム上では、各ラウンドで「配牌 → 出牌 → 投票 → ラウンド結果」を繰り返し、
+          最後に 3 ラウンド勝者の造語で最終投票を行う流れとして整理しています。
+        </p>
+        <div class="flow">
+          <div class="flow-step">
+            <strong>STEP 01</strong>
+            招待 URL から入室し、表示名を決める
+          </div>
+          <div class="flow-step">
+            <strong>STEP 02</strong>
+            ロビーで人数確認、ホストが開始
+          </div>
+          <div class="flow-step">
+            <strong>STEP 03</strong>
+            手牌 10 枚を受け取り、ラウンド開始
+          </div>
+          <div class="flow-step">
+            <strong>STEP 04</strong>
+            順番に 2 枚選んで造語を出す
+          </div>
+          <div class="flow-step">
+            <strong>STEP 05</strong>
+            他人の造語へ投票、同点なら再投票
+          </div>
+          <div class="flow-step">
+            <strong>STEP 06</strong>
+            3 ラウンドの勝ち語を並べて最終投票
+          </div>
+          <div class="flow-step">
+            <strong>STEP 07</strong>
+            最終結果と各プレイヤー成績を表示
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>画面ワイヤー</h2>
+        <p class="section-intro">
+          すべてスマホ縦持ちを想定しています。各画面には「今何をすればいいか」が一目で分かること、
+          非公開情報の手牌と公開情報の場をしっかり分離することを重視しています。
+        </p>
+        <div class="wire-nav">
+          <a class="wire-link" href="#screen-1">1. 入室</a>
+          <a class="wire-link" href="#screen-4">4. 造語を作る</a>
+          <a class="wire-link" href="#screen-5">5. 提出演出</a>
+          <a class="wire-link" href="#screen-6">6. 投票</a>
+          <a class="wire-link" href="#screen-8">8. ラウンド結果</a>
+          <a class="wire-link" href="#screen-10">10. 最終結果</a>
+        </div>
+
+        <div class="wire-grid">
+          <article class="screen" id="screen-1">
+            <div class="screen-title">
+              <h3>1. 招待 URL で入室</h3>
+              <span class="chip">導入</span>
+            </div>
+            <div class="phone">
+              <div class="status"><span>9:41</span><span>招待ルーム</span></div>
+              <div class="topbar">
+                <small>対局卓に参加</small>
+                <strong>おもじゃん</strong>
+              </div>
+              <div class="panel stack">
+                <div>
+                  <strong>卓番号</strong>
+                  <p class="subtle">OMJ-4821 / ホスト: たなか</p>
+                </div>
+                <div>
+                  <strong>表示名</strong>
+                  <div class="panel">あなたの名前を入力</div>
+                </div>
+                <div>
+                  <strong>アイコン色</strong>
+                  <div class="row">
+                    <span class="chip">赤卓</span>
+                    <span class="chip">青卓</span>
+                    <span class="chip">緑卓</span>
+                    <span class="chip">白卓</span>
+                  </div>
+                </div>
+                <div class="button-row">
+                  <div class="button">ルールを見る</div>
+                  <div class="button primary">参加する</div>
+                </div>
+              </div>
+              <div class="panel subtle">
+                初回は「2枚の牌で造語を作り、他プレイヤーの作品に投票します」とだけ短く見せる。
+              </div>
+            </div>
+            <p class="notes">
+              URL から直接入っても迷わないよう、最初の入力は表示名だけに絞る案です。
+            </p>
+          </article>
+
+          <article class="screen" id="screen-2">
+            <div class="screen-title">
+              <h3>2. ロビー / 開始待ち</h3>
+              <span class="chip">開始前</span>
+            </div>
+            <div class="phone">
+              <div class="status"><span>9:42</span><span>3 / 4人 参加中</span></div>
+              <div class="topbar">
+                <small>東一局の前</small>
+                <strong>対局準備</strong>
+              </div>
+              <div class="panel stack">
+                <div class="row">
+                  <div class="seat"><strong>ホスト</strong>たなか</div>
+                  <div class="seat"><strong>参加者</strong>さとう</div>
+                  <div class="seat"><strong>参加者</strong>あなた</div>
+                  <div class="seat"><strong>空席</strong>招待待ち</div>
+                </div>
+                <div class="score">
+                  <span>使用デッキ</span>
+                  <span>基本語牌セット vol.1</span>
+                </div>
+                <div class="score">
+                  <span>ルール</span>
+                  <span>全3ラウンド / 同点は再投票</span>
+                </div>
+                <div class="button-row">
+                  <div class="button">招待リンクをコピー</div>
+                  <div class="button primary">ゲーム開始</div>
+                </div>
+              </div>
+              <div class="panel subtle">
+                ホスト以外には「開始を待っています」を表示。途中参加を許すかは別途要検討。
+              </div>
+            </div>
+            <p class="notes">
+              ロビーでは情報量を絞り、人数と開始条件が分かることを最優先にしています。
+            </p>
+          </article>
+
+          <article class="screen" id="screen-3">
+            <div class="screen-title">
+              <h3>3. ラウンド開始 / 配牌</h3>
+              <span class="chip">ラウンド導入</span>
+            </div>
+            <div class="phone">
+              <div class="status"><span>第1ラウンド / 全3ラウンド</span><span>あなたは 3番手</span></div>
+              <div class="topbar">
+                <small>東一局</small>
+                <strong>配牌完了</strong>
+              </div>
+              <div class="panel stack">
+                <div class="score">
+                  <span>手番順</span>
+                  <span>たなか → さとう → あなた → みき</span>
+                </div>
+                <div class="score">
+                  <span>このラウンドの目標</span>
+                  <span>一番笑わせる造語を作る</span>
+                </div>
+                <div class="tiles">
+                  <div class="tile">爆</div>
+                  <div class="tile">寝</div>
+                  <div class="tile">社長</div>
+                  <div class="tile">現場猫</div>
+                  <div class="tile">ラーメン</div>
+                  <div class="tile">汁</div>
+                  <div class="tile">薄</div>
+                  <div class="tile">侍</div>
+                  <div class="tile">雲</div>
+                  <div class="tile">謝罪会見</div>
+                </div>
+                <div class="button-row single">
+                  <div class="button primary">この手で始める</div>
+                </div>
+              </div>
+              <div class="panel subtle">
+                まずは「今持っている 10 枚」が見えることが最重要。少し長めの語でも牌の中で折り返して読める前提です。
+              </div>
+            </div>
+            <p class="notes">
+              ここで手牌の面白さを感じてもらうので、牌 UI はワイヤー段階でも本作らしさを出す価値があります。
+            </p>
+          </article>
+
+          <article class="screen" id="screen-4">
+            <div class="screen-title">
+              <h3>4. 自分の手番 / 造語を作る</h3>
+              <span class="chip">主操作</span>
+            </div>
+            <div class="phone">
+              <div class="status"><span>あなたの手番</span><span>残り時間 45秒</span></div>
+              <div class="topbar">
+                <small>東一局 / 3番手</small>
+                <strong>2枚を選んで造語を作る</strong>
+              </div>
+              <div class="phrase-preview">
+                <strong>現在の組み合わせ</strong>
+                <span class="font-broadcast">現場猫<br />謝罪会見</span>
+                <em>自動改行に任せず、提出前に見た目を決めてから出す想定</em>
+              </div>
+              <div class="format-panel">
+                <h4>改行位置</h4>
+                <div class="option-row">
+                  <div class="option-pill">自動で縮小</div>
+                  <div class="option-pill active">牌の境目で改行</div>
+                  <div class="option-pill">中央で改行</div>
+                  <div class="option-pill">1行で見せる</div>
+                </div>
+              </div>
+              <div class="format-panel">
+                <h4>書体</h4>
+                <div class="option-row">
+                  <div class="option-pill">勝負明朝</div>
+                  <div class="option-pill active">実況ゴシック</div>
+                  <div class="option-pill">ゆるポップ</div>
+                </div>
+              </div>
+              <div class="tiles">
+                <div class="tile">爆</div>
+                <div class="tile">寝</div>
+                <div class="tile">社長</div>
+                <div class="tile selected">現場猫</div>
+                <div class="tile">ラーメン</div>
+                <div class="tile">汁</div>
+                <div class="tile">薄</div>
+                <div class="tile">侍</div>
+                <div class="tile">雲</div>
+                <div class="tile selected">謝罪会見</div>
+              </div>
+              <div class="button-row">
+                <div class="button">順番を入れ替える</div>
+                <div class="button primary">この見た目で提出</div>
+              </div>
+              <div class="panel subtle">
+                改行位置と書体は、自由編集ではなく少数プリセットから選ぶ形が実装しやすく、面白さも守りやすいです。
+              </div>
+            </div>
+            <p class="notes">
+              改行位置の完全自由編集も可能ですが、まずは「自動縮小 / 境目改行 / 中央改行 / 1行」の 4 択くらいが現実的です。
+            </p>
+          </article>
+
+          <article class="screen" id="screen-5">
+            <div class="screen-title">
+              <h3>5. 提出演出 / 場に公開</h3>
+              <span class="chip">見せ場</span>
+            </div>
+            <div class="phone">
+              <div class="status"><span>提出完了</span><span>次は みき の手番</span></div>
+              <div class="topbar">
+                <small>東一局 / あなたの出牌</small>
+                <strong>あなたの造語が卓に公開された</strong>
+              </div>
+              <div class="popup-stage">
+                <div class="board">
+                  <div class="choice">
+                    <strong>たなか</strong>
+                    <div class="word">爆ラーメン</div>
+                  </div>
+                  <div class="choice">
+                    <strong>さとう</strong>
+                    <div class="word">寝社長</div>
+                  </div>
+                  <div class="choice">
+                    <strong>あなた</strong>
+                    <div class="word">現場猫<br />謝罪会見</div>
+                  </div>
+                  <div class="choice locked">
+                    <strong>みき</strong>
+                    <div class="word">未提出</div>
+                  </div>
+                </div>
+                <div class="panel">
+                  <div class="score">
+                    <span>進行状況</span>
+                    <span>3 / 4人 が提出済み</span>
+                  </div>
+                  <div class="score">
+                    <span>自分の残り手牌</span>
+                    <span>8枚</span>
+                  </div>
+                </div>
+                <div class="popup-card">
+                  <strong>あなたの一打</strong>
+                  <div class="word font-broadcast">現場猫<br />謝罪会見</div>
+                  <div class="meta">提出した瞬間、画面中央に一度だけ大きくポップアップ表示。<br />改行位置: 牌の境目 / 書体: 実況ゴシック</div>
+                </div>
+              </div>
+            </div>
+            <p class="notes">
+              提出時は、場の一覧に入る前に中央ポップアップで一発見せる形が相性よさそうです。これなら「今の一語」の面白さを潰しにくいです。
+            </p>
+          </article>
+
+          <article class="screen" id="screen-6">
+            <div class="screen-title">
+              <h3>6. 投票</h3>
+              <span class="chip">重要画面</span>
+            </div>
+            <div class="phone">
+              <div class="status"><span>第1ラウンド投票</span><span>自分には投票不可</span></div>
+              <div class="topbar">
+                <small>東一局 終了</small>
+                <strong>一番おもしろい造語を選ぶ</strong>
+              </div>
+              <div class="board">
+                <div class="choice">
+                  <strong>たなか</strong>
+                  <div class="word">爆ラーメン</div>
+                  <div class="button-row">
+                    <div class="button primary">この語に投票</div>
+                  </div>
+                </div>
+                <div class="choice">
+                  <strong>さとう</strong>
+                  <div class="word">汁侍</div>
+                  <div class="button-row">
+                    <div class="button primary">この語に投票</div>
+                  </div>
+                </div>
+                <div class="choice locked">
+                  <strong>あなた</strong>
+                  <div class="word">現場猫謝罪会見</div>
+                  <div class="tag">自分の語</div>
+                </div>
+                <div class="choice">
+                  <strong>みき</strong>
+                  <div class="word">雲社長</div>
+                  <div class="button-row">
+                    <div class="button primary">この語に投票</div>
+                  </div>
+                </div>
+              </div>
+              <div class="panel subtle">
+                ラウンドの笑いどころなので、候補一覧でも造語をできるだけ大きく見せる。投票締切は全員完了ベースが自然です。
+              </div>
+            </div>
+            <p class="notes">
+              票数を投票前に見せない前提です。匿名投票にするか記名投票にするかでも見せ方が少し変わります。
+            </p>
+          </article>
+
+          <article class="screen" id="screen-7">
+            <div class="screen-title">
+              <h3>7. 再投票 / ホスト判定</h3>
+              <span class="chip">分岐</span>
+            </div>
+            <div class="phone">
+              <div class="status"><span>同点</span><span>再投票 1 / 1</span></div>
+              <div class="topbar">
+                <small>東一局 同点決着</small>
+                <strong>残った 2 語から再投票</strong>
+              </div>
+              <div class="board">
+                <div class="choice">
+                  <strong>たなか</strong>
+                  <div class="word">爆ラーメン</div>
+                  <div class="button-row">
+                    <div class="button primary">再投票する</div>
+                  </div>
+                </div>
+                <div class="choice">
+                  <strong>みき</strong>
+                  <div class="word">現場猫謝罪会見</div>
+                  <div class="button-row">
+                    <div class="button primary">再投票する</div>
+                  </div>
+                </div>
+              </div>
+              <div class="panel stack">
+                <div class="score">
+                  <span>再投票でも同点の場合</span>
+                  <span>ホストが最終選択</span>
+                </div>
+                <div class="button-row">
+                  <div class="button">ホスト判定を待つ</div>
+                  <div class="button primary">ホストが選ぶ</div>
+                </div>
+              </div>
+            </div>
+            <p class="notes">
+              普段は出ない画面ですが、分岐 UI を先に決めておくと実装で迷いません。
+            </p>
+          </article>
+
+          <article class="screen" id="screen-8">
+            <div class="screen-title">
+              <h3>8. ラウンド結果</h3>
+              <span class="chip">反映</span>
+            </div>
+            <div class="phone">
+              <div class="status"><span>第1ラウンド結果</span><span>残り 2 ラウンド</span></div>
+              <div class="topbar">
+                <small>東一局 勝利語</small>
+                <strong>現場猫謝罪会見</strong>
+              </div>
+              <div class="panel stack">
+                <div class="result primary">
+                  <strong>第1ラウンドの勝利語</strong>
+                  <div class="word">現場猫謝罪会見</div>
+                  <p class="subtle">持ち主: あなた / 2票獲得 / 最終投票候補に残る</p>
+                </div>
+                <div class="score">
+                  <span>持ち主</span>
+                  <span>あなた</span>
+                </div>
+                <div class="score">
+                  <span>得票</span>
+                  <span>2票 / 再投票なし</span>
+                </div>
+                <div class="button-row">
+                  <div class="button">詳細を見る</div>
+                  <div class="button primary">次のラウンドへ</div>
+                </div>
+              </div>
+            </div>
+            <p class="notes">
+              ここでは「誰が勝ったか」よりも「どの造語が勝ったか」を主役にします。持ち主情報はその下に置く想定です。
+            </p>
+          </article>
+
+          <article class="screen" id="screen-9">
+            <div class="screen-title">
+              <h3>9. 最終投票</h3>
+              <span class="chip">試合終盤</span>
+            </div>
+            <div class="phone">
+              <div class="status"><span>最終投票</span><span>3語から選択</span></div>
+              <div class="topbar">
+                <small>決勝卓</small>
+                <strong>3 ラウンド勝者で最終投票</strong>
+              </div>
+              <div class="stack">
+                <div class="choice">
+                  <strong>第1ラウンド勝者 / たなか</strong>
+                  <div class="word">爆ラーメン</div>
+                  <div class="button-row">
+                    <div class="button primary">この語に投票</div>
+                  </div>
+                </div>
+                <div class="choice">
+                  <strong>第2ラウンド勝者 / あなた</strong>
+                  <div class="word">現場猫謝罪会見</div>
+                  <div class="button-row">
+                    <div class="button primary">この語に投票</div>
+                  </div>
+                </div>
+                <div class="choice">
+                  <strong>第3ラウンド勝者 / みき</strong>
+                  <div class="word">薄汁侍</div>
+                  <div class="button-row">
+                    <div class="button primary">この語に投票</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <p class="notes">
+              ルール上のクライマックスです。「この試合で一番おもしろい語」を選んでいる感覚が出るよう、1 画面 1 目的に寄せています。
+            </p>
+          </article>
+
+          <article class="screen" id="screen-10">
+            <div class="screen-title">
+              <h3>10. 最終結果</h3>
+              <span class="chip">締め</span>
+            </div>
+            <div class="phone">
+              <div class="status"><span>対局終了</span><span>共有可能</span></div>
+              <div class="topbar">
+                <small>本日の役満ワード</small>
+                <strong>現場猫謝罪会見</strong>
+              </div>
+              <div class="panel stack">
+                <div class="result primary">
+                  <strong>総合優勝語</strong>
+                  <div class="word">現場猫謝罪会見</div>
+                  <p class="subtle">持ち主: あなた / 最終投票で最多票を獲得</p>
+                </div>
+                <div class="score">
+                  <span>総合優勝</span>
+                  <span>あなた</span>
+                </div>
+                <div class="score">
+                  <span>第1ラウンド勝者</span>
+                  <span>爆ラーメン / たなか</span>
+                </div>
+                <div class="score">
+                  <span>第2ラウンド勝者</span>
+                  <span>現場猫謝罪会見 / あなた</span>
+                </div>
+                <div class="score">
+                  <span>第3ラウンド勝者</span>
+                  <span>薄汁侍 / みき</span>
+                </div>
+                <div class="button-row">
+                  <div class="button">結果画像を共有</div>
+                  <div class="button primary">同じ卓で再戦</div>
+                </div>
+              </div>
+              <div class="panel subtle">
+                最終結果でも主役は人名より造語。まず優勝語を大きく見せ、そのあとで持ち主と各ラウンド勝利語を並べます。
+              </div>
+            </div>
+            <p class="notes">
+              最終結果画面は、勝者表示だけでなく「もう一回やろう」を押したくなる余韻も重要です。
+            </p>
+          </article>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

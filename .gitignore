@@ -1,0 +1,12 @@
+.DS_Store
+
+# Generated review and browser-check screenshots
+.tmp_*.png
+omojan_*.png
+
+# Playwright output
+test-results/
+
+# Unrelated local export artifacts
+offline_cv_*.csv
+offline_cv_*.json

@@ -1,0 +1,3299 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>おもじゃん フロープロトタイプ</title>
+    <style>
+      :root {
+        --paper: #f6efdb;
+        --paper-deep: #efe3bf;
+        --ink: #1f1812;
+        --green: #24452f;
+        --green-soft: #e3eadf;
+        --gold: #b28a32;
+        --red: #b84431;
+        --red-soft: #fae2da;
+        --line: rgba(118, 89, 63, 0.24);
+        --muted: #736454;
+        --shadow: 0 18px 38px rgba(38, 27, 18, 0.14);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        font-family: "Hiragino Sans", "Yu Gothic", sans-serif;
+        background:
+          radial-gradient(circle at top, rgba(255, 255, 255, 0.7), transparent 34%),
+          repeating-linear-gradient(
+            -35deg,
+            rgba(102, 86, 58, 0.04) 0,
+            rgba(102, 86, 58, 0.04) 2px,
+            transparent 2px,
+            transparent 15px
+          ),
+          linear-gradient(180deg, #f7f1df, #ecdfb7);
+      }
+
+      main {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 18px 18px 56px;
+      }
+
+      .page-shell {
+        display: grid;
+        width: 100%;
+        justify-items: center;
+        gap: 14px;
+      }
+
+      .page-header {
+        text-align: center;
+      }
+
+      .page-header h1 {
+        margin: 0;
+        font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+        font-size: clamp(28px, 4vw, 42px);
+        line-height: 1.08;
+        color: var(--green);
+      }
+
+      .page-header p {
+        margin: 6px 0 0;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .phone-shell {
+        display: flex;
+        width: 100%;
+        justify-content: center;
+      }
+
+      .phone {
+        width: min(100%, 420px);
+        max-width: 420px;
+        min-height: 860px;
+        padding: 16px;
+        border-radius: 34px;
+        border: 3px solid #21170f;
+        background:
+          linear-gradient(180deg, rgba(245, 235, 209, 0.98), rgba(253, 247, 235, 0.98)),
+          var(--paper);
+        box-shadow: 0 20px 40px rgba(29, 22, 15, 0.22);
+      }
+
+      .status {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .topbar {
+        margin-top: 10px;
+        padding: 10px 12px;
+        border-radius: 14px;
+        background: linear-gradient(180deg, rgba(36, 69, 47, 0.98), rgba(22, 45, 31, 0.98));
+        color: #f6eddc;
+      }
+
+      .topbar.is-hidden {
+        display: none;
+      }
+
+      .screen-meta-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+
+      .topbar small {
+        display: block;
+        font-size: 12px;
+        line-height: 1.35;
+        color: rgba(246, 237, 220, 0.74);
+      }
+
+      .topbar strong {
+        display: block;
+        margin-top: 2px;
+        font-size: 13px;
+        line-height: 1.35;
+      }
+
+      .topbar small:empty,
+      .topbar strong:empty {
+        display: none;
+      }
+
+      .screen-card {
+        margin-top: 14px;
+        padding: 16px;
+        border-radius: 22px;
+        border: 1px solid rgba(118, 89, 63, 0.18);
+        background: rgba(255, 255, 255, 0.42);
+      }
+
+      .screen-card h3 {
+        margin: 0;
+        font-size: 18px;
+        color: var(--green);
+      }
+
+      .screen-lead {
+        margin-top: 8px;
+        color: var(--muted);
+        line-height: 1.65;
+        font-size: 14px;
+      }
+
+      .room-code {
+        display: inline-flex;
+        margin-top: 14px;
+        padding: 8px 12px;
+        border-radius: 999px;
+        border: 1px solid rgba(184, 138, 50, 0.36);
+        background: rgba(255, 250, 238, 0.96);
+        color: var(--green);
+        font-weight: 700;
+        letter-spacing: 0.08em;
+      }
+
+      .player-list {
+        display: grid;
+        gap: 10px;
+        margin-top: 16px;
+      }
+
+      .player-item {
+        display: flex;
+        gap: 14px;
+        align-items: flex-start;
+        justify-content: space-between;
+        padding: 14px 16px;
+        border-radius: 18px;
+        border: 1px solid rgba(118, 89, 63, 0.18);
+        background: rgba(255, 255, 255, 0.7);
+      }
+
+      .player-item strong {
+        display: block;
+        margin-top: 10px;
+        font-size: 16px;
+      }
+
+      .player-meta {
+        display: block;
+        font-size: 12px;
+        color: var(--muted);
+        letter-spacing: 0.03em;
+      }
+
+      .seat-chip {
+        display: inline-flex;
+        padding: 5px 10px;
+        border-radius: 999px;
+        background: rgba(36, 69, 47, 0.08);
+        color: var(--green);
+        font-size: 12px;
+      }
+
+      .order-picker {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .order-chip {
+        appearance: none;
+        border: 1px solid rgba(118, 89, 63, 0.2);
+        border-radius: 999px;
+        padding: 9px 12px;
+        background: rgba(255, 255, 255, 0.72);
+        color: var(--ink);
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .order-chip.active {
+        border-color: rgba(184, 68, 49, 0.32);
+        background: rgba(248, 220, 210, 0.76);
+        color: #8d2d1d;
+      }
+
+      .turn-order-list {
+        display: grid;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .turn-order-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 12px;
+        border-radius: 16px;
+        border: 1px solid rgba(118, 89, 63, 0.18);
+        background: rgba(255, 255, 255, 0.68);
+      }
+
+      .turn-order-item.is-you {
+        border-color: rgba(184, 138, 50, 0.34);
+        background: rgba(255, 250, 238, 0.9);
+      }
+
+      .turn-order-num {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 26px;
+        height: 26px;
+        border-radius: 999px;
+        background: rgba(36, 69, 47, 0.08);
+        color: var(--green);
+        font-size: 12px;
+        font-weight: 800;
+        flex-shrink: 0;
+      }
+
+      .turn-order-item strong {
+        font-size: 14px;
+      }
+
+      .summary-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .summary-head h4 {
+        margin: 0;
+      }
+
+      .summary-link {
+        appearance: none;
+        border: 0;
+        background: none;
+        color: var(--red);
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
+        padding: 0;
+      }
+
+      .control-block,
+      .board-panel,
+      .vote-panel,
+      .result-panel,
+      .summary-panel {
+        margin-top: 14px;
+        padding: 14px;
+        border-radius: 18px;
+        border: 1px solid rgba(118, 89, 63, 0.18);
+        background: rgba(255, 255, 255, 0.6);
+      }
+
+      .control-block h4,
+      .board-panel h4,
+      .vote-panel h4,
+      .result-panel h4,
+      .summary-panel h4 {
+        margin: 0;
+        font-size: 14px;
+        color: var(--green);
+      }
+
+      .button-row {
+        display: flex;
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      .button-row .btn,
+      .phone-action-row .btn,
+      .popup-actions .btn {
+        flex: 1;
+      }
+
+      .btn {
+        appearance: none;
+        border: 0;
+        border-radius: 16px;
+        padding: 14px 16px;
+        font-size: 15px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: transform 120ms ease, opacity 120ms ease;
+      }
+
+      .btn:hover {
+        transform: translateY(-1px);
+      }
+
+      .btn.primary {
+        background: linear-gradient(180deg, #c7523d, #b0402d);
+        color: #fff9f3;
+      }
+
+      .btn.subtle {
+        background: linear-gradient(180deg, rgba(255, 254, 249, 1), rgba(237, 231, 213, 0.98));
+        color: var(--green);
+        border: 1px solid rgba(118, 89, 63, 0.22);
+      }
+
+      .btn.ghost {
+        background: rgba(255, 255, 255, 0.55);
+        color: var(--muted);
+        border: 1px solid rgba(118, 89, 63, 0.18);
+      }
+
+      .btn:disabled {
+        opacity: 0.42;
+        cursor: default;
+        transform: none;
+      }
+
+      .phrase-preview {
+        margin-top: 14px;
+        padding: 18px 8px 20px;
+        border-radius: 20px;
+        border: 1px solid rgba(184, 146, 62, 0.42);
+        background: linear-gradient(180deg, rgba(255, 249, 237, 0.98), rgba(248, 238, 210, 0.94));
+        text-align: center;
+      }
+
+      .phrase-preview strong {
+        display: block;
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+      }
+
+      .preview-word,
+      .popup-word,
+      .measure-word {
+        min-height: 140px;
+        margin-top: 10px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        font-size: clamp(36px, 8vw, 58px);
+        line-height: 0.94;
+        color: var(--ink);
+        overflow: hidden;
+      }
+
+      .popup-word {
+        margin-top: 14px;
+      }
+
+      .measure-word {
+        position: absolute;
+        left: -9999px;
+        top: -9999px;
+        width: 320px;
+        height: 140px;
+        pointer-events: none;
+        visibility: hidden;
+      }
+
+      .word-line {
+        display: block;
+        max-width: 100%;
+        white-space: nowrap;
+      }
+
+      .font-classic {
+        font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+      }
+
+      .font-broadcast {
+        font-family: "Hiragino Sans", "Yu Gothic", sans-serif;
+        font-weight: 800;
+        letter-spacing: -0.04em;
+      }
+
+      .font-playful {
+        font-family: "Marker Felt", "Hiragino Maru Gothic ProN", "Yu Gothic", sans-serif;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+      }
+
+      .font-heavy {
+        font-family: "Arial Black", "Helvetica Neue", "Hiragino Sans", sans-serif;
+        font-weight: 900;
+        letter-spacing: -0.05em;
+      }
+
+      .font-round {
+        font-family: "Hiragino Maru Gothic ProN", "Yu Gothic", sans-serif;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+      }
+
+      .chip-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .chip {
+        appearance: none;
+        border: 1px solid rgba(118, 89, 63, 0.28);
+        border-radius: 999px;
+        background: rgba(255, 248, 234, 0.96);
+        padding: 8px 12px;
+        font-size: 12px;
+        line-height: 1.2;
+        cursor: pointer;
+      }
+
+      .chip.active {
+        border-color: rgba(184, 68, 49, 0.34);
+        background: rgba(248, 220, 210, 0.78);
+        color: var(--red);
+      }
+
+      .break-panel {
+        margin-top: 12px;
+        padding: 12px;
+        border-radius: 16px;
+        border: 1px solid rgba(118, 89, 63, 0.18);
+        background: rgba(255, 255, 255, 0.62);
+      }
+
+      .break-panel p {
+        margin: 0;
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .break-track {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 10px;
+      }
+
+      .char-box {
+        min-width: 30px;
+        padding: 8px 5px;
+        border-radius: 10px;
+        border: 1px solid rgba(118, 89, 63, 0.18);
+        background: rgba(255, 248, 234, 0.94);
+        text-align: center;
+        font-size: 16px;
+      }
+
+      .break-dot {
+        position: relative;
+        width: 20px;
+        height: 20px;
+        border-radius: 6px;
+        border: 1px solid rgba(118, 89, 63, 0.32);
+        background: rgba(255, 248, 234, 0.98);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+      }
+
+      .break-dot.active {
+        border-color: rgba(36, 69, 47, 0.7);
+        background: rgba(36, 69, 47, 0.12);
+      }
+
+      .break-dot.active::after {
+        content: "";
+        position: absolute;
+        left: 5px;
+        top: 1px;
+        width: 6px;
+        height: 12px;
+        border-right: 3px solid var(--green);
+        border-bottom: 3px solid var(--green);
+        transform: rotate(40deg);
+      }
+
+      .tiles {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 8px;
+        margin-top: 14px;
+      }
+
+      .tile {
+        min-height: 82px;
+        padding: 8px 6px;
+        border-radius: 14px;
+        border: 1px solid rgba(118, 89, 63, 0.34);
+        background: linear-gradient(180deg, #fffdf8, #efe5cd);
+        text-align: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        line-height: 1.18;
+        overflow-wrap: anywhere;
+        word-break: keep-all;
+        cursor: pointer;
+      }
+
+      .tile.selected {
+        border: 2px solid var(--red);
+        background: linear-gradient(180deg, #fff7eb, #f6d3c1);
+      }
+
+      .tile.used {
+        opacity: 0.32;
+        cursor: default;
+        filter: grayscale(0.2);
+      }
+
+      .phone-action-row {
+        display: flex;
+        gap: 10px;
+        margin-top: 14px;
+      }
+
+      .helper {
+        margin-top: 10px;
+        font-size: 13px;
+        color: var(--muted);
+        line-height: 1.65;
+      }
+
+      .board {
+        display: grid;
+        gap: 10px;
+      }
+
+      .board-card {
+        padding: 14px;
+        border-radius: 18px;
+        border: 1px solid rgba(118, 89, 63, 0.2);
+        background: rgba(255, 255, 255, 0.62);
+      }
+
+      .board-card strong {
+        display: block;
+        font-size: 13px;
+        color: var(--green);
+      }
+
+      .board-word {
+        margin-top: 8px;
+        font-size: 30px;
+        line-height: 1.04;
+        word-break: keep-all;
+        overflow-wrap: anywhere;
+      }
+
+      .popup {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        padding: 18px;
+        background: rgba(23, 18, 13, 0.28);
+        z-index: 40;
+        opacity: 0;
+        pointer-events: none;
+        overflow: auto;
+        transition: opacity 120ms linear;
+      }
+
+      .popup.is-open {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      .popup-card3d {
+        position: relative;
+        width: min(calc(100vw - 44px), 344px);
+        min-height: 260px;
+        margin: auto;
+        transform-style: preserve-3d;
+      }
+
+      .popup-face {
+        position: absolute;
+        inset: 0;
+        padding: 20px 8px 18px;
+        border-radius: 22px;
+        backface-visibility: hidden;
+        -webkit-backface-visibility: hidden;
+        box-shadow:
+          0 0 0 4px rgba(184, 146, 62, 0.42),
+          0 22px 40px rgba(29, 22, 15, 0.2);
+      }
+
+      .popup-front {
+        border: 3px solid rgba(36, 69, 47, 0.92);
+        background: linear-gradient(180deg, rgba(255, 255, 253, 0.99), rgba(246, 239, 224, 0.99));
+        text-align: center;
+        opacity: 0;
+        transform: rotateY(-92deg);
+        isolation: isolate;
+      }
+
+      .popup-front::before {
+        content: "";
+        position: absolute;
+        inset: 8px;
+        border-radius: 14px;
+        border: 1px solid rgba(184, 146, 62, 0.52);
+        pointer-events: none;
+        z-index: 0;
+      }
+
+      .popup-front > * {
+        position: relative;
+        z-index: 1;
+      }
+
+      .popup-front.is-champion {
+        background:
+          radial-gradient(circle at top, rgba(255, 244, 201, 0.9), transparent 34%),
+          linear-gradient(180deg, rgba(255, 255, 253, 0.99), rgba(250, 239, 210, 0.99));
+        box-shadow:
+          0 0 0 4px rgba(212, 168, 62, 0.4),
+          0 0 26px rgba(212, 168, 62, 0.24),
+          0 24px 42px rgba(29, 22, 15, 0.24);
+      }
+
+      .popup-front.is-champion::after {
+        content: "";
+        position: absolute;
+        inset: -18px;
+        background:
+          conic-gradient(
+            from 0deg,
+            rgba(212, 168, 62, 0.18),
+            transparent 18%,
+            rgba(212, 168, 62, 0.14) 32%,
+            transparent 46%,
+            rgba(212, 168, 62, 0.16) 62%,
+            transparent 78%,
+            rgba(212, 168, 62, 0.18)
+          );
+        mask: radial-gradient(circle, transparent 57%, black 58%);
+        -webkit-mask: radial-gradient(circle, transparent 57%, black 58%);
+        pointer-events: none;
+        z-index: -1;
+      }
+
+      .popup-back {
+        border: 3px solid rgba(30, 59, 43, 0.98);
+        background:
+          radial-gradient(circle at top, rgba(255, 255, 255, 0.08), transparent 34%),
+          repeating-linear-gradient(
+            45deg,
+            rgba(255, 255, 255, 0.06) 0,
+            rgba(255, 255, 255, 0.06) 8px,
+            rgba(0, 0, 0, 0.02) 8px,
+            rgba(0, 0, 0, 0.02) 16px
+          ),
+          linear-gradient(180deg, rgba(42, 77, 57, 1), rgba(24, 48, 33, 0.98));
+        opacity: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .popup-back::before {
+        content: "";
+        position: absolute;
+        inset: 8px;
+        border-radius: 14px;
+        border: 1px solid rgba(184, 146, 62, 0.42);
+      }
+
+      .popup-back-mark {
+        width: 72%;
+        aspect-ratio: 1 / 1;
+        border-radius: 24px;
+        border: 2px solid rgba(184, 146, 62, 0.5);
+        position: relative;
+      }
+
+      .popup-back-mark::before,
+      .popup-back-mark::after {
+        content: "";
+        position: absolute;
+        border-radius: 999px;
+        border: 2px solid rgba(184, 146, 62, 0.72);
+      }
+
+      .popup-back-mark::before {
+        inset: 22% 34%;
+      }
+
+      .popup-back-mark::after {
+        inset: 34% 22%;
+      }
+
+      .popup.is-open .popup-back {
+        opacity: 1;
+      }
+
+      .popup.is-turning .popup-back {
+        animation: popup-back-flip 170ms linear forwards;
+      }
+
+      .popup.is-turning .popup-front {
+        animation: popup-front-flip 170ms linear 140ms forwards;
+      }
+
+      @keyframes popup-back-flip {
+        from {
+          opacity: 1;
+          transform: rotateY(0deg);
+        }
+        to {
+          opacity: 0;
+          transform: rotateY(90deg);
+        }
+      }
+
+      @keyframes popup-front-flip {
+        from {
+          opacity: 0;
+          transform: rotateY(-90deg);
+        }
+        to {
+          opacity: 1;
+          transform: rotateY(0deg);
+        }
+      }
+
+      .popup-badge {
+        display: inline-flex;
+        padding: 6px 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(36, 69, 47, 0.18);
+        background: rgba(36, 69, 47, 0.06);
+        font-size: 12px;
+        color: var(--green);
+      }
+
+      .popup-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 14px;
+      }
+
+      .champion-popup {
+        z-index: 42;
+      }
+
+      .champion-popup .popup-card3d {
+        width: min(calc(100vw - 36px), 360px);
+        min-height: 294px;
+      }
+
+      .champion-popup .popup-front.is-champion {
+        overflow: hidden;
+        background:
+          radial-gradient(circle at 50% -8%, rgba(255, 248, 221, 1), rgba(255, 245, 210, 0.92) 22%, transparent 52%),
+          linear-gradient(180deg, rgba(255, 255, 253, 0.995), rgba(252, 241, 211, 0.995));
+        box-shadow:
+          0 0 0 4px rgba(228, 184, 72, 0.48),
+          0 0 44px rgba(228, 184, 72, 0.38),
+          0 28px 48px rgba(29, 22, 15, 0.28);
+      }
+
+      .champion-popup .popup-front.is-champion::after {
+        inset: -28px;
+        background:
+          conic-gradient(
+            from 0deg,
+            rgba(232, 189, 73, 0.32),
+            transparent 13%,
+            rgba(232, 189, 73, 0.18) 24%,
+            transparent 37%,
+            rgba(232, 189, 73, 0.24) 53%,
+            transparent 66%,
+            rgba(232, 189, 73, 0.18) 79%,
+            transparent 90%,
+            rgba(232, 189, 73, 0.32)
+          );
+        animation: champion-burst 2.6s ease-in-out infinite;
+      }
+
+      .champion-popup .popup-front.is-champion::before {
+        border-color: rgba(228, 184, 72, 0.7);
+      }
+
+      .champion-popup .popup-badge {
+        border-color: rgba(191, 143, 39, 0.4);
+        background: linear-gradient(180deg, rgba(255, 243, 196, 0.96), rgba(242, 214, 132, 0.94));
+        color: #6d4a07;
+        font-weight: 800;
+      }
+
+      .champion-popup .result-owner {
+        color: #5d481a;
+        font-weight: 800;
+      }
+
+      .champion-popup .popup-front.is-champion {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        padding: 16px 12px 18px;
+      }
+
+      .champion-popup-main {
+        display: grid;
+        align-content: center;
+        justify-items: center;
+        gap: 14px;
+        flex: 1;
+        min-height: 210px;
+        padding: 6px 10px 0;
+      }
+
+      .champion-word-block {
+        display: grid;
+        justify-items: center;
+        align-content: center;
+        gap: 10px;
+        width: 100%;
+        flex: 1;
+      }
+
+      .champion-popup .final-champion {
+        margin-top: 0;
+        font-size: clamp(42px, 10.4vw, 58px);
+      }
+
+      .champion-popup .popup-actions {
+        width: 100%;
+        margin-top: 0;
+        align-self: stretch;
+      }
+
+      .champion-popup .popup-actions .btn {
+        width: 100%;
+      }
+
+      @keyframes champion-burst {
+        0%,
+        100% {
+          opacity: 0.9;
+          transform: scale(0.98);
+        }
+        50% {
+          opacity: 1;
+          transform: scale(1.02);
+        }
+      }
+
+      .wait-stack {
+        display: grid;
+        gap: 12px;
+      }
+
+      .wait-note {
+        margin: 0;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.6;
+      }
+
+      .wait-status-grid {
+        display: grid;
+        gap: 10px;
+      }
+
+      .wait-status {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 12px 14px;
+        border-radius: 16px;
+        border: 1px solid rgba(118, 89, 63, 0.18);
+        background: rgba(255, 255, 255, 0.72);
+      }
+
+      .wait-status strong {
+        font-size: 15px;
+      }
+
+      .wait-status span {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .wait-status.is-done {
+        border-color: rgba(184, 138, 50, 0.32);
+        background: rgba(255, 250, 238, 0.92);
+      }
+
+      .wait-status.is-current {
+        border-color: rgba(184, 68, 49, 0.24);
+        background: rgba(248, 220, 210, 0.54);
+      }
+
+      .vote-grid,
+      .final-grid,
+      .winner-list {
+        display: grid;
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      .vote-card,
+      .winner-card,
+      .history-card {
+        padding: 14px;
+        border-radius: 18px;
+        border: 1px solid rgba(118, 89, 63, 0.2);
+        background: rgba(255, 255, 255, 0.74);
+      }
+
+      .vote-card,
+      .winner-card {
+        width: 100%;
+        text-align: left;
+        cursor: pointer;
+      }
+
+      .vote-card.selected,
+      .winner-card.selected {
+        border-color: rgba(184, 68, 49, 0.34);
+        background: rgba(248, 220, 210, 0.68);
+      }
+
+      .vote-card.disabled {
+        opacity: 0.56;
+      }
+
+      .winner-card.disabled {
+        opacity: 0.56;
+        cursor: default;
+      }
+
+      .vote-label,
+      .winner-label {
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .vote-phrase,
+      .winner-phrase,
+      .result-phrase,
+      .final-champion {
+        margin-top: 8px;
+        font-size: 34px;
+        line-height: 1.02;
+        word-break: keep-all;
+        overflow-wrap: anywhere;
+      }
+
+      .vote-phrase.small,
+      .winner-phrase.small {
+        font-size: 28px;
+      }
+
+      .tally-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      .tally-card {
+        padding: 12px;
+        border-radius: 16px;
+        border: 1px solid rgba(118, 89, 63, 0.18);
+        background: rgba(255, 255, 255, 0.68);
+      }
+
+      .tally-card strong {
+        display: block;
+        color: var(--green);
+      }
+
+      .tally-card span {
+        display: block;
+        margin-top: 6px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .result-stage {
+        margin-top: 14px;
+        padding: 18px 16px;
+        border-radius: 20px;
+        border: 1px solid rgba(184, 146, 62, 0.42);
+        background: linear-gradient(180deg, rgba(255, 249, 237, 0.98), rgba(248, 238, 210, 0.94));
+        text-align: center;
+      }
+
+      .result-stage.is-champion {
+        background:
+          radial-gradient(circle at top, rgba(255, 244, 201, 0.78), transparent 32%),
+          linear-gradient(180deg, rgba(255, 249, 237, 0.99), rgba(246, 232, 192, 0.96));
+        box-shadow: inset 0 0 0 1px rgba(184, 146, 62, 0.24);
+      }
+
+      .result-stage small {
+        color: var(--muted);
+      }
+
+      .result-stage strong {
+        display: block;
+        margin-top: 10px;
+      }
+
+      .result-owner {
+        margin-top: 10px;
+        color: var(--muted);
+      }
+
+      .history-list {
+        display: grid;
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      .history-card strong {
+        display: block;
+        color: var(--green);
+      }
+
+      .history-card span {
+        display: block;
+        margin-top: 6px;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      .empty-note {
+        margin-top: 12px;
+        padding: 12px 14px;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.6);
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.6;
+      }
+
+      .history-overlay {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        padding: 18px;
+        background: rgba(23, 18, 13, 0.36);
+        z-index: 44;
+      }
+
+      .history-overlay-card {
+        width: min(calc(100vw - 36px), 360px);
+        max-height: min(calc(100vh - 48px), 720px);
+        overflow: auto;
+        padding: 16px;
+        border-radius: 24px;
+        border: 3px solid rgba(36, 69, 47, 0.92);
+        background: linear-gradient(180deg, rgba(255, 255, 253, 0.99), rgba(246, 239, 224, 0.99));
+        box-shadow:
+          0 0 0 4px rgba(184, 146, 62, 0.32),
+          0 22px 40px rgba(29, 22, 15, 0.2);
+      }
+
+      .history-overlay-card h3 {
+        margin: 0;
+        color: var(--green);
+        font-size: 20px;
+      }
+
+      .history-overlay-list {
+        display: grid;
+        gap: 10px;
+        margin-top: 14px;
+      }
+
+      .seat-note {
+        display: inline-flex;
+        padding: 5px 10px;
+        border-radius: 999px;
+        background: rgba(184, 138, 50, 0.12);
+        color: var(--gold);
+        font-size: 12px;
+      }
+
+      .round-note {
+        display: inline-flex;
+        padding: 5px 10px;
+        border-radius: 999px;
+        background: rgba(36, 69, 47, 0.08);
+        color: var(--green);
+        font-size: 12px;
+      }
+
+      @media (max-width: 1040px) {
+        .phone-shell {
+          justify-content: stretch;
+        }
+      }
+
+      @media (max-width: 720px) {
+        main {
+          padding: 18px 14px 44px;
+        }
+
+        .phone {
+          width: 100%;
+          min-height: 0;
+          border-radius: 28px;
+        }
+
+        .tiles {
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+
+        .vote-phrase,
+        .winner-phrase,
+        .result-phrase,
+        .final-champion {
+          font-size: 30px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="page-shell">
+        <header class="page-header">
+          <h1>おもじゃん</h1>
+          <p>1試合を通して触れる簡易プロトタイプ</p>
+        </header>
+        <section class="phone-shell">
+          <div class="phone">
+            <div class="status">
+              <span>フロー試作</span>
+              <span id="statusText">ロビー</span>
+            </div>
+            <div class="topbar">
+              <small id="topbarSmall"></small>
+              <strong id="topbarTitle"></strong>
+            </div>
+            <section id="app"></section>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <div id="measureWord" class="measure-word" aria-hidden="true"></div>
+
+    <script>
+      const gameHand = ["現場猫", "謝罪会見", "深夜テンション", "大反省", "ラーメン", "薄", "社長", "汁", "雲", "侍"];
+
+      const recentChampions = [
+        { phrase: "鍋社長", owner: "まつい" },
+        { phrase: "爆ラーメン", owner: "さとう" },
+        { phrase: "寝謝罪会見", owner: "みき" },
+        { phrase: "汁ラッシュ", owner: "やまだ" },
+        { phrase: "薄大反省", owner: "たなか" },
+        { phrase: "雲テンション", owner: "もり" },
+        { phrase: "社長ラーメン", owner: "あおき" }
+      ];
+
+      const players = [
+        { id: "host", name: "やまだ", seat: "ホスト" },
+        { id: "you", name: "あなた", seat: "参加中" },
+        { id: "tanaka", name: "たなか", seat: "参加中" },
+        { id: "miki", name: "みき", seat: "参加中" }
+      ];
+
+      const rounds = [
+        {
+          id: "round1",
+          wind: "東一局",
+          label: "ラウンド1",
+          defaultSelected: [0, 1],
+          defaultFont: "broadcast",
+          defaultLineMode: "boundary",
+          opponents: [
+            { id: "host", owner: "やまだ", phrase: "爆ラーメン" },
+            { id: "tanaka", owner: "たなか", phrase: "寝社長" },
+            { id: "miki", owner: "みき", phrase: "汁侍" }
+          ],
+          otherVotes: ["you", "you", "you"],
+          seedVoteId: "host"
+        },
+        {
+          id: "round2",
+          wind: "東二局",
+          label: "ラウンド2",
+          defaultSelected: [2, 3],
+          defaultFont: "heavy",
+          defaultLineMode: "single",
+          opponents: [
+            { id: "host", owner: "やまだ", phrase: "雲会見" },
+            { id: "tanaka", owner: "たなか", phrase: "薄ラーメン" },
+            { id: "miki", owner: "みき", phrase: "社長汁" }
+          ],
+          otherVotes: ["host", "tanaka", "tanaka"],
+          otherRevotes: ["host", "tanaka", "tanaka"],
+          seedVoteId: "tanaka",
+          tieDemoVoteId: "host",
+          tieDemoRevoteId: "host",
+          hostChoice: "tanaka"
+        },
+        {
+          id: "round3",
+          wind: "東三局",
+          label: "ラウンド3",
+          defaultSelected: [5, 4],
+          defaultFont: "round",
+          defaultLineMode: "manual",
+          defaultManualBreaks: [],
+          opponents: [
+            { id: "host", owner: "やまだ", phrase: "現場大洪水" },
+            { id: "tanaka", owner: "たなか", phrase: "深夜侍" },
+            { id: "miki", owner: "みき", phrase: "謝罪ラッシュ" }
+          ],
+          otherVotes: ["host", "host", "host"],
+          seedVoteId: "host"
+        }
+      ];
+
+      const finalVoteConfig = {
+        otherVotes: ["round2", "round3", "round3"],
+        otherRevotes: ["round2", "round3", "round3"],
+        seedVoteId: "round3",
+        tieDemoVoteId: "round2",
+        tieDemoRevoteId: "round2",
+        hostChoice: "round3"
+      };
+
+      const lineModes = [
+        { id: "boundary", label: "ワードの境目で改行" },
+        { id: "manual", label: "手動で改行" },
+        { id: "single", label: "1行で固定" }
+      ];
+
+      const fonts = [
+        { id: "classic", label: "勝負明朝", className: "font-classic" },
+        { id: "broadcast", label: "実況ゴシック", className: "font-broadcast" },
+        { id: "playful", label: "ゆるポップ", className: "font-playful" },
+        { id: "heavy", label: "極太ゴシック", className: "font-heavy" },
+        { id: "round", label: "丸ゴシック", className: "font-round" }
+      ];
+
+      function createRoundState(round) {
+        return {
+          selected: [...round.defaultSelected],
+          lineMode: round.defaultLineMode || "boundary",
+          manualBreaks: [...(round.defaultManualBreaks || [])],
+          font: round.defaultFont || "broadcast",
+          submission: null,
+          voteId: null,
+          revoteId: null,
+          hostPickId: null,
+          result: null
+        };
+      }
+
+      const state = {
+        screen: "lobby",
+        roundIndex: 0,
+        startPlayerId: "host",
+        submitTurnIndex: 0,
+        waitMode: "submit",
+        historyOpen: false,
+        popupOpen: false,
+        popupTurning: false,
+        popupTimer: 0,
+        finalVoteId: null,
+        finalRevoteId: null,
+        finalHostPickId: null,
+        finalResult: null,
+        finalPopupOpen: false,
+        finalPopupTurning: false,
+        finalPopupTimer: 0,
+        roundStates: rounds.map(createRoundState)
+      };
+
+      const els = {
+        statusText: document.getElementById("statusText"),
+        topbar: document.querySelector(".topbar"),
+        topbarSmall: document.getElementById("topbarSmall"),
+        topbarTitle: document.getElementById("topbarTitle"),
+        app: document.getElementById("app"),
+        measureWord: document.getElementById("measureWord")
+      };
+
+      function escapeHtml(value) {
+        return String(value)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#39;");
+      }
+
+      function getRoundState(index = state.roundIndex) {
+        return state.roundStates[index];
+      }
+
+      function getCurrentRound() {
+        return rounds[state.roundIndex];
+      }
+
+      function getOrderedPlayers() {
+        const startIndex = players.findIndex((player) => player.id === state.startPlayerId);
+        if (startIndex < 0) {
+          return [...players];
+        }
+        return [...players.slice(startIndex), ...players.slice(0, startIndex)];
+      }
+
+      function getCurrentSubmitPlayer() {
+        return getOrderedPlayers()[state.submitTurnIndex] || null;
+      }
+
+      function resetRoundFlow() {
+        state.submitTurnIndex = 0;
+        state.waitMode = "submit";
+        state.screen = getCurrentSubmitPlayer()?.id === "you" ? "submit" : "wait";
+      }
+
+      function getFontClass(fontId) {
+        return fonts.find((font) => font.id === fontId)?.className || "font-classic";
+      }
+
+      function getSelectedTiles(roundIndex = state.roundIndex) {
+        return getRoundState(roundIndex).selected.map((index) => gameHand[index]).filter(Boolean);
+      }
+
+      function getCombinedText(roundIndex = state.roundIndex) {
+        return getSelectedTiles(roundIndex).join("");
+      }
+
+      function getUsedTileIndexes(roundIndex = state.roundIndex) {
+        return state.roundStates
+          .slice(0, roundIndex)
+          .flatMap((roundState) => roundState.submission?.selectedIndices || []);
+      }
+
+      function getAvailableTileIndexes(roundIndex = state.roundIndex) {
+        const used = new Set(getUsedTileIndexes(roundIndex));
+        return gameHand.map((_, index) => index).filter((index) => !used.has(index));
+      }
+
+      function canEditCurrentRound(roundIndex = state.roundIndex) {
+        return state.screen === "submit" && !getRoundState(roundIndex).submission;
+      }
+
+      function prepareRoundDraft(roundIndex = state.roundIndex) {
+        const draft = getRoundState(roundIndex);
+        const available = getAvailableTileIndexes(roundIndex);
+        draft.selected = draft.selected.filter((index) => available.includes(index));
+
+        const fallbackOrder = [...rounds[roundIndex].defaultSelected, ...available];
+        fallbackOrder.forEach((index) => {
+          if (draft.selected.length < 2 && available.includes(index) && !draft.selected.includes(index)) {
+            draft.selected.push(index);
+          }
+        });
+
+        sanitizeManualBreaks(roundIndex);
+      }
+
+      function getBoundaryIndex(roundIndex = state.roundIndex) {
+        const [first] = getSelectedTiles(roundIndex);
+        return Array.from(first || "").length || 0;
+      }
+
+      function normalizeBreaks(breaks, length) {
+        return [...new Set(breaks)]
+          .filter((value) => Number.isInteger(value) && value > 0 && value < length)
+          .sort((a, b) => a - b);
+      }
+
+      function sanitizeManualBreaks(roundIndex = state.roundIndex) {
+        const draft = getRoundState(roundIndex);
+        const chars = Array.from(getCombinedText(roundIndex));
+        if (chars.length <= 1) {
+          draft.manualBreaks = [];
+          return;
+        }
+        draft.manualBreaks = normalizeBreaks(draft.manualBreaks, chars.length);
+      }
+
+      function applyWordMarkup(container, lines, fontClass, lineMode, fontSize) {
+        if (!container) {
+          return;
+        }
+        container.className =
+          container.id === "measureWord" ? "measure-word" : container.id === "popupWord" ? "popup-word" : "preview-word";
+        container.classList.add(fontClass);
+        container.classList.toggle("is-single-line", lineMode === "single");
+        container.innerHTML = lines.map((line) => `<span class="word-line">${escapeHtml(line)}</span>`).join("");
+        container.style.fontSize = fontSize ? `${fontSize}px` : "";
+      }
+
+      function getSubmitSceneEls() {
+        return {
+          previewWord: document.getElementById("previewWord"),
+          tileGrid: document.getElementById("tileGrid"),
+          lineModeRow: document.getElementById("lineModeRow"),
+          fontRow: document.getElementById("fontRow"),
+          manualBreakPanel: document.getElementById("manualBreakPanel"),
+          manualBreakLabel: document.getElementById("manualBreakLabel"),
+          breakTrack: document.getElementById("breakTrack"),
+          popupWord: document.getElementById("popupWord")
+        };
+      }
+
+      function syncMeasureBounds() {
+        const submitEls = getSubmitSceneEls();
+        const previewWidth = submitEls.previewWord?.clientWidth || 320;
+        const popupWidth = submitEls.popupWord?.clientWidth || 320;
+        const previewHeight = submitEls.previewWord?.clientHeight || 140;
+        const popupHeight = submitEls.popupWord?.clientHeight || 140;
+        els.measureWord.style.width = `${Math.min(previewWidth, popupWidth)}px`;
+        els.measureWord.style.height = `${Math.min(previewHeight, popupHeight)}px`;
+      }
+
+      function measureLineFits(text, fontClass, fontSize) {
+        syncMeasureBounds();
+        applyWordMarkup(els.measureWord, [text || " "], fontClass, "single", fontSize);
+        const lineEl = els.measureWord.querySelector(".word-line");
+        return lineEl ? lineEl.scrollWidth <= els.measureWord.clientWidth - 1 : true;
+      }
+
+      function measureFits(fontClass, lineMode, lines, fontSize) {
+        syncMeasureBounds();
+        applyWordMarkup(els.measureWord, lines, fontClass, lineMode, fontSize);
+        const lineEls = Array.from(els.measureWord.querySelectorAll(".word-line"));
+        const tooWide = lineEls.some((line) => line.scrollWidth > els.measureWord.clientWidth - 1);
+        const tooTall = els.measureWord.scrollHeight > els.measureWord.clientHeight - 1;
+        return !(tooWide || tooTall);
+      }
+
+      function getMinimumFontSize(charsLength, lineMode) {
+        if (lineMode === "single") {
+          if (charsLength >= 18) {
+            return 16;
+          }
+          if (charsLength >= 14) {
+            return 18;
+          }
+          if (charsLength >= 10) {
+            return 20;
+          }
+          return 24;
+        }
+        if (charsLength >= 16) {
+          return 28;
+        }
+        if (charsLength >= 12) {
+          return 30;
+        }
+        return 34;
+      }
+
+      function getBreaksFromLines(lines) {
+        const breaks = [];
+        let cursor = 0;
+        lines.forEach((line, index) => {
+          cursor += Array.from(line).length;
+          if (index < lines.length - 1) {
+            breaks.push(cursor);
+          }
+        });
+        return breaks;
+      }
+
+      function getLastFittingEnd(chars, start, endLimit, fontClass, fontSize) {
+        let lastFit = start;
+        for (let end = start + 1; end <= endLimit; end += 1) {
+          const sample = chars.slice(start, end).join("");
+          if (measureLineFits(sample, fontClass, fontSize)) {
+            lastFit = end;
+            continue;
+          }
+          break;
+        }
+        return lastFit > start ? lastFit : Math.min(start + 1, endLimit);
+      }
+
+      function splitForcedRange(chars, start, endLimit, fontClass, fontSize) {
+        const lines = [];
+        let cursor = start;
+        while (cursor < endLimit) {
+          const next = getLastFittingEnd(chars, cursor, endLimit, fontClass, fontSize);
+          lines.push(chars.slice(cursor, next).join(""));
+          cursor = next;
+        }
+        return lines;
+      }
+
+      function buildBoundaryLines(chars, fontClass, fontSize, roundIndex = state.roundIndex) {
+        const boundary = getBoundaryIndex(roundIndex);
+        const breaks = normalizeBreaks([boundary], chars.length);
+        if (!breaks.length) {
+          return splitForcedRange(chars, 0, chars.length, fontClass, fontSize);
+        }
+        const lines = [];
+        let start = 0;
+        [...breaks, chars.length].forEach((end) => {
+          lines.push(...splitForcedRange(chars, start, end, fontClass, fontSize));
+          start = end;
+        });
+        return lines.filter(Boolean);
+      }
+
+      function buildManualLines(chars, fontClass, fontSize, roundIndex = state.roundIndex) {
+        const draft = getRoundState(roundIndex);
+        sanitizeManualBreaks(roundIndex);
+        const forcedBreaks = normalizeBreaks(draft.manualBreaks, chars.length);
+
+        if (!forcedBreaks.length) {
+          return splitForcedRange(chars, 0, chars.length, fontClass, fontSize).filter(Boolean);
+        }
+
+        const lines = [];
+        let start = 0;
+        let forcedIndex = 0;
+
+        while (start < chars.length) {
+          const forcedEnd = forcedBreaks[forcedIndex];
+          if (forcedEnd) {
+            const forcedText = chars.slice(start, forcedEnd).join("");
+            if (measureLineFits(forcedText, fontClass, fontSize)) {
+              lines.push(forcedText);
+            } else {
+              lines.push(...splitForcedRange(chars, start, forcedEnd, fontClass, fontSize));
+            }
+            start = forcedEnd;
+            forcedIndex += 1;
+            continue;
+          }
+
+          lines.push(...splitForcedRange(chars, start, chars.length, fontClass, fontSize));
+          break;
+        }
+
+        return lines.filter(Boolean);
+      }
+
+      function buildLines(chars, fontClass, fontSize, roundIndex = state.roundIndex) {
+        const draft = getRoundState(roundIndex);
+        if (draft.lineMode === "single") {
+          return [chars.join("")];
+        }
+        if (draft.lineMode === "manual") {
+          return buildManualLines(chars, fontClass, fontSize, roundIndex);
+        }
+        return buildBoundaryLines(chars, fontClass, fontSize, roundIndex);
+      }
+
+      function computeWordLayout(roundIndex = state.roundIndex) {
+        const draft = getRoundState(roundIndex);
+        const text = getCombinedText(roundIndex);
+        if (!text) {
+          return { lines: ["牌を2つ選ぶ"], fontSize: 34, effectiveBreaks: [], safetyAdjusted: false };
+        }
+
+        const chars = Array.from(text);
+        const fontClass = getFontClass(draft.font);
+        const maxFontSize = draft.lineMode === "single" ? 72 : 60;
+        const minFontSize = getMinimumFontSize(chars.length, draft.lineMode);
+        let fontSize = maxFontSize;
+        let fallbackLayout = null;
+
+        while (fontSize >= minFontSize) {
+          const lines = buildLines(chars, fontClass, fontSize, roundIndex);
+          const effectiveBreaks = getBreaksFromLines(lines);
+          const safetyAdjusted =
+            fontSize < maxFontSize ||
+            (draft.lineMode === "manual" &&
+              effectiveBreaks.some((point) => !normalizeBreaks(draft.manualBreaks, chars.length).includes(point))) ||
+            (draft.lineMode === "boundary" &&
+              effectiveBreaks.some((point) => point !== getBoundaryIndex(roundIndex)));
+
+          if (measureFits(fontClass, draft.lineMode, lines, fontSize)) {
+            return { lines, fontSize, effectiveBreaks, safetyAdjusted };
+          }
+
+          fallbackLayout = { lines, fontSize, effectiveBreaks, safetyAdjusted: true };
+          fontSize -= 1;
+        }
+
+        return (
+          fallbackLayout || {
+            lines: buildLines(chars, fontClass, minFontSize, roundIndex),
+            fontSize: minFontSize,
+            effectiveBreaks: getBreaksFromLines(buildLines(chars, fontClass, minFontSize, roundIndex)),
+            safetyAdjusted: true
+          }
+        );
+      }
+
+      function getLiveSubmission(roundIndex = state.roundIndex) {
+        const draft = getRoundState(roundIndex);
+        const layout = computeWordLayout(roundIndex);
+        return {
+          id: "you",
+          owner: "あなた",
+          phrase: getCombinedText(roundIndex),
+          lines: layout.lines,
+          selectedIndices: [...draft.selected],
+          font: draft.font,
+          lineMode: draft.lineMode,
+          effectiveBreaks: layout.effectiveBreaks,
+          safetyAdjusted: layout.safetyAdjusted
+        };
+      }
+
+      function getRoundEntries(roundIndex = state.roundIndex) {
+        const round = rounds[roundIndex];
+        const draft = getRoundState(roundIndex);
+        const userEntry = draft.submission || getLiveSubmission(roundIndex);
+        return [
+          userEntry,
+          ...round.opponents.map((entry) => ({
+            ...entry,
+            lines: [entry.phrase],
+            font: "classic"
+          }))
+        ];
+      }
+
+      function getFallbackLines(roundIndex) {
+        const draft = getRoundState(roundIndex);
+        const chars = Array.from(getCombinedText(roundIndex));
+        if (!chars.length) {
+          return ["牌を2つ選ぶ"];
+        }
+        if (draft.lineMode === "single") {
+          return [chars.join("")];
+        }
+        if (draft.lineMode === "manual") {
+          const breaks = normalizeBreaks(draft.manualBreaks, chars.length);
+          if (!breaks.length) {
+            return [chars.join("")];
+          }
+          const points = [0, ...breaks, chars.length];
+          return points.slice(0, -1).map((point, index) => chars.slice(point, points[index + 1]).join(""));
+        }
+        const boundary = getBoundaryIndex(roundIndex);
+        if (boundary > 0 && boundary < chars.length) {
+          return [chars.slice(0, boundary).join(""), chars.slice(boundary).join("")];
+        }
+        return [chars.join("")];
+      }
+
+      function buildFallbackSubmission(roundIndex) {
+        const draft = getRoundState(roundIndex);
+        return {
+          id: "you",
+          owner: "あなた",
+          phrase: getCombinedText(roundIndex),
+          lines: getFallbackLines(roundIndex),
+          selectedIndices: [...draft.selected],
+          font: draft.font,
+          lineMode: draft.lineMode,
+          effectiveBreaks:
+            draft.lineMode === "manual"
+              ? normalizeBreaks(draft.manualBreaks, Array.from(getCombinedText(roundIndex)).length)
+              : [],
+          safetyAdjusted: false
+        };
+      }
+
+      function renderPhraseLines(lines, fontId = "classic", className = "") {
+        const fontClass = getFontClass(fontId);
+        return `<div class="${className} ${fontClass}">${lines
+          .map((line) => `<span class="word-line">${escapeHtml(line)}</span>`)
+          .join("")}</div>`;
+      }
+
+      function renderTieCountList(counts, mode = "owner") {
+        return counts
+          .map(
+            (item) => `
+              <div class="history-card">
+                <strong>${escapeHtml(item.entry.phrase)}</strong>
+                <span>${
+                  mode === "owner"
+                    ? `${item.count}票 / ${escapeHtml(item.entry.owner)} のワード`
+                    : `${item.count}票で同率`
+                }</span>
+              </div>
+            `
+          )
+          .join("");
+      }
+
+      function buildVoteOutcome(entries, votes) {
+        const counts = entries.map((entry, index) => ({
+          id: entry.id,
+          entry,
+          count: votes.filter((voteId) => voteId === entry.id).length,
+          index
+        }));
+
+        counts.sort((a, b) => b.count - a.count || a.index - b.index);
+
+        const voteCount = counts[0]?.count || 0;
+        const tied = counts.filter((item) => item.count === voteCount);
+
+        return {
+          counts,
+          voteCount,
+          tieIds: tied.map((item) => item.id),
+          isTie: tied.length > 1,
+          winner: tied.length === 1 ? tied[0].entry : null
+        };
+      }
+
+      function renderHeader() {
+        const setTopbar = (smallText = "", titleText = "") => {
+          els.topbarSmall.textContent = smallText;
+          els.topbarTitle.textContent = titleText;
+          els.topbar.classList.toggle("is-hidden", !smallText && !titleText);
+        };
+
+        els.statusText.textContent =
+          state.screen === "lobby"
+            ? "ロビー"
+            : state.screen === "revote"
+              ? "再投票"
+              : state.screen === "hostDecide"
+                ? "ホスト裁定"
+            : state.screen === "submit"
+              ? "提出"
+              : state.screen === "wait"
+                ? "待機"
+                : state.screen === "vote"
+                  ? "投票"
+                  : state.screen === "roundResult"
+                    ? "結果"
+            : state.screen === "finalVote"
+              ? "最終投票"
+              : state.screen === "finalRevote"
+                ? "最終再投票"
+                : state.screen === "finalHostDecide"
+                  ? "最終ホスト裁定"
+              : state.screen === "finalResult"
+                ? "最終結果"
+                : "";
+        setTopbar("", "");
+      }
+
+      function renderLobby() {
+        const orderedPlayers = getOrderedPlayers();
+        return `
+          <section class="screen-card">
+            <h3>ルーム待機中</h3>
+            <div class="room-code">ROOM / OMO-2048</div>
+            <div class="player-list">
+              ${players
+                .map(
+                  (player) => `
+                    <div class="player-item">
+                      <div>
+                        <small class="player-meta">${escapeHtml(player.id === "you" ? "あなた" : "対戦相手")}</small>
+                        <strong>${escapeHtml(player.name)}</strong>
+                      </div>
+                      <span class="seat-chip">${escapeHtml(player.seat)}</span>
+                    </div>
+                  `
+                )
+                .join("")}
+            </div>
+            <section class="summary-panel">
+              <h4>最初の順番</h4>
+              <div class="order-picker">
+                ${players
+                  .map(
+                    (player) => `
+                      <button
+                        class="order-chip${state.startPlayerId === player.id ? " active" : ""}"
+                        type="button"
+                        data-start-player="${escapeHtml(player.id)}"
+                      >
+                        ${escapeHtml(player.name)} から
+                      </button>
+                    `
+                  )
+                  .join("")}
+              </div>
+              <div class="turn-order-list">
+                ${orderedPlayers
+                  .map(
+                    (player, index) => `
+                      <div class="turn-order-item${player.id === "you" ? " is-you" : ""}">
+                        <span class="turn-order-num">${index + 1}</span>
+                        <strong>${escapeHtml(player.name)}</strong>
+                      </div>
+                    `
+                  )
+                  .join("")}
+              </div>
+            </section>
+            <div class="button-row">
+              <button class="btn subtle" type="button" data-action="copy-link">招待URLをコピー</button>
+              <button class="btn primary" type="button" data-action="start-game">この卓で開始</button>
+            </div>
+            <section class="summary-panel">
+              <div class="summary-head">
+                <h4>最近の総合優勝ワード</h4>
+                <button class="summary-link" type="button" data-action="open-history">一覧を見る</button>
+              </div>
+              <div class="history-list">
+                ${recentChampions
+                  .slice(0, 5)
+                  .map(
+                    (item) => `
+                      <div class="history-card">
+                        <strong>${escapeHtml(item.phrase)}</strong>
+                        <span>${escapeHtml(item.owner)} が優勝</span>
+                      </div>
+                    `
+                  )
+                  .join("")}
+              </div>
+            </section>
+          </section>
+          ${
+            state.historyOpen
+              ? `
+                <div class="history-overlay">
+                  <section class="history-overlay-card">
+                    <div class="summary-head">
+                      <h3>総合優勝ワード一覧</h3>
+                      <button class="summary-link" type="button" data-action="close-history">閉じる</button>
+                    </div>
+                    <div class="history-overlay-list">
+                      ${recentChampions
+                        .map(
+                          (item) => `
+                            <div class="history-card">
+                              <strong>${escapeHtml(item.phrase)}</strong>
+                              <span>${escapeHtml(item.owner)} が優勝</span>
+                            </div>
+                          `
+                        )
+                        .join("")}
+                    </div>
+                  </section>
+                </div>
+              `
+              : ""
+          }
+        `;
+      }
+
+      function renderSubmit() {
+        const locked = !canEditCurrentRound();
+        const round = getCurrentRound();
+        return `
+          <section class="screen-card">
+            <div class="screen-meta-row">
+              <div class="seat-note">あなたの手番</div>
+              <div class="round-note">${escapeHtml(round.wind)}</div>
+            </div>
+
+            <section class="phrase-preview">
+              <strong>提出前プレビュー</strong>
+              <div id="previewWord" class="preview-word"></div>
+            </section>
+
+            <section id="tileGrid" class="tiles"></section>
+
+            <div class="button-row">
+              <button class="btn subtle" type="button" data-action="swap-selection" ${locked ? "disabled" : ""}>順番入替</button>
+              <button class="btn ghost" type="button" data-action="clear-selection" ${locked ? "disabled" : ""}>選択をクリア</button>
+            </div>
+
+            <section class="control-block">
+              <h4>改行モード</h4>
+              <div id="lineModeRow" class="chip-row"></div>
+              <div id="manualBreakPanel" class="break-panel" hidden>
+                <p id="manualBreakLabel"></p>
+                <div id="breakTrack" class="break-track"></div>
+              </div>
+            </section>
+
+            <section class="control-block">
+              <h4>書体プリセット</h4>
+              <div id="fontRow" class="chip-row"></div>
+            </section>
+
+            <div class="phone-action-row">
+              <button class="btn primary" type="button" data-action="submit-phrase" ${locked ? "disabled" : ""}>この見た目で提出</button>
+            </div>
+          </section>
+            <div class="popup${state.popupOpen ? " is-open" : ""}${state.popupTurning ? " is-turning" : ""}">
+            <div class="popup-card3d">
+              <div class="popup-face popup-back">
+                <div class="popup-back-mark" aria-hidden="true"></div>
+              </div>
+              <div class="popup-face popup-front">
+                <span class="popup-badge">あなた</span>
+                <div id="popupWord" class="popup-word"></div>
+                <div class="popup-actions">
+                  <button class="btn primary" type="button" data-action="close-popup">次へ進む</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      function renderWait() {
+        const orderedPlayers = getOrderedPlayers();
+        const currentSubmitPlayer = getCurrentSubmitPlayer();
+        const configs = {
+          submit: {
+            title: currentSubmitPlayer ? `${currentSubmitPlayer.name} の手番待ち` : "投票前",
+            note: currentSubmitPlayer ? "順番どおりに提出が進みます。" : "提出はすべて終わりました。",
+            button: currentSubmitPlayer ? `${currentSubmitPlayer.name} の提出を進める` : "投票へ"
+          },
+          vote: {
+            title: "投票待ち",
+            note: "あなたの投票は送信済みです。全員の投票がそろったら結果へ進みます。",
+            button: "投票結果を見る"
+          },
+          revote: {
+            title: "再投票待ち",
+            note: "あなたの再投票は送信済みです。全員の再投票がそろったら結果へ進みます。",
+            button: "再投票の結果を見る"
+          },
+          finalVote: {
+            title: "最終投票待ち",
+            note: "あなたの最終投票は送信済みです。全員そろったら総合優勝が決まります。",
+            button: "最終結果を見る"
+          },
+          finalRevote: {
+            title: "最終再投票待ち",
+            note: "あなたの最終再投票は送信済みです。全員そろったら総合優勝が決まります。",
+            button: "最終結果を見る"
+          }
+        };
+        const mode = configs[state.waitMode] ? state.waitMode : "submit";
+        const config = configs[mode];
+        const submission = getRoundState().submission;
+        return `
+          <section class="screen-card">
+            <h3>${config.title}</h3>
+            <div class="wait-stack">
+              <p class="wait-note">${config.note}</p>
+              <section class="summary-panel">
+                <div class="wait-status-grid">
+                  ${(mode === "submit" ? orderedPlayers : players)
+                    .map(
+                      (player, index) => `
+                        <div class="wait-status${
+                          mode === "submit"
+                            ? index < state.submitTurnIndex
+                              ? " is-done"
+                              : index === state.submitTurnIndex
+                                ? " is-current"
+                                : ""
+                            : player.id === "you"
+                              ? " is-done"
+                              : ""
+                        }">
+                          <strong>${escapeHtml(player.name)}</strong>
+                          <span>${
+                            mode === "submit"
+                              ? index < state.submitTurnIndex
+                                ? "提出済み"
+                                : index === state.submitTurnIndex
+                                  ? "手番中"
+                                  : "待機中"
+                              : player.id === "you"
+                                ? "投票済み"
+                                : "投票中"
+                          }</span>
+                        </div>
+                      `
+                    )
+                    .join("")}
+                </div>
+              </section>
+              ${
+                mode === "submit" && submission
+                  ? `
+                    <section class="summary-panel">
+                      <h4>あなたのワード</h4>
+                      ${renderPhraseLines(submission.lines, submission.font, "result-phrase")}
+                    </section>
+                  `
+                  : ""
+              }
+            </div>
+            <div class="button-row">
+              <button class="btn primary" type="button" data-action="resolve-wait">${config.button}</button>
+            </div>
+          </section>
+        `;
+      }
+
+      function renderVote() {
+        const draft = getRoundState();
+        const entries = getRoundEntries();
+        return `
+          <section class="screen-card">
+            <h3>このラウンドで一番おもしろいワードに投票</h3>
+            <section class="vote-panel">
+              <h4>投票候補</h4>
+              <div class="vote-grid">
+                ${entries
+                  .map((entry) => {
+                    const isSelf = entry.id === "you";
+                    const selected = draft.voteId === entry.id;
+                    const phraseClass = entry.phrase.length >= 8 ? "vote-phrase small" : "vote-phrase";
+                    return `
+                      <button
+                        type="button"
+                        class="vote-card${selected ? " selected" : ""}${isSelf ? " disabled" : ""}"
+                        data-vote="${escapeHtml(entry.id)}"
+                        ${isSelf ? "disabled" : ""}
+                      >
+                        <div class="vote-label">${escapeHtml(entry.owner)}</div>
+                        ${renderPhraseLines(entry.lines, entry.font, phraseClass)}
+                      </button>
+                    `;
+                  })
+                  .join("")}
+              </div>
+            </section>
+            <div class="button-row">
+              <button class="btn primary" type="button" data-action="confirm-vote" ${draft.voteId ? "" : "disabled"}>
+                このワードに投票
+              </button>
+            </div>
+          </section>
+        `;
+      }
+
+      function renderRevote() {
+        const draft = getRoundState();
+        const initialOutcome = getVoteOutcome(state.roundIndex, "initial");
+        const entries = getRoundVoteEntries(state.roundIndex, "revote");
+
+        return `
+          <section class="screen-card">
+            <h3>再投票</h3>
+            <section class="summary-panel">
+              <h4>同率で並んだワード</h4>
+              <div class="history-list">
+                ${renderTieCountList(initialOutcome.counts.filter((item) => initialOutcome.tieIds.includes(item.id)), "tie")}
+              </div>
+            </section>
+            <section class="vote-panel">
+              <h4>再投票の候補</h4>
+              <div class="vote-grid">
+                ${entries
+                  .map((entry) => {
+                    const isSelf = entry.id === "you";
+                    const selected = draft.revoteId === entry.id;
+                    const phraseClass = entry.phrase.length >= 8 ? "vote-phrase small" : "vote-phrase";
+                    return `
+                      <button
+                        type="button"
+                        class="vote-card${selected ? " selected" : ""}${isSelf ? " disabled" : ""}"
+                        data-revote="${escapeHtml(entry.id)}"
+                        ${isSelf ? "disabled" : ""}
+                      >
+                        <div class="vote-label">${escapeHtml(entry.owner)}</div>
+                        ${renderPhraseLines(entry.lines, entry.font, phraseClass)}
+                      </button>
+                    `;
+                  })
+                  .join("")}
+              </div>
+            </section>
+            <div class="button-row">
+              <button class="btn primary" type="button" data-action="confirm-revote" ${draft.revoteId ? "" : "disabled"}>
+                再投票を確定
+              </button>
+            </div>
+          </section>
+        `;
+      }
+
+      function renderHostDecide() {
+        const roundState = getRoundState();
+        const revoteOutcome = getVoteOutcome(state.roundIndex, "revote");
+        const tiedCounts = revoteOutcome.counts.filter((item) => revoteOutcome.tieIds.includes(item.id));
+
+        return `
+          <section class="screen-card">
+            <h3>ホスト裁定</h3>
+            <section class="summary-panel">
+              <h4>再投票でも同率</h4>
+              <div class="history-list">
+                ${renderTieCountList(tiedCounts)}
+              </div>
+            </section>
+            <section class="vote-panel">
+              <h4>ホストが勝ちワードを選ぶ</h4>
+              <div class="vote-grid">
+                ${tiedCounts
+                  .map((item) => {
+                    const phraseClass = item.entry.phrase.length >= 8 ? "vote-phrase small" : "vote-phrase";
+                    return `
+                      <button
+                        type="button"
+                        class="vote-card${roundState.hostPickId === item.id ? " selected" : ""}"
+                        data-host-pick="${escapeHtml(item.id)}"
+                      >
+                        <div class="vote-label">${escapeHtml(item.entry.owner)}</div>
+                        ${renderPhraseLines(item.entry.lines, item.entry.font, phraseClass)}
+                      </button>
+                    `;
+                  })
+                  .join("")}
+              </div>
+            </section>
+            <div class="button-row">
+              <button class="btn primary" type="button" data-action="confirm-host-pick" ${roundState.hostPickId ? "" : "disabled"}>
+                このワードで確定
+              </button>
+            </div>
+          </section>
+        `;
+      }
+
+      function renderRoundResult() {
+        const result = getRoundState().result;
+        const tallies = getOwnerTallies();
+        return `
+          <section class="screen-card">
+            <h3>${escapeHtml(getCurrentRound().label)} の勝者</h3>
+            <section class="result-stage">
+              ${renderPhraseLines(result.winner.lines, result.winner.font, "result-phrase")}
+              <div class="result-owner">${result.voteCount}票 / ${escapeHtml(result.winner.owner)} のワード</div>
+            </section>
+
+            <section class="summary-panel">
+              <h4>${result.resolution === "host" ? "再投票の票数内訳" : "票数内訳"}</h4>
+              <div class="history-list">
+                ${renderTieCountList(result.counts)}
+              </div>
+            </section>
+
+            <section class="summary-panel">
+              <h4>ここまでの勝ち上がり</h4>
+              <div class="tally-grid">
+                ${tallies
+                  .map(
+                    (item) => `
+                      <div class="tally-card">
+                        <strong>${escapeHtml(item.owner)}</strong>
+                        <span>${item.count}ラウンド勝利</span>
+                      </div>
+                    `
+                  )
+                  .join("")}
+              </div>
+            </section>
+
+            <div class="button-row">
+              <button class="btn primary" type="button" data-action="${
+                state.roundIndex === rounds.length - 1 ? "to-final-vote" : "next-round"
+              }">
+                ${state.roundIndex === rounds.length - 1 ? "最終投票へ" : "次のラウンドへ"}
+              </button>
+            </div>
+          </section>
+        `;
+      }
+
+      function renderFinalVote() {
+        const candidates = getFinalCandidates();
+        return `
+          <section class="screen-card">
+            <h3>最終投票</h3>
+            <section class="vote-panel">
+              <h4>勝ち上がった3ワード</h4>
+              <div class="final-grid">
+                ${candidates
+                  .map((candidate) => {
+                    const selected = state.finalVoteId === candidate.id;
+                    const isSelf = candidate.owner === "あなた";
+                    const phraseClass = candidate.phrase.length >= 8 ? "winner-phrase small" : "winner-phrase";
+                    return `
+                      <button
+                        type="button"
+                        class="winner-card${selected ? " selected" : ""}${isSelf ? " disabled" : ""}"
+                        data-final-vote="${escapeHtml(candidate.id)}"
+                        ${isSelf ? "disabled" : ""}
+                      >
+                        <div class="winner-label">${escapeHtml(candidate.roundLabel)} の勝者</div>
+                        ${renderPhraseLines(candidate.lines, candidate.font, phraseClass)}
+                        <div class="winner-label">${escapeHtml(candidate.owner)}</div>
+                      </button>
+                    `;
+                  })
+                  .join("")}
+              </div>
+            </section>
+            <div class="button-row">
+              <button class="btn primary" type="button" data-action="confirm-final-vote" ${
+                state.finalVoteId ? "" : "disabled"
+              }>
+                最終結果を見る
+              </button>
+            </div>
+          </section>
+        `;
+      }
+
+      function renderFinalRevote() {
+        const initialOutcome = getFinalOutcome("initial");
+        const candidates = getFinalVoteEntries("revote");
+
+        return `
+          <section class="screen-card">
+            <h3>最終再投票</h3>
+            <section class="summary-panel">
+              <h4>同率で並んだワード</h4>
+              <div class="history-list">
+                ${renderTieCountList(initialOutcome.counts.filter((item) => initialOutcome.tieIds.includes(item.id)), "tie")}
+              </div>
+            </section>
+            <section class="vote-panel">
+              <h4>再投票の候補</h4>
+              <div class="final-grid">
+                ${candidates
+                  .map((candidate) => {
+                    const selected = state.finalRevoteId === candidate.id;
+                    const isSelf = candidate.owner === "あなた";
+                    const phraseClass = candidate.phrase.length >= 8 ? "winner-phrase small" : "winner-phrase";
+                    return `
+                      <button
+                        type="button"
+                        class="winner-card${selected ? " selected" : ""}${isSelf ? " disabled" : ""}"
+                        data-final-revote="${escapeHtml(candidate.id)}"
+                        ${isSelf ? "disabled" : ""}
+                      >
+                        <div class="winner-label">${escapeHtml(candidate.roundLabel)} の勝者</div>
+                        ${renderPhraseLines(candidate.lines, candidate.font, phraseClass)}
+                        <div class="winner-label">${escapeHtml(candidate.owner)}</div>
+                      </button>
+                    `;
+                  })
+                  .join("")}
+              </div>
+            </section>
+            <div class="button-row">
+              <button class="btn primary" type="button" data-action="confirm-final-revote" ${
+                state.finalRevoteId ? "" : "disabled"
+              }>
+                再投票を確定
+              </button>
+            </div>
+          </section>
+        `;
+      }
+
+      function renderFinalHostDecide() {
+        const revoteOutcome = getFinalOutcome("revote");
+        const tiedCounts = revoteOutcome.counts.filter((item) => revoteOutcome.tieIds.includes(item.id));
+
+        return `
+          <section class="screen-card">
+            <h3>最終ホスト裁定</h3>
+            <section class="summary-panel">
+              <h4>再投票でも同率</h4>
+              <div class="history-list">
+                ${renderTieCountList(tiedCounts)}
+              </div>
+            </section>
+            <section class="vote-panel">
+              <h4>ホストが総合優勝を選ぶ</h4>
+              <div class="final-grid">
+                ${tiedCounts
+                  .map((item) => {
+                    const phraseClass = item.entry.phrase.length >= 8 ? "winner-phrase small" : "winner-phrase";
+                    return `
+                      <button
+                        type="button"
+                        class="winner-card${state.finalHostPickId === item.id ? " selected" : ""}"
+                        data-final-host-pick="${escapeHtml(item.id)}"
+                      >
+                        <div class="winner-label">${escapeHtml(item.entry.roundLabel)} の勝者</div>
+                        ${renderPhraseLines(item.entry.lines, item.entry.font, phraseClass)}
+                        <div class="winner-label">${escapeHtml(item.entry.owner)}</div>
+                      </button>
+                    `;
+                  })
+                  .join("")}
+              </div>
+            </section>
+            <div class="button-row">
+              <button class="btn primary" type="button" data-action="confirm-final-host-pick" ${
+                state.finalHostPickId ? "" : "disabled"
+              }>
+                このワードで確定
+              </button>
+            </div>
+          </section>
+        `;
+      }
+
+      function renderFinalResult() {
+        const result = state.finalResult;
+        return `
+          <section class="screen-card">
+            <h3>総合優勝</h3>
+            <section class="result-stage is-champion">
+              <small>総合優勝</small>
+              ${renderPhraseLines(result.winner.lines, result.winner.font, "result-phrase")}
+              <div class="result-owner">${escapeHtml(result.winner.owner)}</div>
+            </section>
+            <section class="summary-panel">
+              <h4>各ラウンドの勝ちワード</h4>
+              <div class="history-list">
+                ${state.roundStates
+                  .map(
+                    (roundState, index) => `
+                      <div class="history-card">
+                        <strong>${escapeHtml(rounds[index].label)}</strong>
+                        <span>${escapeHtml(roundState.result.winner.phrase)} / ${escapeHtml(roundState.result.winner.owner)}</span>
+                      </div>
+                    `
+                  )
+                  .join("")}
+              </div>
+            </section>
+
+            <div class="button-row">
+              <button class="btn primary" type="button" data-action="restart-prototype">もう一度最初から</button>
+            </div>
+          </section>
+          ${
+            state.finalPopupOpen
+              ? `
+                <div class="popup champion-popup is-open${state.finalPopupTurning ? " is-turning" : ""}">
+                  <div class="popup-card3d">
+                    <div class="popup-face popup-back">
+                      <div class="popup-back-mark" aria-hidden="true"></div>
+                    </div>
+                    <div class="popup-face popup-front is-champion">
+                      <div class="champion-popup-main">
+                        <span class="popup-badge">総合優勝</span>
+                        <div class="champion-word-block">
+                          ${renderPhraseLines(result.winner.lines, result.winner.font, "final-champion")}
+                          <div class="result-owner">${escapeHtml(result.winner.owner)}</div>
+                        </div>
+                      </div>
+                      <div class="popup-actions">
+                        <button class="btn primary" type="button" data-action="close-final-popup">結果一覧を見る</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              `
+              : ""
+          }
+        `;
+      }
+
+      function renderApp() {
+        renderHeader();
+
+        const screens = {
+          lobby: renderLobby,
+          submit: renderSubmit,
+          wait: renderWait,
+          vote: renderVote,
+          revote: renderRevote,
+          hostDecide: renderHostDecide,
+          roundResult: renderRoundResult,
+          finalVote: renderFinalVote,
+          finalRevote: renderFinalRevote,
+          finalHostDecide: renderFinalHostDecide,
+          finalResult: renderFinalResult
+        };
+
+        els.app.innerHTML = screens[state.screen]();
+
+        if (state.screen === "submit") {
+          prepareRoundDraft();
+          hydrateSubmitScreen();
+        }
+      }
+
+      function hydrateSubmitScreen() {
+        const draft = getRoundState();
+        const layout = computeWordLayout();
+        const submitEls = getSubmitSceneEls();
+        const locked = !canEditCurrentRound();
+        const used = new Set(getUsedTileIndexes());
+
+        if (submitEls.lineModeRow) {
+          submitEls.lineModeRow.innerHTML = lineModes
+            .map(
+              (mode) =>
+                `<button type="button" class="chip${mode.id === draft.lineMode ? " active" : ""}" data-mode="${mode.id}" ${
+                  locked ? "disabled" : ""
+                }>${mode.label}</button>`
+            )
+            .join("");
+        }
+
+        if (submitEls.fontRow) {
+          submitEls.fontRow.innerHTML = fonts
+            .map(
+              (font) =>
+                `<button type="button" class="chip${font.id === draft.font ? " active" : ""}" data-font="${font.id}" ${
+                  locked ? "disabled" : ""
+                }>${font.label}</button>`
+            )
+            .join("");
+        }
+
+        if (submitEls.tileGrid) {
+          submitEls.tileGrid.innerHTML = gameHand
+            .map((tile, index) => {
+              const selected = draft.selected.includes(index);
+              const isUsed = used.has(index);
+              return `<button type="button" class="tile${selected ? " selected" : ""}${isUsed ? " used" : ""}" data-tile="${index}" ${
+                isUsed || locked ? "disabled" : ""
+              }>${escapeHtml(tile)}</button>`;
+            })
+            .join("");
+        }
+
+        applyWordMarkup(submitEls.previewWord, layout.lines, getFontClass(draft.font), draft.lineMode, layout.fontSize);
+
+        renderManualBreakPanel(submitEls);
+        renderSubmitPopup(submitEls, layout);
+      }
+
+      function renderManualBreakPanel(submitEls) {
+        const draft = getRoundState();
+        const chars = Array.from(getCombinedText());
+        const canBreak = chars.length > 1;
+        submitEls.manualBreakPanel.hidden = !(draft.lineMode === "manual" && canBreak);
+        if (submitEls.manualBreakPanel.hidden) {
+          return;
+        }
+
+        sanitizeManualBreaks();
+        submitEls.manualBreakLabel.textContent = draft.manualBreaks.length
+          ? `${draft.manualBreaks.join(" / ")}文字目のあとで改行`
+          : "改行を入れない";
+        submitEls.breakTrack.innerHTML = chars
+          .map((char, index) => {
+            const box = `<span class="char-box">${escapeHtml(char)}</span>`;
+            const gap =
+              index < chars.length - 1
+                ? `<button type="button" class="break-dot${draft.manualBreaks.includes(index + 1) ? " active" : ""}" data-break="${
+                    index + 1
+                  }" aria-label="${index + 1}文字目のあとで改行" ${canEditCurrentRound() ? "" : "disabled"}></button>`
+                : "";
+            return `${box}${gap}`;
+          })
+          .join("");
+      }
+
+      function renderSubmitPopup(submitEls, layout) {
+        const draft = getRoundState();
+        const entry = draft.submission || getLiveSubmission();
+        applyWordMarkup(submitEls.popupWord, entry.lines, getFontClass(entry.font), draft.lineMode, layout.fontSize);
+      }
+
+      function getRoundVoteEntries(roundIndex = state.roundIndex, phase = "initial") {
+        const entries = getRoundEntries(roundIndex);
+        if (phase === "initial") {
+          return entries;
+        }
+        const initialOutcome = getVoteOutcome(roundIndex, "initial");
+        return entries.filter((entry) => initialOutcome.tieIds.includes(entry.id));
+      }
+
+      function getVoteOutcome(roundIndex = state.roundIndex, phase = "initial") {
+        const round = rounds[roundIndex];
+        const roundState = getRoundState(roundIndex);
+        const entries = getRoundVoteEntries(roundIndex, phase);
+        const validIds = new Set(entries.map((entry) => entry.id));
+        const userVoteId = phase === "initial" ? roundState.voteId : roundState.revoteId;
+        const otherVotes = phase === "initial" ? round.otherVotes : round.otherRevotes || round.otherVotes;
+        const votes = [userVoteId, ...otherVotes].filter((voteId) => validIds.has(voteId));
+        return {
+          phase,
+          ...buildVoteOutcome(entries, votes)
+        };
+      }
+
+      function getOwnerTallies() {
+        const map = new Map();
+        state.roundStates
+          .filter((roundState) => roundState.result)
+          .forEach((roundState) => {
+            const owner = roundState.result.winner.owner;
+            map.set(owner, (map.get(owner) || 0) + 1);
+          });
+        return [...map.entries()]
+          .map(([owner, count]) => ({ owner, count }))
+          .sort((a, b) => b.count - a.count);
+      }
+
+      function getFinalCandidates() {
+        return state.roundStates.map((roundState, index) => ({
+          ...roundState.result.winner,
+          id: rounds[index].id,
+          roundLabel: rounds[index].label
+        }));
+      }
+
+      function getFinalVoteEntries(phase = "initial") {
+        const candidates = getFinalCandidates();
+        if (phase === "initial") {
+          return candidates;
+        }
+        const initialOutcome = getFinalOutcome("initial");
+        return candidates.filter((candidate) => initialOutcome.tieIds.includes(candidate.id));
+      }
+
+      function getFinalOutcome(phase = "initial") {
+        const entries = getFinalVoteEntries(phase);
+        const validIds = new Set(entries.map((entry) => entry.id));
+        const userVoteId = phase === "initial" ? state.finalVoteId : state.finalRevoteId;
+        const otherVotes = phase === "initial" ? finalVoteConfig.otherVotes : finalVoteConfig.otherRevotes || finalVoteConfig.otherVotes;
+        const votes = [userVoteId, ...otherVotes].filter((voteId) => validIds.has(voteId));
+        return {
+          phase,
+          ...buildVoteOutcome(entries, votes)
+        };
+      }
+
+      function buildRoundResult(roundIndex = state.roundIndex, resolution = "initial", hostChoiceId = null) {
+        const initialOutcome = getVoteOutcome(roundIndex, "initial");
+        if (resolution === "initial") {
+          return {
+            ...initialOutcome,
+            resolution,
+            initialOutcome
+          };
+        }
+
+        const revoteOutcome = getVoteOutcome(roundIndex, "revote");
+        if (resolution === "revote") {
+          return {
+            ...revoteOutcome,
+            resolution,
+            initialOutcome,
+            revoteOutcome
+          };
+        }
+
+        const winner =
+          revoteOutcome.counts.find((item) => item.id === hostChoiceId)?.entry || revoteOutcome.counts[0]?.entry || initialOutcome.winner;
+
+        return {
+          winner,
+          voteCount: revoteOutcome.voteCount,
+          counts: revoteOutcome.counts,
+          tieIds: revoteOutcome.tieIds,
+          isTie: false,
+          resolution,
+          initialOutcome,
+          revoteOutcome
+        };
+      }
+
+      function buildFinalResult(resolution = "initial", hostChoiceId = null) {
+        const initialOutcome = getFinalOutcome("initial");
+        if (resolution === "initial") {
+          return {
+            ...initialOutcome,
+            resolution,
+            initialOutcome
+          };
+        }
+
+        const revoteOutcome = getFinalOutcome("revote");
+        if (resolution === "revote") {
+          return {
+            ...revoteOutcome,
+            resolution,
+            initialOutcome,
+            revoteOutcome
+          };
+        }
+
+        const winner =
+          revoteOutcome.counts.find((item) => item.id === hostChoiceId)?.entry || revoteOutcome.counts[0]?.entry || initialOutcome.winner;
+
+        return {
+          winner,
+          voteCount: revoteOutcome.voteCount,
+          counts: revoteOutcome.counts,
+          tieIds: revoteOutcome.tieIds,
+          isTie: false,
+          resolution,
+          initialOutcome,
+          revoteOutcome
+        };
+      }
+
+      function clearPopup() {
+        if (state.popupTimer) {
+          window.clearTimeout(state.popupTimer);
+          state.popupTimer = 0;
+        }
+        state.popupOpen = false;
+        state.popupTurning = false;
+      }
+
+      function queuePopupTurn() {
+        clearPopup();
+        state.popupOpen = true;
+        renderApp();
+        state.popupTimer = window.setTimeout(() => {
+          state.popupTimer = 0;
+          state.popupTurning = true;
+          renderApp();
+        }, 120);
+      }
+
+      function clearFinalPopup() {
+        if (state.finalPopupTimer) {
+          window.clearTimeout(state.finalPopupTimer);
+          state.finalPopupTimer = 0;
+        }
+        state.finalPopupOpen = false;
+        state.finalPopupTurning = false;
+      }
+
+      function queueFinalPopupTurn() {
+        clearFinalPopup();
+        state.finalPopupOpen = true;
+        renderApp();
+        state.finalPopupTimer = window.setTimeout(() => {
+          state.finalPopupTimer = 0;
+          state.finalPopupTurning = true;
+          renderApp();
+        }, 120);
+      }
+
+      function startGame() {
+        state.roundIndex = 0;
+        state.finalVoteId = null;
+        state.finalRevoteId = null;
+        state.finalHostPickId = null;
+        state.finalResult = null;
+        state.historyOpen = false;
+        state.roundStates = rounds.map(createRoundState);
+        clearPopup();
+        clearFinalPopup();
+        resetRoundFlow();
+        renderApp();
+      }
+
+      function restartPrototype() {
+        state.screen = "lobby";
+        state.roundIndex = 0;
+        state.submitTurnIndex = 0;
+        state.waitMode = "submit";
+        state.finalVoteId = null;
+        state.finalRevoteId = null;
+        state.finalHostPickId = null;
+        state.finalResult = null;
+        state.historyOpen = false;
+        state.roundStates = rounds.map(createRoundState);
+        clearPopup();
+        clearFinalPopup();
+        renderApp();
+      }
+
+      function seedRoundTieFlow(roundIndex, stage = "revote") {
+        const roundState = getRoundState(roundIndex);
+        const round = rounds[roundIndex];
+        if (!roundState.submission) {
+          roundState.submission = buildFallbackSubmission(roundIndex);
+        }
+        roundState.voteId = round.tieDemoVoteId || round.seedVoteId || round.otherVotes[0];
+        if (stage === "host") {
+          roundState.revoteId = round.tieDemoRevoteId || roundState.voteId;
+        }
+      }
+
+      function seedFinalTieFlow(stage = "revote") {
+        state.finalVoteId = finalVoteConfig.tieDemoVoteId || finalVoteConfig.seedVoteId;
+        if (stage === "host") {
+          state.finalRevoteId = finalVoteConfig.tieDemoRevoteId || state.finalVoteId;
+        }
+      }
+
+      function applyQueryState() {
+        const params = new URLSearchParams(window.location.search);
+        const screen = params.get("screen");
+        const round = Number(params.get("round"));
+        const submitted = params.get("submitted");
+        const popup = params.get("popup");
+        const waitMode = params.get("waitMode");
+        const first = params.get("first");
+        const turn = Number(params.get("turn"));
+
+        if (Number.isInteger(round) && round >= 0 && round < rounds.length) {
+          state.roundIndex = round;
+        }
+
+        if (players.some((player) => player.id === first)) {
+          state.startPlayerId = first;
+        }
+
+        if (Number.isInteger(turn) && turn >= 0 && turn <= players.length) {
+          state.submitTurnIndex = turn;
+        }
+
+        if (["submit", "vote", "revote", "finalVote", "finalRevote"].includes(waitMode)) {
+          state.waitMode = waitMode;
+        }
+
+        if (submitted === "1") {
+          getRoundState().submission = buildFallbackSubmission(state.roundIndex);
+        }
+
+        if (
+          screen &&
+          [
+            "lobby",
+            "submit",
+            "wait",
+            "vote",
+            "revote",
+            "hostDecide",
+            "roundResult",
+            "finalVote",
+            "finalRevote",
+            "finalHostDecide",
+            "finalResult"
+          ].includes(screen)
+        ) {
+          state.screen = screen;
+        }
+
+        if (state.screen !== "lobby" && state.roundIndex > 0) {
+          for (let i = 0; i < state.roundIndex; i += 1) {
+            if (!state.roundStates[i].result) {
+              seedRoundOutcome(i, rounds[i].seedVoteId || rounds[i].otherVotes[0]);
+            }
+          }
+        }
+
+        const shouldSeedSubmission =
+          ["vote", "revote", "hostDecide", "roundResult", "finalVote", "finalRevote", "finalHostDecide", "finalResult"].includes(
+            state.screen
+          ) ||
+          (state.screen === "wait" &&
+            (submitted === "1" ||
+              state.waitMode !== "submit" ||
+              state.submitTurnIndex > getOrderedPlayers().findIndex((player) => player.id === "you")));
+
+        if (shouldSeedSubmission && !getRoundState().submission) {
+          getRoundState().submission = buildFallbackSubmission(state.roundIndex);
+        }
+
+        if (state.screen === "revote") {
+          seedRoundTieFlow(state.roundIndex, "revote");
+        }
+
+        if (state.screen === "hostDecide") {
+          seedRoundTieFlow(state.roundIndex, "host");
+          getRoundState().hostPickId = null;
+        }
+
+        if (["roundResult", "finalVote", "finalRevote", "finalHostDecide", "finalResult"].includes(state.screen)) {
+          for (let i = 0; i <= Math.max(state.roundIndex, 0); i += 1) {
+            seedRoundOutcome(i, rounds[i].seedVoteId || rounds[i].otherVotes[0]);
+          }
+        }
+
+        if (["finalVote", "finalRevote", "finalHostDecide", "finalResult"].includes(state.screen)) {
+          for (let i = 0; i < rounds.length; i += 1) {
+            if (!state.roundStates[i].result) {
+              seedRoundOutcome(i, rounds[i].seedVoteId || rounds[i].otherVotes[0]);
+            }
+          }
+          state.finalVoteId = params.get("finalVote") || finalVoteConfig.seedVoteId;
+        }
+
+        if (state.screen === "finalRevote") {
+          seedFinalTieFlow("revote");
+        }
+
+        if (state.screen === "finalHostDecide") {
+          seedFinalTieFlow("host");
+          state.finalHostPickId = null;
+        }
+
+        if (state.screen === "finalResult") {
+          state.finalResult = buildFinalResult("initial");
+          state.finalPopupOpen = true;
+          state.finalPopupTurning = true;
+        }
+
+        state.popupOpen = popup === "1";
+        state.popupTurning = popup === "1";
+      }
+
+      function submitCurrentPhrase() {
+        if (!canEditCurrentRound()) {
+          return;
+        }
+        if (getSelectedTiles().length < 2) {
+          window.alert("まずは牌を2つ選んでください。");
+          return;
+        }
+        getRoundState().submission = getLiveSubmission();
+        queuePopupTurn();
+      }
+
+      function finishCurrentRoundVote() {
+        const roundState = getRoundState();
+        if (!roundState.voteId) {
+          return;
+        }
+
+        const outcome = getVoteOutcome(state.roundIndex, "initial");
+        if (outcome.isTie) {
+          roundState.revoteId = null;
+          roundState.hostPickId = null;
+          state.screen = "revote";
+          renderApp();
+          return;
+        }
+
+        roundState.result = buildRoundResult(state.roundIndex, "initial");
+        state.waitMode = "submit";
+        state.screen = "roundResult";
+        renderApp();
+      }
+
+      function finishCurrentRoundRevote() {
+        const roundState = getRoundState();
+        if (!roundState.revoteId) {
+          return;
+        }
+
+        const outcome = getVoteOutcome(state.roundIndex, "revote");
+        if (outcome.isTie) {
+          roundState.hostPickId = null;
+          state.screen = "hostDecide";
+          renderApp();
+          return;
+        }
+
+        roundState.result = buildRoundResult(state.roundIndex, "revote");
+        state.waitMode = "submit";
+        state.screen = "roundResult";
+        renderApp();
+      }
+
+      function decideRoundByHost(winnerId) {
+        const round = rounds[state.roundIndex];
+        const revoteOutcome = getVoteOutcome(state.roundIndex, "revote");
+        if (!revoteOutcome.tieIds.includes(winnerId)) {
+          return;
+        }
+        getRoundState().result = buildRoundResult(state.roundIndex, "host", winnerId || round.hostChoice);
+        state.waitMode = "submit";
+        state.screen = "roundResult";
+        renderApp();
+      }
+
+      function finishFinalVote() {
+        if (!state.finalVoteId) {
+          return;
+        }
+
+        const outcome = getFinalOutcome("initial");
+        if (outcome.isTie) {
+          state.finalRevoteId = null;
+          state.finalHostPickId = null;
+          state.screen = "finalRevote";
+          renderApp();
+          return;
+        }
+
+        state.finalResult = buildFinalResult("initial");
+        state.screen = "finalResult";
+        queueFinalPopupTurn();
+      }
+
+      function finishFinalRevote() {
+        if (!state.finalRevoteId) {
+          return;
+        }
+
+        const outcome = getFinalOutcome("revote");
+        if (outcome.isTie) {
+          state.finalHostPickId = null;
+          state.screen = "finalHostDecide";
+          renderApp();
+          return;
+        }
+
+        state.finalResult = buildFinalResult("revote");
+        state.screen = "finalResult";
+        queueFinalPopupTurn();
+      }
+
+      function decideFinalByHost(winnerId) {
+        const outcome = getFinalOutcome("revote");
+        if (!outcome.tieIds.includes(winnerId)) {
+          return;
+        }
+        state.finalResult = buildFinalResult("host", winnerId || finalVoteConfig.hostChoice);
+        state.screen = "finalResult";
+        queueFinalPopupTurn();
+      }
+
+      function seedRoundOutcome(roundIndex, voteId) {
+        const roundState = getRoundState(roundIndex);
+        const round = rounds[roundIndex];
+        if (!roundState.submission) {
+          roundState.submission = buildFallbackSubmission(roundIndex);
+        }
+        roundState.voteId = voteId || round.seedVoteId || round.otherVotes[0];
+        roundState.revoteId = null;
+        roundState.hostPickId = null;
+
+        const initialOutcome = getVoteOutcome(roundIndex, "initial");
+        if (!initialOutcome.isTie) {
+          roundState.result = buildRoundResult(roundIndex, "initial");
+          return;
+        }
+
+        roundState.revoteId = round.tieDemoRevoteId || roundState.voteId;
+        const revoteOutcome = getVoteOutcome(roundIndex, "revote");
+        if (!revoteOutcome.isTie) {
+          roundState.result = buildRoundResult(roundIndex, "revote");
+          return;
+        }
+
+        roundState.result = buildRoundResult(roundIndex, "host", round.hostChoice || revoteOutcome.tieIds[0]);
+      }
+
+      function toggleTile(index) {
+        if (!canEditCurrentRound()) {
+          return;
+        }
+        if (getUsedTileIndexes().includes(index)) {
+          return;
+        }
+        const draft = getRoundState();
+        const selectedIndex = draft.selected.indexOf(index);
+        if (selectedIndex >= 0) {
+          draft.selected.splice(selectedIndex, 1);
+          renderApp();
+          return;
+        }
+        if (draft.selected.length >= 2) {
+          draft.selected.shift();
+        }
+        draft.selected.push(index);
+        sanitizeManualBreaks();
+        renderApp();
+      }
+
+      function updateDraft(action) {
+        if (!canEditCurrentRound()) {
+          return;
+        }
+        const draft = getRoundState();
+        switch (action) {
+          case "swap-selection":
+            draft.selected.reverse();
+            sanitizeManualBreaks();
+            break;
+          case "clear-selection":
+            draft.selected = [];
+            draft.manualBreaks = [];
+            break;
+          default:
+            break;
+        }
+        renderApp();
+      }
+
+      document.addEventListener("click", (event) => {
+        const modeButton = event.target.closest("[data-mode]");
+        if (modeButton) {
+          if (!canEditCurrentRound()) {
+            return;
+          }
+          getRoundState().lineMode = modeButton.dataset.mode;
+          sanitizeManualBreaks();
+          renderApp();
+          return;
+        }
+
+        const fontButton = event.target.closest("[data-font]");
+        if (fontButton) {
+          if (!canEditCurrentRound()) {
+            return;
+          }
+          getRoundState().font = fontButton.dataset.font;
+          renderApp();
+          return;
+        }
+
+        const breakButton = event.target.closest("[data-break]");
+        if (breakButton) {
+          if (!canEditCurrentRound()) {
+            return;
+          }
+          const draft = getRoundState();
+          const value = Number(breakButton.dataset.break);
+          draft.manualBreaks = draft.manualBreaks.includes(value)
+            ? draft.manualBreaks.filter((point) => point !== value)
+            : [...draft.manualBreaks, value];
+          renderApp();
+          return;
+        }
+
+        const tileButton = event.target.closest("[data-tile]");
+        if (tileButton) {
+          toggleTile(Number(tileButton.dataset.tile));
+          return;
+        }
+
+        const voteButton = event.target.closest("[data-vote]");
+        if (voteButton && !voteButton.disabled) {
+          getRoundState().voteId = voteButton.dataset.vote;
+          getRoundState().revoteId = null;
+          renderApp();
+          return;
+        }
+
+        const revoteButton = event.target.closest("[data-revote]");
+        if (revoteButton && !revoteButton.disabled) {
+          getRoundState().revoteId = revoteButton.dataset.revote;
+          renderApp();
+          return;
+        }
+
+        const hostPickButton = event.target.closest("[data-host-pick]");
+        if (hostPickButton) {
+          getRoundState().hostPickId = hostPickButton.dataset.hostPick;
+          renderApp();
+          return;
+        }
+
+        const startPlayerButton = event.target.closest("[data-start-player]");
+        if (startPlayerButton) {
+          state.startPlayerId = startPlayerButton.dataset.startPlayer;
+          renderApp();
+          return;
+        }
+
+        const finalVoteButton = event.target.closest("[data-final-vote]");
+        if (finalVoteButton && !finalVoteButton.disabled) {
+          state.finalVoteId = finalVoteButton.dataset.finalVote;
+          state.finalRevoteId = null;
+          renderApp();
+          return;
+        }
+
+        const finalRevoteButton = event.target.closest("[data-final-revote]");
+        if (finalRevoteButton && !finalRevoteButton.disabled) {
+          state.finalRevoteId = finalRevoteButton.dataset.finalRevote;
+          renderApp();
+          return;
+        }
+
+        const finalHostPickButton = event.target.closest("[data-final-host-pick]");
+        if (finalHostPickButton) {
+          state.finalHostPickId = finalHostPickButton.dataset.finalHostPick;
+          renderApp();
+          return;
+        }
+
+        const actionButton = event.target.closest("[data-action]");
+        if (!actionButton) {
+          return;
+        }
+
+        const action = actionButton.dataset.action;
+
+        if (action === "copy-link") {
+          const inviteUrl = "https://omojan.example/room/OMO-2048";
+          if (navigator.clipboard?.writeText) {
+            navigator.clipboard.writeText(inviteUrl).then(
+              () => window.alert("招待URLをコピーしました。"),
+              () => window.alert(inviteUrl)
+            );
+          } else {
+            window.alert(inviteUrl);
+          }
+          return;
+        }
+
+        if (action === "start-game") {
+          startGame();
+          return;
+        }
+
+        if (action === "open-history") {
+          state.historyOpen = true;
+          renderApp();
+          return;
+        }
+
+        if (action === "close-history") {
+          state.historyOpen = false;
+          renderApp();
+          return;
+        }
+
+        if (action === "swap-selection" || action === "clear-selection") {
+          updateDraft(action);
+          return;
+        }
+
+        if (action === "submit-phrase") {
+          submitCurrentPhrase();
+          return;
+        }
+
+        if (action === "close-popup") {
+          clearPopup();
+          state.waitMode = "submit";
+          state.submitTurnIndex = getOrderedPlayers().findIndex((player) => player.id === "you") + 1;
+          state.screen = state.submitTurnIndex >= players.length ? "vote" : "wait";
+          renderApp();
+          return;
+        }
+
+        if (action === "confirm-vote") {
+          state.waitMode = "vote";
+          state.screen = "wait";
+          renderApp();
+          return;
+        }
+
+        if (action === "confirm-revote") {
+          state.waitMode = "revote";
+          state.screen = "wait";
+          renderApp();
+          return;
+        }
+
+        if (action === "confirm-host-pick") {
+          decideRoundByHost(getRoundState().hostPickId);
+          return;
+        }
+
+        if (action === "resolve-wait") {
+          if (state.waitMode === "submit") {
+            state.submitTurnIndex += 1;
+            if (state.submitTurnIndex >= players.length) {
+              state.screen = "vote";
+            } else {
+              state.screen = getCurrentSubmitPlayer()?.id === "you" && !getRoundState().submission ? "submit" : "wait";
+            }
+            renderApp();
+            return;
+          }
+          if (state.waitMode === "vote") {
+            finishCurrentRoundVote();
+            return;
+          }
+          if (state.waitMode === "revote") {
+            finishCurrentRoundRevote();
+            return;
+          }
+          if (state.waitMode === "finalVote") {
+            finishFinalVote();
+            return;
+          }
+          if (state.waitMode === "finalRevote") {
+            finishFinalRevote();
+            return;
+          }
+          return;
+        }
+
+        if (action === "next-round") {
+          clearPopup();
+          clearFinalPopup();
+          state.roundIndex += 1;
+          resetRoundFlow();
+          renderApp();
+          return;
+        }
+
+        if (action === "to-final-vote") {
+          state.finalVoteId = null;
+          state.finalRevoteId = null;
+          state.finalHostPickId = null;
+          state.screen = "finalVote";
+          renderApp();
+          return;
+        }
+
+        if (action === "confirm-final-vote") {
+          state.waitMode = "finalVote";
+          state.screen = "wait";
+          renderApp();
+          return;
+        }
+
+        if (action === "confirm-final-revote") {
+          state.waitMode = "finalRevote";
+          state.screen = "wait";
+          renderApp();
+          return;
+        }
+
+        if (action === "confirm-final-host-pick") {
+          decideFinalByHost(state.finalHostPickId);
+          return;
+        }
+
+        if (action === "close-final-popup") {
+          clearFinalPopup();
+          renderApp();
+          return;
+        }
+
+        if (action === "restart-prototype") {
+          restartPrototype();
+        }
+      });
+
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && state.popupOpen) {
+          clearPopup();
+          renderApp();
+        }
+      });
+
+      applyQueryState();
+      renderApp();
+    </script>
+  </body>
+</html>

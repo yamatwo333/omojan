@@ -1,0 +1,1605 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>おもじゃん 提出UIプロトタイプ</title>
+    <style>
+      :root {
+        --bg: #e3d4b0;
+        --table: #214431;
+        --table-2: #183021;
+        --paper: #fbf6ea;
+        --paper-deep: #f0e2bf;
+        --ink: #1d160f;
+        --muted: #6d5e4c;
+        --green: #2a4d39;
+        --green-soft: rgba(42, 77, 57, 0.1);
+        --gold: #b8923e;
+        --gold-soft: rgba(184, 146, 62, 0.22);
+        --red: #9b2b1f;
+        --line: #76593f;
+        --shadow: 0 20px 44px rgba(29, 22, 15, 0.16);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+        background:
+          radial-gradient(circle at top, rgba(255, 255, 255, 0.26), transparent 30%),
+          linear-gradient(180deg, #e7dab8 0%, #d7c399 55%, #ccb487 100%);
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        opacity: 0.1;
+        background:
+          repeating-linear-gradient(
+            45deg,
+            rgba(42, 77, 57, 0.35) 0,
+            rgba(42, 77, 57, 0.35) 2px,
+            transparent 2px,
+            transparent 18px
+          );
+      }
+
+      main {
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 28px 18px 56px;
+      }
+
+      .hero {
+        padding: 24px;
+        border-radius: 28px;
+        border: 2px solid rgba(118, 89, 63, 0.72);
+        background:
+          linear-gradient(135deg, rgba(33, 68, 49, 0.98), rgba(24, 48, 33, 0.96)),
+          var(--table);
+        color: #f7efdd;
+        box-shadow: var(--shadow);
+      }
+
+      .hero-tag {
+        display: inline-flex;
+        padding: 6px 12px;
+        border-radius: 999px;
+        border: 1px solid rgba(247, 239, 221, 0.28);
+        font-size: 12px;
+        letter-spacing: 0.12em;
+      }
+
+      h1,
+      h2,
+      h3,
+      h4,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        margin-top: 14px;
+        font-size: clamp(32px, 5vw, 54px);
+        line-height: 1.04;
+      }
+
+      .hero p {
+        max-width: 860px;
+        margin-top: 12px;
+        color: rgba(247, 239, 221, 0.88);
+        line-height: 1.8;
+      }
+
+      .hero-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 12px;
+        margin-top: 18px;
+      }
+
+      .hero-card {
+        padding: 14px 16px;
+        border-radius: 18px;
+        border: 1px solid rgba(247, 239, 221, 0.18);
+        background: rgba(247, 239, 221, 0.08);
+      }
+
+      .hero-card strong {
+        display: block;
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        color: rgba(247, 239, 221, 0.74);
+      }
+
+      .hero-card span {
+        display: block;
+        margin-top: 6px;
+        font-size: 18px;
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: minmax(0, 420px) minmax(0, 1fr);
+        gap: 22px;
+        margin-top: 26px;
+      }
+
+      .panel {
+        padding: 20px;
+        border-radius: 26px;
+        border: 2px solid rgba(118, 89, 63, 0.44);
+        background: rgba(251, 246, 234, 0.9);
+        box-shadow: var(--shadow);
+      }
+
+      .panel h2 {
+        font-size: 24px;
+      }
+
+      .panel p {
+        margin-top: 10px;
+        color: var(--muted);
+        line-height: 1.75;
+      }
+
+      .control-block {
+        margin-top: 18px;
+        padding: 16px;
+        border-radius: 20px;
+        border: 1px solid rgba(118, 89, 63, 0.24);
+        background: rgba(255, 255, 255, 0.46);
+      }
+
+      .control-block h3 {
+        font-size: 15px;
+        letter-spacing: 0.06em;
+        color: var(--green);
+      }
+
+      .selected-pair {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      .selected-slot {
+        min-height: 72px;
+        padding: 12px 10px;
+        border-radius: 16px;
+        border: 1px solid rgba(118, 89, 63, 0.26);
+        background: linear-gradient(180deg, #fffefa, #f2e7cb);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        font-size: 18px;
+        line-height: 1.2;
+      }
+
+      .selected-slot.empty {
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .button-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      button {
+        appearance: none;
+        border: none;
+        background: none;
+        color: inherit;
+        font: inherit;
+        cursor: pointer;
+      }
+
+      .btn {
+        min-height: 44px;
+        padding: 12px 14px;
+        border-radius: 14px;
+        border: 1px solid rgba(118, 89, 63, 0.34);
+        background: #fff8ea;
+        font-size: 14px;
+        text-align: center;
+      }
+
+      .btn.primary {
+        border-color: rgba(155, 43, 31, 0.42);
+        background: linear-gradient(180deg, #c24a37, #9f2f22);
+        color: #fff9ef;
+      }
+
+      .btn.subtle {
+        background: rgba(42, 77, 57, 0.08);
+        color: var(--green);
+      }
+
+      .chip-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .chip {
+        padding: 8px 12px;
+        border-radius: 999px;
+        border: 1px solid rgba(118, 89, 63, 0.28);
+        background: rgba(255, 248, 234, 0.96);
+        font-size: 12px;
+        line-height: 1.2;
+      }
+
+      .chip.active {
+        border-color: rgba(155, 43, 31, 0.42);
+        background: rgba(194, 74, 55, 0.1);
+        color: var(--red);
+      }
+
+      .break-panel {
+        margin-top: 12px;
+        padding: 12px;
+        border-radius: 16px;
+        border: 1px solid rgba(118, 89, 63, 0.2);
+        background: rgba(255, 255, 255, 0.56);
+      }
+
+      .break-panel p {
+        margin-top: 0;
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .break-track {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 10px;
+      }
+
+      .char-box {
+        min-width: 32px;
+        padding: 8px 6px;
+        border-radius: 10px;
+        border: 1px solid rgba(118, 89, 63, 0.22);
+        background: rgba(255, 248, 234, 0.96);
+        text-align: center;
+        font-size: 16px;
+      }
+
+      .break-dot {
+        position: relative;
+        width: 20px;
+        height: 20px;
+        border-radius: 6px;
+        border: 1px solid rgba(118, 89, 63, 0.34);
+        background: rgba(255, 248, 234, 0.98);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+      }
+
+      .break-dot.active {
+        border-color: rgba(42, 77, 57, 0.7);
+        background: rgba(42, 77, 57, 0.12);
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.72),
+          0 0 0 3px rgba(42, 77, 57, 0.08);
+      }
+
+      .break-dot.active::after {
+        content: "";
+        position: absolute;
+        left: 5px;
+        top: 1px;
+        width: 6px;
+        height: 12px;
+        border-right: 3px solid var(--green);
+        border-bottom: 3px solid var(--green);
+        transform: rotate(40deg);
+      }
+
+      .helper {
+        margin-top: 10px;
+        font-size: 13px;
+        color: var(--muted);
+        line-height: 1.65;
+      }
+
+      .phone-shell {
+        display: flex;
+        justify-content: center;
+      }
+
+      .phone {
+        width: min(100%, 430px);
+        padding: 16px;
+        border-radius: 32px;
+        border: 3px solid #221710;
+        background:
+          linear-gradient(180deg, rgba(244, 234, 206, 0.96), rgba(251, 246, 234, 0.98)),
+          var(--paper);
+        box-shadow: 0 16px 32px rgba(29, 22, 15, 0.18);
+      }
+
+      .status {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .topbar {
+        margin-top: 12px;
+        padding: 14px;
+        border-radius: 18px;
+        background: linear-gradient(180deg, rgba(42, 77, 57, 0.98), rgba(24, 48, 33, 0.96));
+        color: #f7efdd;
+      }
+
+      .topbar small {
+        display: block;
+        color: rgba(247, 239, 221, 0.72);
+      }
+
+      .topbar strong {
+        display: block;
+        margin-top: 6px;
+        font-size: 20px;
+      }
+
+      .phrase-preview {
+        margin-top: 12px;
+        padding: 18px 8px 20px;
+        border-radius: 20px;
+        border: 1px solid rgba(184, 146, 62, 0.42);
+        background: linear-gradient(180deg, rgba(255, 249, 237, 0.98), rgba(248, 238, 210, 0.94));
+        text-align: center;
+      }
+
+      .phrase-preview strong {
+        display: block;
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+      }
+
+      .preview-word {
+        min-height: 140px;
+        margin-top: 10px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        font-size: clamp(34px, 8vw, 56px);
+        line-height: 0.96;
+        color: var(--ink);
+        word-break: keep-all;
+        text-wrap: balance;
+        overflow: hidden;
+      }
+
+      .word-line {
+        display: block;
+        max-width: 100%;
+        white-space: nowrap;
+      }
+
+      .font-classic {
+        font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+      }
+
+      .font-broadcast {
+        font-family: "Hiragino Sans", "Yu Gothic", sans-serif;
+        font-weight: 800;
+        letter-spacing: -0.04em;
+      }
+
+      .font-playful {
+        font-family: "Marker Felt", "Hiragino Maru Gothic ProN", "Yu Gothic", sans-serif;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+      }
+
+      .font-heavy {
+        font-family: "Arial Black", "Helvetica Neue", "Hiragino Sans", sans-serif;
+        font-weight: 900;
+        letter-spacing: -0.05em;
+      }
+
+      .font-condensed {
+        font-family: "Avenir Next Condensed", "Arial Narrow", "Hiragino Sans", sans-serif;
+        font-weight: 800;
+        letter-spacing: -0.04em;
+      }
+
+      .font-round {
+        font-family: "Hiragino Maru Gothic ProN", "Yu Gothic", sans-serif;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+      }
+
+      .preview-caption {
+        margin-top: 8px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .tiles {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 8px;
+        margin-top: 14px;
+      }
+
+      .tile {
+        min-height: 82px;
+        padding: 8px 6px;
+        border-radius: 14px;
+        border: 1px solid rgba(118, 89, 63, 0.38);
+        background: linear-gradient(180deg, #fffdf8, #efe5cd);
+        text-align: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        line-height: 1.18;
+        overflow-wrap: anywhere;
+        word-break: keep-all;
+      }
+
+      .tile.selected {
+        border: 2px solid var(--red);
+        background: linear-gradient(180deg, #fff7eb, #f6d3c1);
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.4);
+      }
+
+      .phone-action-row {
+        display: flex;
+        gap: 10px;
+        margin-top: 14px;
+      }
+
+      .phone-action-row .btn {
+        flex: 1;
+      }
+
+      .stage {
+        position: relative;
+        min-height: 370px;
+        margin-top: 16px;
+        padding: 14px;
+        border-radius: 20px;
+        border: 1px solid rgba(118, 89, 63, 0.24);
+        background: rgba(255, 255, 255, 0.3);
+        overflow: hidden;
+        perspective: 1200px;
+      }
+
+      .stage .board,
+      .stage .stage-info {
+        transition:
+          filter 300ms cubic-bezier(0.2, 0.8, 0.2, 1),
+          opacity 300ms cubic-bezier(0.2, 0.8, 0.2, 1);
+      }
+
+      .stage.is-open .board,
+      .stage.is-open .stage-info {
+        filter: blur(0.25px);
+        opacity: 0.18;
+      }
+
+      .stage::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: rgba(29, 22, 15, 0.18);
+        opacity: 0;
+        transition: opacity 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
+        pointer-events: none;
+      }
+
+      .stage.is-open::after {
+        opacity: 1;
+      }
+
+      .board {
+        display: grid;
+        gap: 10px;
+      }
+
+      .board-card {
+        padding: 14px;
+        border-radius: 18px;
+        border: 1px solid rgba(118, 89, 63, 0.28);
+        background: rgba(255, 255, 255, 0.56);
+      }
+
+      .board-card strong {
+        display: block;
+        font-size: 13px;
+        color: var(--green);
+      }
+
+      .board-word {
+        margin-top: 8px;
+        font-size: 30px;
+        line-height: 1.02;
+        word-break: keep-all;
+      }
+
+      .stage-info {
+        margin-top: 12px;
+        padding: 12px 14px;
+        border-radius: 16px;
+        border: 1px solid rgba(118, 89, 63, 0.24);
+        background: rgba(241, 228, 194, 0.76);
+      }
+
+      .stage-info p {
+        margin-top: 0;
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .popup {
+        position: absolute;
+        left: 16px;
+        right: 16px;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 1;
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .stage.is-open .popup {
+        animation: popup-shell-in 90ms linear forwards;
+        pointer-events: auto;
+      }
+
+      @keyframes popup-shell-in {
+        0% {
+          opacity: 0;
+        }
+        100% {
+          opacity: 1;
+        }
+      }
+
+      .popup-card3d {
+        position: relative;
+        min-height: 260px;
+        transform-style: preserve-3d;
+        transform-origin: center center;
+      }
+
+      .popup-face {
+        position: absolute;
+        inset: 0;
+        padding: 20px 8px 18px;
+        border-radius: 22px;
+        backface-visibility: hidden;
+        -webkit-backface-visibility: hidden;
+        box-shadow:
+          0 0 0 5px rgba(184, 146, 62, 0.42),
+          0 22px 40px rgba(29, 22, 15, 0.2);
+        transform-origin: center center;
+      }
+
+      .popup-front {
+        border: 3px solid rgba(42, 77, 57, 0.92);
+        background: linear-gradient(180deg, rgba(255, 255, 253, 0.99), rgba(246, 239, 224, 0.99));
+        text-align: center;
+        opacity: 0;
+        transform: rotateY(-92deg);
+      }
+
+      .popup-front::before {
+        content: "";
+        position: absolute;
+        inset: 8px;
+        border-radius: 14px;
+        border: 1px solid rgba(184, 146, 62, 0.52);
+        pointer-events: none;
+      }
+
+      .popup-back {
+        border: 3px solid rgba(30, 59, 43, 0.98);
+        background:
+          radial-gradient(circle at top, rgba(255, 255, 255, 0.08), transparent 34%),
+          repeating-linear-gradient(
+            45deg,
+            rgba(255, 255, 255, 0.06) 0,
+            rgba(255, 255, 255, 0.06) 8px,
+            rgba(0, 0, 0, 0.02) 8px,
+            rgba(0, 0, 0, 0.02) 16px
+          ),
+          linear-gradient(180deg, rgba(42, 77, 57, 1), rgba(24, 48, 33, 0.98));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transform: rotateY(0deg);
+      }
+
+      .popup-back::before {
+        content: "";
+        position: absolute;
+        inset: 8px;
+        border-radius: 14px;
+        border: 1px solid rgba(184, 146, 62, 0.42);
+      }
+
+      .popup-back-mark {
+        width: 72%;
+        aspect-ratio: 1 / 1;
+        border-radius: 24px;
+        border: 2px solid rgba(184, 146, 62, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+      }
+
+      .popup-back-mark::before,
+      .popup-back-mark::after {
+        content: "";
+        position: absolute;
+        border-radius: 999px;
+        border: 2px solid rgba(184, 146, 62, 0.72);
+      }
+
+      .popup-back-mark::before {
+        inset: 22% 34%;
+      }
+
+      .popup-back-mark::after {
+        inset: 34% 22%;
+      }
+
+      .stage.is-open .popup-back {
+        opacity: 1;
+      }
+
+      .stage.is-turning .popup-back {
+        animation: popup-back-away 200ms ease-in forwards;
+      }
+
+      .stage.is-turning .popup-front {
+        animation: popup-front-in 220ms ease-out 150ms forwards;
+      }
+
+      @keyframes popup-back-away {
+        0% {
+          opacity: 1;
+          transform: rotateY(0deg);
+        }
+        100% {
+          opacity: 0;
+          transform: rotateY(92deg);
+        }
+      }
+
+      @keyframes popup-front-in {
+        0% {
+          opacity: 0;
+          transform: rotateY(-92deg);
+        }
+        100% {
+          opacity: 1;
+          transform: rotateY(0deg);
+        }
+      }
+
+      .popup-badge {
+        display: inline-flex;
+        padding: 6px 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(42, 77, 57, 0.18);
+        background: rgba(42, 77, 57, 0.06);
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        color: var(--green);
+      }
+
+      .popup-word {
+        min-height: 140px;
+        margin-top: 14px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        font-size: clamp(42px, 9vw, 64px);
+        line-height: 0.94;
+        color: var(--ink);
+        word-break: keep-all;
+        text-wrap: balance;
+        overflow: hidden;
+      }
+
+      .popup-meta {
+        margin-top: 12px;
+        font-size: 12px;
+        line-height: 1.6;
+        color: var(--muted);
+      }
+
+      .popup-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 14px;
+      }
+
+      .popup-actions .btn {
+        flex: 1;
+      }
+
+      .measure-word {
+        position: absolute;
+        left: -9999px;
+        top: -9999px;
+        width: 320px;
+        min-height: 140px;
+        height: 140px;
+        pointer-events: none;
+        visibility: hidden;
+      }
+
+      .note-list {
+        display: grid;
+        gap: 10px;
+        margin-top: 16px;
+      }
+
+      .note {
+        padding: 14px 16px;
+        border-radius: 18px;
+        border: 1px solid rgba(118, 89, 63, 0.24);
+        background: rgba(255, 255, 255, 0.46);
+        line-height: 1.7;
+        color: var(--muted);
+      }
+
+      .note strong {
+        color: var(--ink);
+      }
+
+      @media (max-width: 980px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+
+        .phone-shell {
+          justify-content: stretch;
+        }
+      }
+
+      @media (max-width: 720px) {
+        main {
+          padding: 18px 14px 44px;
+        }
+
+        .hero,
+        .panel {
+          padding: 18px;
+          border-radius: 22px;
+        }
+
+        .tiles {
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+
+        .phone {
+          width: 100%;
+          border-radius: 28px;
+        }
+
+        .popup {
+          left: 12px;
+          right: 12px;
+          padding: 18px 14px 16px;
+        }
+
+        .popup-word {
+          font-size: 44px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="hero">
+        <span class="hero-tag">OMOJAN / SUBMIT PROTOTYPE</span>
+        <h1>おもじゃん<br />提出UIミニプロトタイプ</h1>
+        <p>
+          2枚の牌を選び、改行位置と書体を整えてから提出する試作です。
+          提出した瞬間は白い牌面ポップアップで中央に大きく表示され、言葉そのものが主役になる見せ方を試せます。
+        </p>
+        <div class="hero-list">
+          <div class="hero-card">
+            <strong>今回触れるもの</strong>
+            <span>牌選択 / 書体 / 改行 / 提出演出</span>
+          </div>
+          <div class="hero-card">
+            <strong>確認ポイント</strong>
+            <span>面白さを削らない改行位置</span>
+          </div>
+          <div class="hero-card">
+            <strong>提出時演出</strong>
+            <span>白背景に黒文字 + 麻雀らしい縁</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="layout">
+        <section class="panel">
+          <h2>調整ポイント</h2>
+          <p>
+            改行位置が変なところに入ると面白さが落ちる、という懸念をそのまま試せるようにしています。
+            今回は「完全自由編集」ではなく、「手元で十分試せる」ことを優先して現実的な操作に寄せています。
+          </p>
+
+          <div class="control-block">
+            <h3>選択中の2牌</h3>
+            <div class="selected-pair">
+              <div class="selected-slot" id="slotA"></div>
+              <div class="selected-slot" id="slotB"></div>
+            </div>
+            <div class="button-row">
+              <button class="btn subtle" id="swapBtn" type="button">順番を入れ替える</button>
+              <button class="btn subtle" id="clearBtn" type="button">選択をクリア</button>
+            </div>
+            <p class="helper">
+              牌を3つ目で押した場合は、いちばん古い選択を入れ替えます。
+            </p>
+          </div>
+
+          <div class="control-block">
+            <h3>改行モード</h3>
+            <div class="chip-row" id="lineModeRow"></div>
+            <div class="break-panel" id="manualBreakPanel" hidden>
+              <p id="manualBreakLabel"></p>
+              <div class="break-track" id="breakTrack"></div>
+            </div>
+            <p class="helper">
+              実装としては、まずこのくらいのプリセット方式がいちばん安全です。
+            </p>
+          </div>
+
+          <div class="control-block">
+            <h3>書体プリセット</h3>
+            <div class="chip-row" id="fontRow"></div>
+            <p class="helper">
+              文字の性格を少し変えるだけで、同じ造語でも印象がかなり変わります。
+            </p>
+          </div>
+
+          <div class="note-list">
+            <div class="note">
+              <strong>おすすめの見方:</strong> `ワードの境目で改行` と `実況ゴシック` を基準にして、
+              そこからどれだけ崩したくなるかを見ると判断しやすいです。
+            </div>
+            <div class="note">
+              <strong>現実的な実装案:</strong> 改行位置は `ワードの境目 / 手動 / 1行で固定`、
+              書体は本番では `3〜5種類` くらいに絞ると、楽しさと実装コストのバランスが取りやすいです。
+            </div>
+            <div class="note">
+              <strong>今回の判断:</strong> 手動改行は残したまま進めます。面白さを守る最後の逃げ道としてかなり相性が良いです。
+            </div>
+            <div class="note">
+              <strong>モードの違い:</strong> `1行で固定` は絶対に1行で見せて、その中で入る限界まで大きくします。
+              `ワードの境目で改行` は2つのワードの境目を先に守りつつ、どうしても長い時だけ中で追加改行します。
+            </div>
+            <div class="note">
+              <strong>手動改行の考え方:</strong> チェックを1つも入れなければ `改行なし` です。長すぎる場合だけ、面白さを守るための保護改行が自動で追加されます。
+            </div>
+            <div class="note">
+              <strong>手動で改行の仕様:</strong> チェックした位置は、まず実際の改行として優先します。そのうえで長すぎる行だけ、後ろ側に保護改行を追加します。
+            </div>
+          </div>
+        </section>
+
+        <section class="phone-shell">
+          <div class="phone">
+            <div class="status">
+              <span>提出UI試作</span>
+              <span>あなたの手番</span>
+            </div>
+
+            <div class="topbar">
+              <small>東一局 / 3番手</small>
+              <strong>2枚を選んで、見た目を整えて提出</strong>
+            </div>
+
+            <section class="phrase-preview">
+              <strong>提出前プレビュー</strong>
+              <div id="previewWord" class="preview-word"></div>
+              <p class="preview-caption" id="previewCaption"></p>
+            </section>
+
+            <section class="tiles" id="tileGrid"></section>
+
+            <div class="phone-action-row">
+              <button class="btn subtle" id="phoneSwapBtn" type="button">順番入替</button>
+              <button class="btn primary" id="submitBtn" type="button">この見た目で提出</button>
+            </div>
+
+            <section class="stage" id="stage">
+              <div class="board" id="board"></div>
+              <div class="stage-info">
+                <p>提出前は卓に並ぶ一覧が見えていて、提出した瞬間だけ中央の牌面ポップアップが出る想定です。</p>
+              </div>
+              <div class="popup" id="popup">
+                <div class="popup-card3d" id="popupCard3d">
+                  <div class="popup-face popup-back">
+                    <div class="popup-back-mark" aria-hidden="true"></div>
+                  </div>
+                  <div class="popup-face popup-front">
+                    <span class="popup-badge">あなたの一打</span>
+                    <div id="popupWord" class="popup-word"></div>
+                    <div id="popupMeta" class="popup-meta"></div>
+                    <div class="popup-actions">
+                      <button class="btn subtle" id="replayBtn" type="button">もう一度出す</button>
+                      <button class="btn primary" id="closePopupBtn" type="button">閉じる</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+        </section>
+      </section>
+    </main>
+    <div id="measureWord" class="popup-word measure-word" aria-hidden="true"></div>
+
+    <script>
+      const state = {
+        tiles: [
+          "爆",
+          "寝",
+          "社長",
+          "現場猫",
+          "ラーメン",
+          "汁",
+          "薄",
+          "侍",
+          "雲",
+          "謝罪会見",
+          "深夜テンション",
+          "大反省"
+        ],
+        selected: [3, 9],
+        lineMode: "boundary",
+        manualBreaks: [],
+        font: "broadcast",
+        popupOpen: false,
+        popupTurning: false,
+        board: [
+          { owner: "たなか", phrase: "爆ラーメン" },
+          { owner: "さとう", phrase: "寝社長" },
+          { owner: "みき", phrase: "汁侍" }
+        ]
+      };
+
+      const lineModes = [
+        { id: "boundary", label: "ワードの境目で改行" },
+        { id: "manual", label: "手動で改行" },
+        { id: "single", label: "1行で固定" }
+      ];
+
+      const fonts = [
+        { id: "classic", label: "勝負明朝", className: "font-classic" },
+        { id: "broadcast", label: "実況ゴシック", className: "font-broadcast" },
+        { id: "playful", label: "ゆるポップ", className: "font-playful" },
+        { id: "heavy", label: "極太ゴシック", className: "font-heavy" },
+        { id: "condensed", label: "細長ゴシック", className: "font-condensed" },
+        { id: "round", label: "丸ゴシック", className: "font-round" }
+      ];
+
+      const els = {
+        slotA: document.getElementById("slotA"),
+        slotB: document.getElementById("slotB"),
+        swapBtn: document.getElementById("swapBtn"),
+        clearBtn: document.getElementById("clearBtn"),
+        phoneSwapBtn: document.getElementById("phoneSwapBtn"),
+        lineModeRow: document.getElementById("lineModeRow"),
+        fontRow: document.getElementById("fontRow"),
+        manualBreakPanel: document.getElementById("manualBreakPanel"),
+        manualBreakLabel: document.getElementById("manualBreakLabel"),
+        breakTrack: document.getElementById("breakTrack"),
+        previewWord: document.getElementById("previewWord"),
+        previewCaption: document.getElementById("previewCaption"),
+        tileGrid: document.getElementById("tileGrid"),
+        submitBtn: document.getElementById("submitBtn"),
+        board: document.getElementById("board"),
+        stage: document.getElementById("stage"),
+        popup: document.getElementById("popup"),
+        measureWord: document.getElementById("measureWord"),
+        popupWord: document.getElementById("popupWord"),
+        popupMeta: document.getElementById("popupMeta"),
+        replayBtn: document.getElementById("replayBtn"),
+        closePopupBtn: document.getElementById("closePopupBtn")
+      };
+      let popupTurnTimer = 0;
+
+      function getSelectedTiles() {
+        return state.selected.map((index) => state.tiles[index]).filter(Boolean);
+      }
+
+      function getCombinedText() {
+        return getSelectedTiles().join("");
+      }
+
+      function getFontClass() {
+        return fonts.find((font) => font.id === state.font)?.className || "font-classic";
+      }
+
+      function getBoundaryIndex() {
+        const [first] = getSelectedTiles();
+        return Array.from(first || "").length || 0;
+      }
+
+      function normalizeBreaks(breaks, length) {
+        return [...new Set(breaks)]
+          .filter((value) => Number.isInteger(value) && value > 0 && value < length)
+          .sort((a, b) => a - b);
+      }
+
+      function sanitizeManualBreaks() {
+        const chars = Array.from(getCombinedText());
+        if (chars.length <= 1) {
+          state.manualBreaks = [];
+          return;
+        }
+
+        state.manualBreaks = normalizeBreaks(state.manualBreaks, chars.length);
+      }
+
+      function isLongPhrase() {
+        return Array.from(getCombinedText()).length >= 8;
+      }
+
+      function applyWordMarkup(container, lines, className, lineMode, fontSize) {
+        if (container.id === "measureWord") {
+          container.className = "popup-word measure-word";
+        } else {
+          container.className = container.id === "popupWord" ? "popup-word" : "preview-word";
+        }
+        container.classList.add(className);
+        container.classList.toggle("is-single-line", lineMode === "single");
+        if (isLongPhrase()) {
+          container.classList.add("is-long");
+        }
+        container.innerHTML = lines.map((line) => `<span class="word-line">${line}</span>`).join("");
+        container.style.fontSize = fontSize ? `${fontSize}px` : "";
+      }
+
+      function syncMeasureBounds() {
+        const previewWidth = els.previewWord.clientWidth || 320;
+        const popupWidth = els.popupWord.clientWidth || 320;
+        const previewHeight = els.previewWord.clientHeight || 140;
+        const popupHeight = els.popupWord.clientHeight || 140;
+        els.measureWord.style.width = `${Math.min(previewWidth, popupWidth)}px`;
+        els.measureWord.style.height = `${Math.min(previewHeight, popupHeight)}px`;
+      }
+
+      function measureLineFits(text, fontClass, fontSize) {
+        syncMeasureBounds();
+        applyWordMarkup(els.measureWord, [text || " "], fontClass, "single", fontSize);
+        const lineEl = els.measureWord.querySelector(".word-line");
+        return lineEl ? lineEl.scrollWidth <= els.measureWord.clientWidth - 1 : true;
+      }
+
+      function measureFits(fontClass, lineMode, lines, fontSize) {
+        syncMeasureBounds();
+        applyWordMarkup(els.measureWord, lines, fontClass, lineMode, fontSize);
+        const lineEls = Array.from(els.measureWord.querySelectorAll(".word-line"));
+        const tooWide = lineEls.some((line) => line.scrollWidth > els.measureWord.clientWidth - 1);
+        const tooTall = els.measureWord.scrollHeight > els.measureWord.clientHeight - 1;
+        return !(tooWide || tooTall);
+      }
+
+      function getMinimumFontSize(charsLength) {
+        if (state.lineMode === "single") {
+          if (charsLength >= 18) {
+            return 16;
+          }
+          if (charsLength >= 14) {
+            return 18;
+          }
+          if (charsLength >= 10) {
+            return 20;
+          }
+          return 24;
+        }
+        if (charsLength >= 16) {
+          return 28;
+        }
+        if (charsLength >= 12) {
+          return 30;
+        }
+        return 34;
+      }
+
+      function getBreaksFromLines(lines) {
+        const breaks = [];
+        let cursor = 0;
+
+        lines.forEach((line, index) => {
+          cursor += Array.from(line).length;
+          if (index < lines.length - 1) {
+            breaks.push(cursor);
+          }
+        });
+
+        return breaks;
+      }
+
+      function getLastFittingEnd(chars, start, endLimit, fontClass, fontSize) {
+        let lastFit = start;
+
+        for (let end = start + 1; end <= endLimit; end += 1) {
+          const sample = chars.slice(start, end).join("");
+          if (measureLineFits(sample, fontClass, fontSize)) {
+            lastFit = end;
+            continue;
+          }
+          break;
+        }
+
+        return lastFit > start ? lastFit : Math.min(start + 1, endLimit);
+      }
+
+      function splitForcedRange(chars, start, endLimit, fontClass, fontSize) {
+        const lines = [];
+        let cursor = start;
+
+        while (cursor < endLimit) {
+          const next = getLastFittingEnd(chars, cursor, endLimit, fontClass, fontSize);
+          lines.push(chars.slice(cursor, next).join(""));
+          cursor = next;
+        }
+
+        return lines;
+      }
+
+      function buildBoundaryLines(chars, fontClass, fontSize) {
+        const boundary = getBoundaryIndex();
+        const breaks = normalizeBreaks([boundary], chars.length);
+
+        if (!breaks.length) {
+          return splitForcedRange(chars, 0, chars.length, fontClass, fontSize);
+        }
+
+        const lines = [];
+        let start = 0;
+
+        [...breaks, chars.length].forEach((end) => {
+          lines.push(...splitForcedRange(chars, start, end, fontClass, fontSize));
+          start = end;
+        });
+
+        return lines.filter(Boolean);
+      }
+
+      function buildManualLines(chars, fontClass, fontSize) {
+        sanitizeManualBreaks();
+        const forcedBreaks = normalizeBreaks(state.manualBreaks, chars.length);
+
+        if (!forcedBreaks.length) {
+          return splitForcedRange(chars, 0, chars.length, fontClass, fontSize).filter(Boolean);
+        }
+
+        const lines = [];
+        let start = 0;
+        let currentForcedIndex = 0;
+
+        while (start < chars.length) {
+          const forcedEnd = forcedBreaks[currentForcedIndex];
+
+          if (forcedEnd) {
+            const forcedText = chars.slice(start, forcedEnd).join("");
+            if (measureLineFits(forcedText, fontClass, fontSize)) {
+              lines.push(forcedText);
+              start = forcedEnd;
+              currentForcedIndex += 1;
+              continue;
+            }
+
+            const protectedLines = splitForcedRange(chars, start, forcedEnd, fontClass, fontSize);
+            lines.push(...protectedLines);
+            start = forcedEnd;
+            currentForcedIndex += 1;
+            continue;
+          }
+
+          const rest = splitForcedRange(chars, start, chars.length, fontClass, fontSize);
+          lines.push(...rest);
+          break;
+        }
+
+        return lines.filter(Boolean);
+      }
+
+      function buildLines(chars, fontClass, fontSize) {
+        if (state.lineMode === "single") {
+          return [chars.join("")];
+        }
+
+        if (state.lineMode === "manual") {
+          return buildManualLines(chars, fontClass, fontSize);
+        }
+
+        return buildBoundaryLines(chars, fontClass, fontSize);
+      }
+
+      function computeWordLayout() {
+        const text = getCombinedText();
+        if (!text) {
+          return { lines: ["牌を2つ選ぶ"], fontSize: 34, effectiveBreaks: [], safetyAdjusted: false };
+        }
+
+        const chars = Array.from(text);
+        const fontClass = getFontClass();
+        const maxFontSize = state.lineMode === "single" ? 72 : 60;
+        const minFontSize = getMinimumFontSize(chars.length);
+        let fontSize = maxFontSize;
+        let fallbackLayout = null;
+
+        while (fontSize >= minFontSize) {
+          const lines = buildLines(chars, fontClass, fontSize);
+          const effectiveBreaks = getBreaksFromLines(lines);
+          const safetyAdjusted =
+            fontSize < maxFontSize ||
+            (state.lineMode === "manual" &&
+              effectiveBreaks.some((point) => !normalizeBreaks(state.manualBreaks, chars.length).includes(point))) ||
+            (state.lineMode === "boundary" &&
+              effectiveBreaks.some((point) => point !== getBoundaryIndex()));
+
+          if (measureFits(fontClass, state.lineMode, lines, fontSize)) {
+            return { lines, fontSize, effectiveBreaks, safetyAdjusted };
+          }
+
+          fallbackLayout = { lines, fontSize, effectiveBreaks, safetyAdjusted: true };
+          fontSize -= 1;
+        }
+
+        return (
+          fallbackLayout || {
+            lines: buildLines(chars, fontClass, minFontSize),
+            fontSize: minFontSize,
+            effectiveBreaks: getBreaksFromLines(buildLines(chars, fontClass, minFontSize)),
+            safetyAdjusted: true
+          }
+        );
+      }
+
+      function renderSelectedSlots() {
+        const tiles = getSelectedTiles();
+        [els.slotA, els.slotB].forEach((slot, index) => {
+          const value = tiles[index];
+          slot.textContent = value || (index === 0 ? "上の句を選択" : "下の句を選択");
+          slot.className = value ? "selected-slot" : "selected-slot empty";
+        });
+      }
+
+      function renderModeChips() {
+        els.lineModeRow.innerHTML = lineModes
+          .map(
+            (mode) =>
+              `<button type="button" class="chip${mode.id === state.lineMode ? " active" : ""}" data-mode="${mode.id}">${mode.label}</button>`
+          )
+          .join("");
+      }
+
+      function renderFontChips() {
+        els.fontRow.innerHTML = fonts
+          .map(
+            (font) =>
+              `<button type="button" class="chip${font.id === state.font ? " active" : ""}" data-font="${font.id}">${font.label}</button>`
+          )
+          .join("");
+      }
+
+      function renderBreakTrack() {
+        const combined = getCombinedText();
+        const chars = Array.from(combined);
+        const canBreak = chars.length > 1;
+
+        els.manualBreakPanel.hidden = !(state.lineMode === "manual" && canBreak);
+        if (els.manualBreakPanel.hidden) {
+          return;
+        }
+
+        sanitizeManualBreaks();
+        const label = state.manualBreaks.length
+          ? `${state.manualBreaks.join(" / ")}文字目のあとで改行`
+          : "改行を入れない";
+        els.manualBreakLabel.textContent = label;
+        els.breakTrack.innerHTML = chars
+          .map((char, index) => {
+            const box = `<span class="char-box">${char}</span>`;
+            const gap =
+              index < chars.length - 1
+                ? `<button type="button" class="break-dot${state.manualBreaks.includes(index + 1) ? " active" : ""}" data-break="${
+                    index + 1
+                  }" aria-label="${index + 1}文字目のあとで改行"></button>`
+                : "";
+            return `${box}${gap}`;
+          })
+          .join("");
+      }
+
+      function renderTiles() {
+        els.tileGrid.innerHTML = state.tiles
+          .map((tile, index) => {
+            const selected = state.selected.includes(index);
+            return `<button type="button" class="tile${selected ? " selected" : ""}" data-tile="${index}">${tile}</button>`;
+          })
+          .join("");
+      }
+
+      function renderPreview(layout) {
+        const className = getFontClass();
+        applyWordMarkup(els.previewWord, layout.lines, className, state.lineMode, layout.fontSize);
+        const combined = getCombinedText();
+        if (!combined) {
+          els.previewCaption.textContent = "まずは牌を2つ選ぶと、ここに見た目が出ます。";
+          return;
+        }
+
+        const modeLabel = lineModes.find((mode) => mode.id === state.lineMode)?.label || "";
+        const fontLabel = fonts.find((font) => font.id === state.font)?.label || "";
+        els.previewCaption.textContent = layout.safetyAdjusted
+          ? `改行: ${modeLabel} / 書体: ${fontLabel} / 保護改行または縮小あり`
+          : `改行: ${modeLabel} / 書体: ${fontLabel}`;
+      }
+
+      function getYourBoardWord(layout) {
+        return layout.lines.join("<br>");
+      }
+
+      function renderBoard(layout) {
+        const cards = [...state.board];
+        if (getCombinedText()) {
+          cards.splice(2, 0, { owner: "あなた", phrase: getYourBoardWord(layout), isYou: true });
+        }
+
+        els.board.innerHTML = cards
+          .map(
+            (card) => `
+              <div class="board-card">
+                <strong>${card.isYou ? "あなた" : card.owner}</strong>
+                <div class="board-word ${card.isYou ? getFontClass() : ""}">${card.phrase}</div>
+              </div>
+            `
+          )
+          .join("");
+      }
+
+      function renderPopup(layout) {
+        applyWordMarkup(els.popupWord, layout.lines, getFontClass(), state.lineMode, layout.fontSize);
+        const modeLabel = lineModes.find((mode) => mode.id === state.lineMode)?.label || "";
+        const fontLabel = fonts.find((font) => font.id === state.font)?.label || "";
+        const breakText = layout.effectiveBreaks.length
+          ? layout.effectiveBreaks.join(" / ") + "文字目で改行"
+          : "改行なし";
+        els.popupMeta.innerHTML = `改行: ${modeLabel}（${breakText}）<br />書体: ${fontLabel}`;
+        els.stage.classList.toggle("is-open", state.popupOpen);
+        els.stage.classList.toggle("is-turning", state.popupOpen && state.popupTurning);
+      }
+
+      function render() {
+        sanitizeManualBreaks();
+        const layout = computeWordLayout();
+        renderSelectedSlots();
+        renderModeChips();
+        renderFontChips();
+        renderBreakTrack();
+        renderTiles();
+        renderPreview(layout);
+        renderBoard(layout);
+        renderPopup(layout);
+      }
+
+      function syncManualBreaksToCurrentText() {
+        const chars = Array.from(getCombinedText());
+        if (chars.length <= 1) {
+          state.manualBreaks = [];
+          return;
+        }
+
+        sanitizeManualBreaks();
+      }
+
+      function toggleTile(index) {
+        const selectedIndex = state.selected.indexOf(index);
+        if (selectedIndex >= 0) {
+          state.selected.splice(selectedIndex, 1);
+          render();
+          return;
+        }
+
+        if (state.selected.length >= 2) {
+          state.selected.shift();
+        }
+
+        state.selected.push(index);
+        syncManualBreaksToCurrentText();
+        render();
+      }
+
+      function submitCurrentPhrase() {
+        if (getSelectedTiles().length < 2) {
+          window.alert("まずは牌を2つ選んでください。");
+          return;
+        }
+
+        state.popupOpen = true;
+        state.popupTurning = false;
+        render();
+        queuePopupTurn();
+      }
+
+      function cancelPopupTurn() {
+        if (popupTurnTimer) {
+          window.clearTimeout(popupTurnTimer);
+          popupTurnTimer = 0;
+        }
+      }
+
+      function queuePopupTurn() {
+        cancelPopupTurn();
+        popupTurnTimer = window.setTimeout(() => {
+          popupTurnTimer = 0;
+          state.popupTurning = true;
+          render();
+        }, 120);
+      }
+
+      function applyQueryState() {
+        const params = new URLSearchParams(window.location.search);
+        const selected = params.get("selected");
+        const lineMode = params.get("lineMode");
+        const font = params.get("font");
+        const manualBreak = Number(params.get("manualBreak"));
+        const popup = params.get("popup");
+
+        if (selected) {
+          const indices = selected
+            .split(",")
+            .map((value) => Number(value))
+            .filter((value) => Number.isInteger(value) && value >= 0 && value < state.tiles.length)
+            .slice(0, 2);
+          if (indices.length) {
+            state.selected = indices;
+          }
+        }
+
+        if (lineModes.some((mode) => mode.id === lineMode)) {
+          state.lineMode = lineMode;
+        }
+
+        if (fonts.some((item) => item.id === font)) {
+          state.font = font;
+        }
+
+        if (Number.isInteger(manualBreak) && manualBreak > 0) {
+          state.manualBreaks = [manualBreak];
+        }
+
+        const manualBreaks = params.get("manualBreaks");
+        if (manualBreaks) {
+          state.manualBreaks = manualBreaks
+            .split(",")
+            .map((value) => Number(value))
+            .filter((value) => Number.isInteger(value) && value > 0);
+        }
+
+        state.popupOpen = popup === "1";
+        state.popupTurning = false;
+      }
+
+      els.swapBtn.addEventListener("click", () => {
+        state.selected.reverse();
+        syncManualBreaksToCurrentText();
+        render();
+      });
+
+      els.phoneSwapBtn.addEventListener("click", () => {
+        state.selected.reverse();
+        syncManualBreaksToCurrentText();
+        render();
+      });
+
+      els.clearBtn.addEventListener("click", () => {
+        cancelPopupTurn();
+        state.selected = [];
+        state.popupOpen = false;
+        state.popupTurning = false;
+        render();
+      });
+
+      els.lineModeRow.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-mode]");
+        if (!button) {
+          return;
+        }
+        state.lineMode = button.dataset.mode;
+        syncManualBreaksToCurrentText();
+        render();
+      });
+
+      els.fontRow.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-font]");
+        if (!button) {
+          return;
+        }
+        state.font = button.dataset.font;
+        render();
+      });
+
+      els.breakTrack.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-break]");
+        if (!button) {
+          return;
+        }
+        const value = Number(button.dataset.break);
+        if (state.manualBreaks.includes(value)) {
+          state.manualBreaks = state.manualBreaks.filter((point) => point !== value);
+        } else {
+          state.manualBreaks = [...state.manualBreaks, value];
+        }
+        render();
+      });
+
+      els.tileGrid.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-tile]");
+        if (!button) {
+          return;
+        }
+        toggleTile(Number(button.dataset.tile));
+      });
+
+      els.submitBtn.addEventListener("click", submitCurrentPhrase);
+      els.replayBtn.addEventListener("click", submitCurrentPhrase);
+      els.closePopupBtn.addEventListener("click", () => {
+        cancelPopupTurn();
+        state.popupOpen = false;
+        state.popupTurning = false;
+        render();
+      });
+
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && state.popupOpen) {
+          cancelPopupTurn();
+          state.popupOpen = false;
+          state.popupTurning = false;
+          render();
+        }
+      });
+
+      applyQueryState();
+      syncManualBreaksToCurrentText();
+      render();
+      if (state.popupOpen) {
+        queuePopupTurn();
+      }
+    </script>
+  </body>
+</html>

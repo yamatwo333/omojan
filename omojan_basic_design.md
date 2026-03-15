@@ -43,6 +43,19 @@ flowchart LR
   L --> M["Deck Master JSON / S3"]
 ```
 
+### 3-1. 実装の進め方
+
+実装は次の順で進めます。
+
+1. `backend/mock_api`
+   - ローカルで画面と API 契約を固める
+2. `backend/lambda/api`
+   - Lambda / API Gateway の入口を固める
+3. `DynamoDB 接続`
+   - room / invite / deck / champions を永続化する
+
+つまり、`ローカル mock -> Lambda 雛形 -> DynamoDB 本実装` の順で寄せます。
+
 ## 4. フロントエンド設計方針
 
 ### 4-1. 画面状態の考え方

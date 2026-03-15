@@ -33,6 +33,8 @@
   - テスト計画書
 - `mock_api/`
   - API 実装前に使うモックデータ
+- `infra/sam/`
+  - Lambda + API Gateway + DynamoDB の AWS 雛形
 
 ## 開き方
 
@@ -64,6 +66,7 @@ http://127.0.0.1:8000/omojan_phase_prototype.html?data=fixture
 
 ```bash
 npm run test:mock-api
+npm run test:lambda-api
 npm run test:e2e:phase
 ```
 

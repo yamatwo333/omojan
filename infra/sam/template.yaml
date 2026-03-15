@@ -1,0 +1,91 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: Omojan backend scaffold (API Gateway + Lambda + DynamoDB)
+
+Parameters:
+  StageName:
+    Type: String
+    Default: dev
+  AllowedOrigin:
+    Type: String
+    Default: "*"
+  AppTableName:
+    Type: String
+    Default: OmojanApp
+
+Globals:
+  Function:
+    Runtime: nodejs22.x
+    Timeout: 10
+    MemorySize: 256
+
+Resources:
+  OmojanHttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: !Ref StageName
+      CorsConfiguration:
+        AllowOrigins:
+          - !Ref AllowedOrigin
+        AllowHeaders:
+          - content-type
+          - x-omojan-player-token
+        AllowMethods:
+          - GET
+          - POST
+          - OPTIONS
+
+  OmojanApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub omojan-api-${StageName}
+      CodeUri: ../../
+      Handler: backend/lambda/api/handler.handler
+      Environment:
+        Variables:
+          APP_STAGE: !Ref StageName
+          APP_TABLE_NAME: !Ref AppTableName
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref OmojanAppTable
+      Events:
+        ApiProxy:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref OmojanHttpApi
+            Path: /v1/{proxy+}
+            Method: ANY
+
+  OmojanAppTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Ref AppTableName
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+      TimeToLiveSpecification:
+        AttributeName: expiresAt
+        Enabled: true
+      SSESpecification:
+        SSEEnabled: true
+
+Outputs:
+  HttpApiBaseUrl:
+    Description: Base URL for the scaffold API
+    Value: !Sub https://${OmojanHttpApi}.execute-api.${AWS::Region}.amazonaws.com/${StageName}
+
+  AppTableName:
+    Description: DynamoDB table for Omojan app data
+    Value: !Ref OmojanAppTable
+
+  FunctionName:
+    Description: Lambda function name
+    Value: !Ref OmojanApiFunction

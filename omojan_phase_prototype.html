@@ -487,8 +487,8 @@
         <header class="page-header">
           <h1>おもじゃん</h1>
           <p>
-            API を優先して room 状態を読み込み、使えないときは fixture JSON にフォールバックする
-            phase 駆動の試作です。見た目確認用とは分けて、実装の土台を固める目的で使います。
+            phase から画面を導出する実装寄りの試作です。画面確認は fixture を使い、
+            ライブデモと最近の優勝ワードは API を優先して読みます。見た目確認用とは分けて、実装の土台を固める目的で使います。
           </p>
         </header>
 
@@ -538,7 +538,8 @@
       };
 
       const DEFAULT_ROOM_ID = "room_omo_2048";
-      const DEFAULT_API_BASE_URL = "http://127.0.0.1:8787/v1";
+      const LOCAL_API_BASE_URL = "http://127.0.0.1:8787/v1";
+      const PUBLIC_DEV_API_BASE_URL = "https://nglzfg3co5.execute-api.ap-northeast-1.amazonaws.com/dev/v1";
       const DATA_MODES = new Set(["auto", "api", "fixture"]);
       const LIVE_ROOM_ID_KEY = "omojan-live-room-id";
       const LIVE_PLAYER_TOKEN_KEY = "omojan-live-player-token";
@@ -560,7 +561,7 @@
         dataMode: "auto",
         dataSource: "loading",
         dataStatusText: "接続先を確認中です。",
-        apiBaseUrl: DEFAULT_API_BASE_URL,
+        apiBaseUrl: LOCAL_API_BASE_URL,
         errorMessage: "",
         isLoading: true,
         pendingAction: false,
@@ -594,6 +595,26 @@
 
       function clone(value) {
         return JSON.parse(JSON.stringify(value));
+      }
+
+      function resolveDefaultApiBaseUrl() {
+        const { hostname, protocol } = window.location;
+        if (protocol === "file:") {
+          return LOCAL_API_BASE_URL;
+        }
+        if (hostname === "localhost" || hostname === "127.0.0.1") {
+          return LOCAL_API_BASE_URL;
+        }
+        return PUBLIC_DEV_API_BASE_URL;
+      }
+
+      function canFetchScenarioRoomFromApi() {
+        try {
+          const url = new URL(state.apiBaseUrl);
+          return ["127.0.0.1", "localhost"].includes(url.hostname) && url.port === "8787";
+        } catch {
+          return false;
+        }
       }
 
       function getRoom() {
@@ -1363,6 +1384,9 @@
         if (source === "api") {
           return `接続先: API (${state.apiBaseUrl})`;
         }
+        if (source === "hybrid") {
+          return `接続先: 画面は fixture / 履歴とライブデモは API (${state.apiBaseUrl})`;
+        }
         if (source === "fixture") {
           return reason || "接続先: fixture JSON";
         }
@@ -1763,16 +1787,47 @@
         renderApp();
 
         const sources =
-          state.dataMode === "api" ? ["api"] : state.dataMode === "fixture" ? ["fixture"] : ["api", "fixture"];
+          state.dataMode === "fixture"
+            ? ["fixture"]
+            : state.dataMode === "api"
+              ? [canFetchScenarioRoomFromApi() ? "api" : "hybrid"]
+              : [canFetchScenarioRoomFromApi() ? "api" : "hybrid", "fixture"];
 
         let lastError = null;
 
         for (const source of sources) {
           try {
-            const [room, recentChampions] =
-              source === "api"
-                ? await Promise.all([fetchApiRoom(scenarioId), fetchApiChampions()])
-                : await Promise.all([fetchFixtureRoom(scenarioId), fetchFixtureChampions()]);
+            let room;
+            let recentChampions;
+            let dataStatusText;
+            let dataSource = source;
+
+            if (source === "api") {
+              [room, recentChampions] = await Promise.all([fetchApiRoom(scenarioId), fetchApiChampions()]);
+              dataStatusText = describeDataSource("api");
+            } else if (source === "hybrid") {
+              room = await fetchFixtureRoom(scenarioId);
+              try {
+                recentChampions = await fetchApiChampions();
+                dataStatusText = describeDataSource("hybrid");
+              } catch (error) {
+                if (state.dataMode === "api") {
+                  throw error;
+                }
+                recentChampions = await fetchFixtureChampions();
+                dataSource = "fixture";
+                dataStatusText = describeDataSource(
+                  "fixture",
+                  "接続先: fixture JSON (API に接続できなかったため履歴も fixture に切り替え)"
+                );
+              }
+            } else {
+              [room, recentChampions] = await Promise.all([fetchFixtureRoom(scenarioId), fetchFixtureChampions()]);
+              dataStatusText =
+                state.dataMode === "auto" && lastError
+                  ? describeDataSource("fixture", "接続先: fixture JSON (API に接続できなかったため自動フォールバック)")
+                  : describeDataSource("fixture");
+            }
 
             if (requestId !== state.loadRequestId) {
               return;
@@ -1780,16 +1835,8 @@
 
             state.room = room;
             state.recentChampions = recentChampions;
-            state.dataSource = source;
-            state.dataStatusText =
-              source === "api"
-                ? describeDataSource("api")
-                : describeDataSource(
-                    "fixture",
-                    state.dataMode === "auto" && lastError
-                      ? `接続先: fixture JSON (API に接続できなかったため自動フォールバック)`
-                      : "接続先: fixture JSON"
-                  );
+            state.dataSource = dataSource;
+            state.dataStatusText = dataStatusText;
             state.isLoading = false;
             syncLocalDraft();
             renderScenarioGrid();
@@ -1817,6 +1864,8 @@
         const dataMode = params.get("data");
         const apiBaseUrl = params.get("apiBaseUrl");
 
+        state.apiBaseUrl = resolveDefaultApiBaseUrl();
+
         if (scenario && scenarioLabels[scenario]) {
           state.selectedScenarioId = scenario;
         }
@@ -1829,10 +1878,14 @@
 
         state.dataStatusText =
           state.dataMode === "api"
-            ? `接続先: API を固定 (${state.apiBaseUrl})`
+            ? canFetchScenarioRoomFromApi()
+              ? `接続先: API を固定 (${state.apiBaseUrl})`
+              : `接続先: 画面は fixture / ライブデモは API を固定 (${state.apiBaseUrl})`
             : state.dataMode === "fixture"
               ? "接続先: fixture JSON を固定"
-              : `接続先: API を優先 (${state.apiBaseUrl})`;
+              : canFetchScenarioRoomFromApi()
+                ? `接続先: API を優先 (${state.apiBaseUrl})`
+                : `接続先: 画面は fixture / ライブデモは API を優先 (${state.apiBaseUrl})`;
 
         renderScenarioGrid();
         renderApp();

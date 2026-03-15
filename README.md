@@ -66,10 +66,10 @@ AWS 上の dev API は次です。
 https://nglzfg3co5.execute-api.ap-northeast-1.amazonaws.com/dev/v1
 ```
 
-公開中の Amplify 版から直接つなぐ場合は次を開きます。
+公開中の Amplify 版から phase 駆動プロトタイプを開く場合は、次をそのまま開けば AWS dev API に自動接続します。
 
 ```txt
-https://main.dr94wxwisw55z.amplifyapp.com/omojan_phase_prototype.html?data=auto&apiBaseUrl=https%3A%2F%2Fnglzfg3co5.execute-api.ap-northeast-1.amazonaws.com%2Fdev%2Fv1
+https://main.dr94wxwisw55z.amplifyapp.com/omojan_phase_prototype.html
 ```
 
 Lambda 実装寄りのローカル API で確認したい場合は、代わりに以下を起動します。

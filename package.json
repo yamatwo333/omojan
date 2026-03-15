@@ -1,0 +1,8 @@
+{
+  "name": "omojan-prototype",
+  "private": true,
+  "scripts": {
+    "start:mock-api": "node backend/mock_api/local_server.js",
+    "test:mock-api": "node --test backend/mock_api/handler.test.js"
+  }
+}

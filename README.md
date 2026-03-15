@@ -1,4 +1,4 @@
-# おもじゃん Prototype
+# omojan / おもじゃん Prototype
 
 スマホ向け Web ボードゲーム「おもじゃん」の試作置き場です。
 

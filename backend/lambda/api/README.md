@@ -26,6 +26,7 @@
 は実装済みです。
 
 このうちゲーム進行 API は、初版の 1 試合ループを最後まで通せる状態です。  
+`GET /v1/champions/recent` も、総合優勝が確定したワードを DynamoDB / memory に追加して返せます。  
 現在 `501 NOT_IMPLEMENTED` を返すのは、運営用デッキ更新や今後の拡張 API です。
 
 補足:

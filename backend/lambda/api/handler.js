@@ -525,6 +525,70 @@ function setFinalWinner(updatedRoom, finalVote, winnerCandidateId, source, count
   updatedRoom.status = "finished";
 }
 
+function buildChampionHistoryEntry(room) {
+  const champion = room.game?.champion;
+  if (!champion) {
+    return null;
+  }
+
+  const wonAt = room.updatedAt || nowIso();
+  const compactWonAt = wonAt.replace(/[-:.TZ]/g, "").slice(0, 14);
+  return {
+    PK: "CHAMPIONS",
+    SK: `TS#${wonAt}#ROOM#${room.roomId}`,
+    entityType: "ChampionHistory",
+    championId: `ch_${compactWonAt}_${room.roomId.slice(-8)}`,
+    roomId: room.roomId,
+    inviteCode: room.inviteCode,
+    playerId: champion.playerId,
+    displayName: champion.displayName,
+    phrase: champion.phrase,
+    fontId: champion.fontId,
+    renderedLines: clone(champion.renderedLines || []),
+    wonAt,
+    createdAt: wonAt
+  };
+}
+
+function toChampionHistoryView(item) {
+  return {
+    championId: item.championId,
+    phrase: item.phrase,
+    displayName: item.displayName,
+    wonAt: item.wonAt
+  };
+}
+
+function buildRecentChampionItems(historyItems, limit) {
+  const merged = [];
+  const seen = new Set();
+
+  for (const item of historyItems) {
+    const normalized = toChampionHistoryView(item);
+    if (seen.has(normalized.championId)) {
+      continue;
+    }
+    seen.add(normalized.championId);
+    merged.push(normalized);
+    if (merged.length >= limit) {
+      return merged;
+    }
+  }
+
+  for (const item of recentChampions) {
+    if (seen.has(item.championId)) {
+      continue;
+    }
+    seen.add(item.championId);
+    merged.push(clone(item));
+    if (merged.length >= limit) {
+      break;
+    }
+  }
+
+  return merged;
+}
+
 function buildVotedRoom(room, mePlayer, roundIndex, targetPlayerId, mode = "vote") {
   const expectedPhase = mode === "revote" ? "round_revote" : "round_vote";
   if (room.game?.phase !== expectedPhase) {
@@ -981,7 +1045,13 @@ function toRoomPayload(room, mePlayer, playerToken = null) {
 }
 
 function toConditionalFailure(error) {
-  return error && (error.name === "ConditionalCheckFailedException" || error.code === "ConditionalCheckFailedException");
+  return (
+    error &&
+    (error.name === "ConditionalCheckFailedException" ||
+      error.code === "ConditionalCheckFailedException" ||
+      error.name === "TransactionCanceledException" ||
+      error.code === "TransactionCanceledException")
+  );
 }
 
 async function loadAwsSdkModules() {
@@ -1051,7 +1121,27 @@ async function createDynamoRoomRepository(options = {}) {
     return response.Items?.[0] || null;
   }
 
+  async function queryChampionHistory(limit) {
+    const response = await documentClient.send(
+      new modules.QueryCommand({
+        TableName: tableName,
+        KeyConditionExpression: "PK = :pk",
+        ExpressionAttributeValues: {
+          ":pk": "CHAMPIONS"
+        },
+        ScanIndexForward: false,
+        Limit: Math.max(limit, 1)
+      })
+    );
+    return response.Items || [];
+  }
+
   return {
+    async getRecentChampions(limit) {
+      const items = await queryChampionHistory(limit);
+      return buildRecentChampionItems(items, limit);
+    },
+
     async createRoom({ displayName, playerCount }) {
       for (let attempt = 0; attempt < 10; attempt += 1) {
         const issuedAt = nowIso();
@@ -1404,7 +1494,36 @@ async function createDynamoRoomRepository(options = {}) {
 
         const updatedRoom = buildFinalVotedRoom(room, mePlayer, candidateId, mode);
         try {
-          await putRoomItem(updatedRoom, room.revision);
+          const championEntry =
+            updatedRoom.game?.phase === "final_result" && room.game?.phase !== "final_result"
+              ? buildChampionHistoryEntry(updatedRoom)
+              : null;
+          if (championEntry) {
+            await documentClient.send(
+              new modules.TransactWriteCommand({
+                TransactItems: [
+                  {
+                    Put: {
+                      TableName: tableName,
+                      Item: updatedRoom,
+                      ConditionExpression: "#revision = :expectedRevision",
+                      ExpressionAttributeNames: { "#revision": "revision" },
+                      ExpressionAttributeValues: { ":expectedRevision": room.revision }
+                    }
+                  },
+                  {
+                    Put: {
+                      TableName: tableName,
+                      Item: championEntry,
+                      ConditionExpression: "attribute_not_exists(PK)"
+                    }
+                  }
+                ]
+              })
+            );
+          } else {
+            await putRoomItem(updatedRoom, room.revision);
+          }
           const updatedMePlayer = updatedRoom.players.find((player) => player.playerId === mePlayer.playerId);
           return { room: updatedRoom, mePlayer: updatedMePlayer };
         } catch (error) {
@@ -1431,7 +1550,36 @@ async function createDynamoRoomRepository(options = {}) {
 
         const updatedRoom = buildFinalHostDecisionRoom(room, mePlayer, candidateId);
         try {
-          await putRoomItem(updatedRoom, room.revision);
+          const championEntry =
+            updatedRoom.game?.phase === "final_result" && room.game?.phase !== "final_result"
+              ? buildChampionHistoryEntry(updatedRoom)
+              : null;
+          if (championEntry) {
+            await documentClient.send(
+              new modules.TransactWriteCommand({
+                TransactItems: [
+                  {
+                    Put: {
+                      TableName: tableName,
+                      Item: updatedRoom,
+                      ConditionExpression: "#revision = :expectedRevision",
+                      ExpressionAttributeNames: { "#revision": "revision" },
+                      ExpressionAttributeValues: { ":expectedRevision": room.revision }
+                    }
+                  },
+                  {
+                    Put: {
+                      TableName: tableName,
+                      Item: championEntry,
+                      ConditionExpression: "attribute_not_exists(PK)"
+                    }
+                  }
+                ]
+              })
+            );
+          } else {
+            await putRoomItem(updatedRoom, room.revision);
+          }
           const updatedMePlayer = updatedRoom.players.find((player) => player.playerId === mePlayer.playerId);
           return { room: updatedRoom, mePlayer: updatedMePlayer };
         } catch (error) {
@@ -1477,12 +1625,42 @@ async function createDynamoRoomRepository(options = {}) {
 function createMemoryRoomRepository() {
   const rooms = new Map();
   const invites = new Map();
+  const championHistory = recentChampions.map((item) => ({
+    PK: "CHAMPIONS",
+    SK: `TS#${item.wonAt}#SEED#${item.championId}`,
+    entityType: "ChampionHistory",
+    championId: item.championId,
+    roomId: "",
+    inviteCode: "",
+    playerId: "",
+    displayName: item.displayName,
+    phrase: item.phrase,
+    fontId: "",
+    renderedLines: [item.phrase],
+    wonAt: item.wonAt,
+    createdAt: item.wonAt
+  }));
 
   function saveRoom(room) {
     rooms.set(room.roomId, clone(room));
   }
 
+  function saveChampionEntry(room, previousPhase = null) {
+    if (room.game?.phase !== "final_result" || previousPhase === "final_result") {
+      return;
+    }
+    const entry = buildChampionHistoryEntry(room);
+    if (!entry) {
+      return;
+    }
+    championHistory.unshift(entry);
+  }
+
   return {
+    async getRecentChampions(limit) {
+      return buildRecentChampionItems(championHistory, limit);
+    },
+
     async createRoom({ displayName, playerCount }) {
       const issuedAt = nowIso();
       const roomId = makeId("room");
@@ -1706,6 +1884,7 @@ function createMemoryRoomRepository() {
       }
 
       const updatedRoom = buildFinalVotedRoom(room, mePlayer, candidateId, mode);
+      saveChampionEntry(updatedRoom, room.game?.phase);
       saveRoom(updatedRoom);
       const updatedMePlayer = updatedRoom.players.find((player) => player.playerId === mePlayer.playerId);
       return { room: clone(updatedRoom), mePlayer: clone(updatedMePlayer) };
@@ -1722,6 +1901,7 @@ function createMemoryRoomRepository() {
       }
 
       const updatedRoom = buildFinalHostDecisionRoom(room, mePlayer, candidateId);
+      saveChampionEntry(updatedRoom, room.game?.phase);
       saveRoom(updatedRoom);
       const updatedMePlayer = updatedRoom.players.find((player) => player.playerId === mePlayer.playerId);
       return { room: clone(updatedRoom), mePlayer: clone(updatedMePlayer) };
@@ -1784,7 +1964,17 @@ function createHandler(options = {}) {
         case "health":
           return handleHealth();
         case "getChampionsRecent":
-          return handleGetChampionsRecent(event);
+          {
+            const repository = await roomRepositoryPromise;
+            if (typeof repository.getRecentChampions === "function") {
+              const requestedLimit = Number(event.queryStringParameters?.limit || "5");
+              const limit = Number.isFinite(requestedLimit) && requestedLimit > 0 ? requestedLimit : 5;
+              return ok({
+                items: await repository.getRecentChampions(limit)
+              });
+            }
+            return handleGetChampionsRecent(event);
+          }
         case "getDeck":
           return handleGetDeck(matched.params[0]);
         case "createRoom": {

@@ -532,6 +532,26 @@ test("final vote can resolve directly into final_result and restart to lobby", a
   assert.equal(restartedRoom.myHand.length, 0);
 });
 
+test("recent champions includes newly finished game at the top", async () => {
+  const handler = createTestHandler();
+  const session = await createSession(handler, ["ホスト", "ゲストA", "ゲストB"]);
+  let room = await reachFinalVote(handler, session);
+
+  room = await voteFinalFor(handler, session, room, "ホスト", "ゲストA", "vote");
+  room = await voteFinalFor(handler, session, room, "ゲストA", "ホスト", "vote");
+  room = await voteFinalFor(handler, session, room, "ゲストB", "ホスト", "vote");
+
+  const response = await handler(createEvent("GET", "/v1/champions/recent", { query: { limit: "3" } }));
+  const body = await parseResponse(response);
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(body.ok, true);
+  assert.equal(body.data.items[0].displayName, room.game.champion.displayName);
+  assert.equal(body.data.items[0].phrase, room.game.champion.phrase);
+  assert.match(body.data.items[0].championId, /^ch_/);
+  assert.equal(body.data.items.length, 3);
+});
+
 test("final tie can progress through final_revote and final_host_decide", async () => {
   const handler = createTestHandler();
   const session = await createSession(handler, ["ホスト", "ゲストA", "ゲストB"]);

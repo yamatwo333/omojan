@@ -14,11 +14,15 @@
 - `POST /v1/rooms/{roomId}/start-player`
 - `POST /v1/rooms/{roomId}/start`
 - `POST /v1/rooms/{roomId}/rounds/{roundIndex}/submit`
+- `POST /v1/rooms/{roomId}/rounds/{roundIndex}/vote`
+- `POST /v1/rooms/{roomId}/rounds/{roundIndex}/revote`
+- `POST /v1/rooms/{roomId}/rounds/{roundIndex}/host-decision`
+- `POST /v1/rooms/{roomId}/rounds/{roundIndex}/proceed`
 
 は実装済みです。
 
 このうち room 系は DynamoDB を使う本実装です。  
-一方で、投票以降の進行 API はまだ `501 NOT_IMPLEMENTED` を返します。
+一方で、最終投票まわりの API はまだ `501 NOT_IMPLEMENTED` を返します。
 
 ## 目的
 

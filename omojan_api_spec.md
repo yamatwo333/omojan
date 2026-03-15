@@ -183,6 +183,8 @@ type RoundView = {
   wind: "東一局" | "東二局" | "東三局";
   phaseStatus: "pending" | "submit" | "vote" | "revote" | "host_decide" | "finished";
   submissions: SubmissionView[];
+  votedPlayerIds: string[];
+  revotedPlayerIds: string[];
   voteSummary: {
     counts: Array<{
       playerId: string;
@@ -201,6 +203,8 @@ type RoundView = {
 ```ts
 type FinalVoteView = {
   phaseStatus: "vote" | "revote" | "host_decide" | "finished";
+  votedPlayerIds: string[];
+  revotedPlayerIds: string[];
   candidates: Array<{
     candidateId: string;
     roundIndex: 0 | 1 | 2;
@@ -687,4 +691,5 @@ X-Omojan-Player-Token: pt_...
 - 同時更新競合時は `CONFLICT_RETRY` を返す
 - 投票確定や提出確定のレスポンスは、画面差分ではなく最新 room を返す
 - フロントは `phase` と `me` を見て画面を決める
+- `round_vote / round_revote / final_vote / final_revote` では、必要に応じて `votedPlayerIds / revotedPlayerIds` で自分の行動済みを判定する
 - モックデータは `mock_api/` 配下を参照する

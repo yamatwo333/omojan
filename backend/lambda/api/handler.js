@@ -89,10 +89,10 @@ function parseRoute(method, pathname) {
     { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/start-player$/, route: "startPlayer" },
     { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/start$/, route: "startGame" },
     { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/rounds\/(\d+)\/submit$/, route: "submitWord" },
-    { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/rounds\/(\d+)\/vote$/, route: "notImplemented" },
-    { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/rounds\/(\d+)\/revote$/, route: "notImplemented" },
-    { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/rounds\/(\d+)\/host-decision$/, route: "notImplemented" },
-    { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/rounds\/(\d+)\/proceed$/, route: "notImplemented" },
+    { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/rounds\/(\d+)\/vote$/, route: "submitVote" },
+    { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/rounds\/(\d+)\/revote$/, route: "submitRevote" },
+    { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/rounds\/(\d+)\/host-decision$/, route: "submitHostDecision" },
+    { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/rounds\/(\d+)\/proceed$/, route: "proceedRound" },
     { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/final-vote$/, route: "notImplemented" },
     { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/final-revote$/, route: "notImplemented" },
     { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/final-host-decision$/, route: "notImplemented" },
@@ -125,7 +125,11 @@ function handleHealth() {
       "rooms:reconnect",
       "rooms:start-player",
       "rooms:start",
-      "rounds:submit"
+      "rounds:submit",
+      "rounds:vote",
+      "rounds:revote",
+      "rounds:host-decision",
+      "rounds:proceed"
     ]
   });
 }
@@ -182,9 +186,42 @@ function makeInviteCode() {
 
 function createEmptyRounds() {
   return [
-    { roundIndex: 0, label: "ラウンド1", wind: "東一局", phaseStatus: "pending", submissions: [], voteSummary: null, winner: null },
-    { roundIndex: 1, label: "ラウンド2", wind: "東二局", phaseStatus: "pending", submissions: [], voteSummary: null, winner: null },
-    { roundIndex: 2, label: "ラウンド3", wind: "東三局", phaseStatus: "pending", submissions: [], voteSummary: null, winner: null }
+    {
+      roundIndex: 0,
+      label: "ラウンド1",
+      wind: "東一局",
+      phaseStatus: "pending",
+      submissions: [],
+      votes: {},
+      revotes: {},
+      hostDecision: null,
+      voteSummary: null,
+      winner: null
+    },
+    {
+      roundIndex: 1,
+      label: "ラウンド2",
+      wind: "東二局",
+      phaseStatus: "pending",
+      submissions: [],
+      votes: {},
+      revotes: {},
+      hostDecision: null,
+      voteSummary: null,
+      winner: null
+    },
+    {
+      roundIndex: 2,
+      label: "ラウンド3",
+      wind: "東三局",
+      phaseStatus: "pending",
+      submissions: [],
+      votes: {},
+      revotes: {},
+      hostDecision: null,
+      voteSummary: null,
+      winner: null
+    }
   ];
 }
 
@@ -269,6 +306,18 @@ function getCurrentRound(room) {
     return null;
   }
   return room.game.rounds?.[room.game.roundIndex] || null;
+}
+
+function startRound(updatedRoom, roundIndex) {
+  updatedRoom.game.roundIndex = roundIndex;
+  updatedRoom.game.phase = "round_submit";
+  updatedRoom.game.currentTurnPlayerId = updatedRoom.playerOrder[0] || updatedRoom.startPlayerId || updatedRoom.hostPlayerId;
+  updatedRoom.game.rounds[roundIndex].phaseStatus = "submit";
+  updatedRoom.game.rounds[roundIndex].votes = {};
+  updatedRoom.game.rounds[roundIndex].revotes = {};
+  updatedRoom.game.rounds[roundIndex].hostDecision = null;
+  updatedRoom.game.rounds[roundIndex].voteSummary = null;
+  updatedRoom.game.rounds[roundIndex].winner = null;
 }
 
 function buildPhraseFromTiles(payload, selectedTiles) {
@@ -367,6 +416,187 @@ function buildSubmittedRoom(room, mePlayer, roundIndex, payload) {
   updatedRoom.expiresAt = Math.floor(Date.now() / 1000) + ROOM_TTL_SECONDS;
   updatedRoom.revision += 1;
 
+  return updatedRoom;
+}
+
+function summarizeRoundVotes(round, validTargetIds, ballots) {
+  const counts = validTargetIds.map((playerId) => {
+    const submission = round.submissions.find((item) => item.playerId === playerId);
+    return {
+      playerId,
+      displayName: submission?.displayName || playerId,
+      phrase: submission?.phrase || playerId,
+      count: Object.values(ballots).filter((value) => value === playerId).length
+    };
+  });
+
+  const topCount = Math.max(...counts.map((item) => item.count));
+  const tiedPlayerIds = counts.filter((item) => item.count === topCount).map((item) => item.playerId);
+  return {
+    counts,
+    tiedPlayerIds,
+    winnerPlayerId: tiedPlayerIds[0] || null
+  };
+}
+
+function setRoundWinner(updatedRoom, round, winnerPlayerId, source, counts) {
+  const submission = round.submissions.find((item) => item.playerId === winnerPlayerId);
+  const countRow = counts.find((item) => item.playerId === winnerPlayerId);
+  round.winner = {
+    playerId: winnerPlayerId,
+    displayName: submission.displayName,
+    phrase: submission.phrase,
+    fontId: submission.fontId,
+    renderedLines: submission.renderedLines,
+    voteCount: countRow?.count || 0,
+    source
+  };
+  round.phaseStatus = "finished";
+  round.voteSummary = {
+    counts,
+    tiedPlayerIds: []
+  };
+  updatedRoom.game.phase = "round_result";
+  updatedRoom.game.currentTurnPlayerId = null;
+}
+
+function buildVotedRoom(room, mePlayer, roundIndex, targetPlayerId, mode = "vote") {
+  const expectedPhase = mode === "revote" ? "round_revote" : "round_vote";
+  if (room.game?.phase !== expectedPhase) {
+    throw domainError(409, "INVALID_PHASE", `${expectedPhase} ではないため実行できません。`);
+  }
+  if (room.game?.roundIndex !== roundIndex) {
+    throw domainError(409, "INVALID_PHASE", "ラウンドが一致しません。");
+  }
+
+  const updatedRoom = clone(room);
+  const round = getCurrentRound(updatedRoom);
+  if (!round) {
+    throw domainError(409, "INVALID_PHASE", "ラウンド状態が見つかりません。");
+  }
+
+  const ballotKey = mode === "revote" ? "revotes" : "votes";
+  const existingBallots = round[ballotKey] || {};
+  if (existingBallots[mePlayer.playerId]) {
+    throw domainError(409, "ALREADY_VOTED", "すでに投票済みです。");
+  }
+
+  const validTargetIds =
+    mode === "revote" ? round.voteSummary?.tiedPlayerIds || [] : round.submissions.map((submission) => submission.playerId);
+  if (!validTargetIds.includes(targetPlayerId)) {
+    throw domainError(400, "INVALID_TARGET", "投票先が不正です。");
+  }
+  if (targetPlayerId === mePlayer.playerId) {
+    throw domainError(409, "SELF_VOTE_FORBIDDEN", "自分のワードには投票できません。");
+  }
+
+  round[ballotKey] = {
+    ...existingBallots,
+    [mePlayer.playerId]: targetPlayerId
+  };
+
+  const expectedVoterCount = updatedRoom.players.length;
+  if (Object.keys(round[ballotKey]).length < expectedVoterCount) {
+    updatedRoom.updatedAt = nowIso();
+    updatedRoom.expiresAt = Math.floor(Date.now() / 1000) + ROOM_TTL_SECONDS;
+    updatedRoom.revision += 1;
+    return updatedRoom;
+  }
+
+  const summary = summarizeRoundVotes(round, validTargetIds, round[ballotKey]);
+  round.voteSummary = {
+    counts: summary.counts,
+    tiedPlayerIds: summary.tiedPlayerIds.length > 1 ? summary.tiedPlayerIds : []
+  };
+
+  if (summary.tiedPlayerIds.length > 1) {
+    updatedRoom.game.phase = mode === "revote" ? "round_host_decide" : "round_revote";
+    updatedRoom.game.currentTurnPlayerId = null;
+    round.phaseStatus = mode === "revote" ? "host_decide" : "revote";
+    if (mode === "vote") {
+      round.revotes = {};
+    }
+  } else {
+    setRoundWinner(updatedRoom, round, summary.winnerPlayerId, mode === "revote" ? "revote" : "initial", summary.counts);
+  }
+
+  updatedRoom.updatedAt = nowIso();
+  updatedRoom.expiresAt = Math.floor(Date.now() / 1000) + ROOM_TTL_SECONDS;
+  updatedRoom.revision += 1;
+  return updatedRoom;
+}
+
+function buildHostDecisionRoom(room, mePlayer, roundIndex, winnerPlayerId) {
+  if (room.game?.phase !== "round_host_decide") {
+    throw domainError(409, "INVALID_PHASE", "round_host_decide ではないため実行できません。");
+  }
+  if (!mePlayer.isHost) {
+    throw domainError(403, "NOT_HOST", "ホストのみ実行できます。");
+  }
+  if (room.game?.roundIndex !== roundIndex) {
+    throw domainError(409, "INVALID_PHASE", "ラウンドが一致しません。");
+  }
+
+  const updatedRoom = clone(room);
+  const round = getCurrentRound(updatedRoom);
+  if (!round) {
+    throw domainError(409, "INVALID_PHASE", "ラウンド状態が見つかりません。");
+  }
+  const tiedPlayerIds = round.voteSummary?.tiedPlayerIds || [];
+  if (!tiedPlayerIds.includes(winnerPlayerId)) {
+    throw domainError(400, "INVALID_TARGET", "裁定対象が不正です。");
+  }
+
+  round.hostDecision = winnerPlayerId;
+  setRoundWinner(updatedRoom, round, winnerPlayerId, "host_decide", round.voteSummary?.counts || []);
+  updatedRoom.updatedAt = nowIso();
+  updatedRoom.expiresAt = Math.floor(Date.now() / 1000) + ROOM_TTL_SECONDS;
+  updatedRoom.revision += 1;
+  return updatedRoom;
+}
+
+function beginFinalVote(updatedRoom) {
+  updatedRoom.game.phase = "final_vote";
+  updatedRoom.game.currentTurnPlayerId = null;
+  updatedRoom.game.finalVote = {
+    phaseStatus: "vote",
+    candidates: updatedRoom.game.rounds.map((round) => ({
+      candidateId: `final_round${round.roundIndex + 1}`,
+      roundIndex: round.roundIndex,
+      playerId: round.winner.playerId,
+      displayName: round.winner.displayName,
+      phrase: round.winner.phrase,
+      fontId: round.winner.fontId,
+      renderedLines: round.winner.renderedLines
+    })),
+    votes: {},
+    revotes: {},
+    hostDecision: null,
+    voteSummary: null,
+    winner: null
+  };
+}
+
+function buildProceedRoom(room, mePlayer, roundIndex) {
+  if (room.game?.phase !== "round_result") {
+    throw domainError(409, "INVALID_PHASE", "round_result ではないため実行できません。");
+  }
+  if (!mePlayer.isHost) {
+    throw domainError(403, "NOT_HOST", "ホストのみ実行できます。");
+  }
+  if (room.game?.roundIndex !== roundIndex) {
+    throw domainError(409, "INVALID_PHASE", "ラウンドが一致しません。");
+  }
+
+  const updatedRoom = clone(room);
+  if (roundIndex < 2) {
+    startRound(updatedRoom, roundIndex + 1);
+  } else {
+    beginFinalVote(updatedRoom);
+  }
+  updatedRoom.updatedAt = nowIso();
+  updatedRoom.expiresAt = Math.floor(Date.now() / 1000) + ROOM_TTL_SECONDS;
+  updatedRoom.revision += 1;
   return updatedRoom;
 }
 
@@ -481,6 +711,34 @@ function buildMyHand(room, mePlayer) {
   }));
 }
 
+function toRoundView(round) {
+  return {
+    roundIndex: round.roundIndex,
+    label: round.label,
+    wind: round.wind,
+    phaseStatus: round.phaseStatus,
+    submissions: clone(round.submissions || []),
+    voteSummary: round.voteSummary ? clone(round.voteSummary) : null,
+    winner: round.winner ? clone(round.winner) : null,
+    votedPlayerIds: Object.keys(round.votes || {}),
+    revotedPlayerIds: Object.keys(round.revotes || {})
+  };
+}
+
+function toFinalVoteView(finalVote) {
+  if (!finalVote) {
+    return null;
+  }
+  return {
+    phaseStatus: finalVote.phaseStatus,
+    candidates: clone(finalVote.candidates || []),
+    voteSummary: finalVote.voteSummary ? clone(finalVote.voteSummary) : null,
+    winner: finalVote.winner ? clone(finalVote.winner) : null,
+    votedPlayerIds: Object.keys(finalVote.votes || {}),
+    revotedPlayerIds: Object.keys(finalVote.revotes || {})
+  };
+}
+
 function mapRoomResponse(room, mePlayer) {
   const players = [...room.players].sort((left, right) => left.seatOrder - right.seatOrder);
   return {
@@ -497,8 +755,8 @@ function mapRoomResponse(room, mePlayer) {
       roundIndex: room.game?.roundIndex ?? null,
       currentTurnPlayerId: room.game?.currentTurnPlayerId ?? null,
       players: players.map(toPlayerView),
-      rounds: Array.isArray(room.game?.rounds) ? clone(room.game.rounds) : createEmptyRounds(),
-      finalVote: room.game?.finalVote ? clone(room.game.finalVote) : null,
+      rounds: Array.isArray(room.game?.rounds) ? room.game.rounds.map(toRoundView) : createEmptyRounds().map(toRoundView),
+      finalVote: toFinalVoteView(room.game?.finalVote),
       champion: room.game?.champion ? clone(room.game.champion) : null
     },
     me: {
@@ -849,6 +1107,87 @@ async function createDynamoRoomRepository(options = {}) {
       }
 
       throw domainError(409, "CONFLICT_RETRY", "提出処理が競合しました。もう一度お試しください。", true);
+    },
+
+    async submitVote(roomId, playerToken, roundIndex, targetPlayerId, mode = "vote") {
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        const room = await getRoomItem(roomId);
+        if (!room) {
+          throw domainError(404, "ROOM_NOT_FOUND", "指定された room は存在しません。");
+        }
+        const mePlayer = getPlayerByToken(room, playerToken);
+        if (!mePlayer) {
+          throw domainError(401, "PLAYER_TOKEN_INVALID", "playerToken が必要です。");
+        }
+
+        const updatedRoom = buildVotedRoom(room, mePlayer, roundIndex, targetPlayerId, mode);
+        try {
+          await putRoomItem(updatedRoom, room.revision);
+          const updatedMePlayer = updatedRoom.players.find((player) => player.playerId === mePlayer.playerId);
+          return { room: updatedRoom, mePlayer: updatedMePlayer };
+        } catch (error) {
+          if (toConditionalFailure(error)) {
+            continue;
+          }
+          throw error;
+        }
+      }
+
+      throw domainError(409, "CONFLICT_RETRY", "投票処理が競合しました。もう一度お試しください。", true);
+    },
+
+    async submitHostDecision(roomId, playerToken, roundIndex, winnerPlayerId) {
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        const room = await getRoomItem(roomId);
+        if (!room) {
+          throw domainError(404, "ROOM_NOT_FOUND", "指定された room は存在しません。");
+        }
+        const mePlayer = getPlayerByToken(room, playerToken);
+        if (!mePlayer) {
+          throw domainError(401, "PLAYER_TOKEN_INVALID", "playerToken が必要です。");
+        }
+
+        const updatedRoom = buildHostDecisionRoom(room, mePlayer, roundIndex, winnerPlayerId);
+        try {
+          await putRoomItem(updatedRoom, room.revision);
+          const updatedMePlayer = updatedRoom.players.find((player) => player.playerId === mePlayer.playerId);
+          return { room: updatedRoom, mePlayer: updatedMePlayer };
+        } catch (error) {
+          if (toConditionalFailure(error)) {
+            continue;
+          }
+          throw error;
+        }
+      }
+
+      throw domainError(409, "CONFLICT_RETRY", "ホスト裁定が競合しました。もう一度お試しください。", true);
+    },
+
+    async proceedRound(roomId, playerToken, roundIndex) {
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        const room = await getRoomItem(roomId);
+        if (!room) {
+          throw domainError(404, "ROOM_NOT_FOUND", "指定された room は存在しません。");
+        }
+        const mePlayer = getPlayerByToken(room, playerToken);
+        if (!mePlayer) {
+          throw domainError(401, "PLAYER_TOKEN_INVALID", "playerToken が必要です。");
+        }
+
+        const updatedRoom = buildProceedRoom(room, mePlayer, roundIndex);
+        try {
+          await putRoomItem(updatedRoom, room.revision);
+          const updatedMePlayer = updatedRoom.players.find((player) => player.playerId === mePlayer.playerId);
+          return { room: updatedRoom, mePlayer: updatedMePlayer };
+        } catch (error) {
+          if (toConditionalFailure(error)) {
+            continue;
+          }
+          throw error;
+        }
+      }
+
+      throw domainError(409, "CONFLICT_RETRY", "次ラウンド進行が競合しました。もう一度お試しください。", true);
     }
   };
 }
@@ -1026,6 +1365,54 @@ function createMemoryRoomRepository() {
       return { room: clone(updatedRoom), mePlayer: clone(updatedMePlayer) };
     },
 
+    async submitVote(roomId, playerToken, roundIndex, targetPlayerId, mode = "vote") {
+      const room = rooms.get(roomId);
+      if (!room) {
+        throw domainError(404, "ROOM_NOT_FOUND", "指定された room は存在しません。");
+      }
+      const mePlayer = getPlayerByToken(room, playerToken);
+      if (!mePlayer) {
+        throw domainError(401, "PLAYER_TOKEN_INVALID", "playerToken が必要です。");
+      }
+
+      const updatedRoom = buildVotedRoom(room, mePlayer, roundIndex, targetPlayerId, mode);
+      saveRoom(updatedRoom);
+      const updatedMePlayer = updatedRoom.players.find((player) => player.playerId === mePlayer.playerId);
+      return { room: clone(updatedRoom), mePlayer: clone(updatedMePlayer) };
+    },
+
+    async submitHostDecision(roomId, playerToken, roundIndex, winnerPlayerId) {
+      const room = rooms.get(roomId);
+      if (!room) {
+        throw domainError(404, "ROOM_NOT_FOUND", "指定された room は存在しません。");
+      }
+      const mePlayer = getPlayerByToken(room, playerToken);
+      if (!mePlayer) {
+        throw domainError(401, "PLAYER_TOKEN_INVALID", "playerToken が必要です。");
+      }
+
+      const updatedRoom = buildHostDecisionRoom(room, mePlayer, roundIndex, winnerPlayerId);
+      saveRoom(updatedRoom);
+      const updatedMePlayer = updatedRoom.players.find((player) => player.playerId === mePlayer.playerId);
+      return { room: clone(updatedRoom), mePlayer: clone(updatedMePlayer) };
+    },
+
+    async proceedRound(roomId, playerToken, roundIndex) {
+      const room = rooms.get(roomId);
+      if (!room) {
+        throw domainError(404, "ROOM_NOT_FOUND", "指定された room は存在しません。");
+      }
+      const mePlayer = getPlayerByToken(room, playerToken);
+      if (!mePlayer) {
+        throw domainError(401, "PLAYER_TOKEN_INVALID", "playerToken が必要です。");
+      }
+
+      const updatedRoom = buildProceedRoom(room, mePlayer, roundIndex);
+      saveRoom(updatedRoom);
+      const updatedMePlayer = updatedRoom.players.find((player) => player.playerId === mePlayer.playerId);
+      return { room: clone(updatedRoom), mePlayer: clone(updatedMePlayer) };
+    },
+
     debugGetStoredRoom(roomId) {
       const room = rooms.get(roomId);
       return room ? clone(room) : null;
@@ -1161,6 +1548,83 @@ function createHandler(options = {}) {
           }
           const repository = await roomRepositoryPromise;
           const result = await repository.submitWord(matched.params[0], playerToken, Number(matched.params[1]), body);
+          return ok(toRoomPayload(result.room, result.mePlayer));
+        }
+        case "submitVote": {
+          const body = parseBody(event);
+          if (!body) {
+            return fail(400, "INVALID_JSON", "JSON の形式が不正です。");
+          }
+          const playerToken = getHeader(event, "X-Omojan-Player-Token");
+          if (!playerToken) {
+            return fail(401, "PLAYER_TOKEN_INVALID", "playerToken が必要です。");
+          }
+          const targetPlayerId = String(body.targetPlayerId || "").trim();
+          if (!targetPlayerId) {
+            return fail(400, "INVALID_TARGET", "投票先が不正です。");
+          }
+          const repository = await roomRepositoryPromise;
+          const result = await repository.submitVote(
+            matched.params[0],
+            playerToken,
+            Number(matched.params[1]),
+            targetPlayerId,
+            "vote"
+          );
+          return ok(toRoomPayload(result.room, result.mePlayer));
+        }
+        case "submitRevote": {
+          const body = parseBody(event);
+          if (!body) {
+            return fail(400, "INVALID_JSON", "JSON の形式が不正です。");
+          }
+          const playerToken = getHeader(event, "X-Omojan-Player-Token");
+          if (!playerToken) {
+            return fail(401, "PLAYER_TOKEN_INVALID", "playerToken が必要です。");
+          }
+          const targetPlayerId = String(body.targetPlayerId || "").trim();
+          if (!targetPlayerId) {
+            return fail(400, "INVALID_TARGET", "投票先が不正です。");
+          }
+          const repository = await roomRepositoryPromise;
+          const result = await repository.submitVote(
+            matched.params[0],
+            playerToken,
+            Number(matched.params[1]),
+            targetPlayerId,
+            "revote"
+          );
+          return ok(toRoomPayload(result.room, result.mePlayer));
+        }
+        case "submitHostDecision": {
+          const body = parseBody(event);
+          if (!body) {
+            return fail(400, "INVALID_JSON", "JSON の形式が不正です。");
+          }
+          const playerToken = getHeader(event, "X-Omojan-Player-Token");
+          if (!playerToken) {
+            return fail(401, "PLAYER_TOKEN_INVALID", "playerToken が必要です。");
+          }
+          const winnerPlayerId = String(body.winnerPlayerId || "").trim();
+          if (!winnerPlayerId) {
+            return fail(400, "INVALID_TARGET", "裁定対象が不正です。");
+          }
+          const repository = await roomRepositoryPromise;
+          const result = await repository.submitHostDecision(
+            matched.params[0],
+            playerToken,
+            Number(matched.params[1]),
+            winnerPlayerId
+          );
+          return ok(toRoomPayload(result.room, result.mePlayer));
+        }
+        case "proceedRound": {
+          const playerToken = getHeader(event, "X-Omojan-Player-Token");
+          if (!playerToken) {
+            return fail(401, "PLAYER_TOKEN_INVALID", "playerToken が必要です。");
+          }
+          const repository = await roomRepositoryPromise;
+          const result = await repository.proceedRound(matched.params[0], playerToken, Number(matched.params[1]));
           return ok(toRoomPayload(result.room, result.mePlayer));
         }
         case "notImplemented":

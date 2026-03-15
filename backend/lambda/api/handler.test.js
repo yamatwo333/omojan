@@ -163,15 +163,17 @@ async function submitAllForCurrentRound(handler, session, roundIndex) {
   return room;
 }
 
-async function voteFor(handler, session, player, roundIndex, targetPlayerId, mode = "vote") {
+async function voteFor(handler, session, voterDisplayName, roundIndex, targetDisplayName, mode = "vote") {
+  const voter = findPlayer(session, voterDisplayName);
+  const target = findPlayer(session, targetDisplayName);
   const endpoint = mode === "revote" ? "revote" : "vote";
   const response = await handler(
     createEvent("POST", `/v1/rooms/${session.roomId}/rounds/${roundIndex}/${endpoint}`, {
       headers: {
-        "X-Omojan-Player-Token": player.playerToken
+        "X-Omojan-Player-Token": voter.playerToken
       },
       body: {
-        targetPlayerId
+        targetPlayerId: target.playerId
       }
     })
   );
@@ -181,15 +183,16 @@ async function voteFor(handler, session, player, roundIndex, targetPlayerId, mod
   return body.data.room;
 }
 
-async function hostDecisionFor(handler, session, roundIndex, winnerPlayerId) {
+async function hostDecisionFor(handler, session, roundIndex, winnerDisplayName) {
   const host = session.players[0];
+  const winner = findPlayer(session, winnerDisplayName);
   const response = await handler(
     createEvent("POST", `/v1/rooms/${session.roomId}/rounds/${roundIndex}/host-decision`, {
       headers: {
         "X-Omojan-Player-Token": host.playerToken
       },
       body: {
-        winnerPlayerId
+        winnerPlayerId: winner.playerId
       }
     })
   );
@@ -215,6 +218,120 @@ async function proceedRound(handler, session, roundIndex) {
   return body.data.room;
 }
 
+async function playRound(handler, session, roundIndex, votePlan, options = {}) {
+  let room = await submitAllForCurrentRound(handler, session, roundIndex);
+  assert.equal(room.game.phase, "round_vote");
+
+  for (const [voterDisplayName, targetDisplayName] of votePlan) {
+    room = await voteFor(handler, session, voterDisplayName, roundIndex, targetDisplayName, "vote");
+  }
+
+  if (room.game.phase === "round_revote") {
+    assert.ok(options.revotePlan, "revotePlan is required for tied round");
+    for (const [voterDisplayName, targetDisplayName] of options.revotePlan) {
+      room = await voteFor(handler, session, voterDisplayName, roundIndex, targetDisplayName, "revote");
+    }
+  }
+
+  if (room.game.phase === "round_host_decide") {
+    assert.ok(options.hostDecisionDisplayName, "hostDecisionDisplayName is required for host decision");
+    room = await hostDecisionFor(handler, session, roundIndex, options.hostDecisionDisplayName);
+  }
+
+  assert.equal(room.game.phase, "round_result");
+  return room;
+}
+
+function getFinalCandidateByDisplayName(room, displayName) {
+  const candidate = room.game.finalVote.candidates.find((item) => item.displayName === displayName);
+  assert.ok(candidate, `final candidate not found: ${displayName}`);
+  return candidate;
+}
+
+async function voteFinalFor(handler, session, room, voterDisplayName, targetDisplayName, mode = "vote") {
+  const voter = findPlayer(session, voterDisplayName);
+  const candidate = getFinalCandidateByDisplayName(room, targetDisplayName);
+  const endpoint = mode === "revote" ? "final-revote" : "final-vote";
+  const response = await handler(
+    createEvent("POST", `/v1/rooms/${session.roomId}/${endpoint}`, {
+      headers: {
+        "X-Omojan-Player-Token": voter.playerToken
+      },
+      body: {
+        candidateId: candidate.candidateId
+      }
+    })
+  );
+  const body = await parseResponse(response);
+  assert.equal(response.statusCode, 200);
+  assert.equal(body.ok, true);
+  return body.data.room;
+}
+
+async function finalHostDecisionFor(handler, session, room, targetDisplayName) {
+  const host = session.players[0];
+  const candidate = getFinalCandidateByDisplayName(room, targetDisplayName);
+  const response = await handler(
+    createEvent("POST", `/v1/rooms/${session.roomId}/final-host-decision`, {
+      headers: {
+        "X-Omojan-Player-Token": host.playerToken
+      },
+      body: {
+        candidateId: candidate.candidateId
+      }
+    })
+  );
+  const body = await parseResponse(response);
+  assert.equal(response.statusCode, 200);
+  assert.equal(body.ok, true);
+  return body.data.room;
+}
+
+async function restartGame(handler, session) {
+  const host = session.players[0];
+  const response = await handler(
+    createEvent("POST", `/v1/rooms/${session.roomId}/restart`, {
+      headers: {
+        "X-Omojan-Player-Token": host.playerToken
+      },
+      body: {}
+    })
+  );
+  const body = await parseResponse(response);
+  assert.equal(response.statusCode, 200);
+  assert.equal(body.ok, true);
+  return body.data.room;
+}
+
+async function reachFinalVote(handler, session) {
+  await startGame(handler, session, "ホスト");
+
+  await playRound(handler, session, 0, [
+    ["ホスト", "ゲストA"],
+    ["ゲストA", "ゲストB"],
+    ["ゲストB", "ゲストA"]
+  ]);
+  await proceedRound(handler, session, 0);
+
+  await playRound(handler, session, 1, [
+    ["ホスト", "ゲストB"],
+    ["ゲストA", "ゲストB"],
+    ["ゲストB", "ホスト"]
+  ]);
+  await proceedRound(handler, session, 1);
+
+  await playRound(handler, session, 2, [
+    ["ホスト", "ゲストA"],
+    ["ゲストA", "ホスト"],
+    ["ゲストB", "ホスト"]
+  ]);
+
+  const finalVoteRoom = await proceedRound(handler, session, 2);
+  assert.equal(finalVoteRoom.game.phase, "final_vote");
+  assert.equal(finalVoteRoom.game.finalVote.candidates.length, 3);
+  return finalVoteRoom;
+}
+
 test("GET /v1/health returns lambda scaffold metadata", async () => {
   process.env.APP_STAGE = "dev";
   process.env.APP_TABLE_NAME = "OmojanApp";
@@ -238,7 +355,11 @@ test("GET /v1/health returns lambda scaffold metadata", async () => {
     "rounds:vote",
     "rounds:revote",
     "rounds:host-decision",
-    "rounds:proceed"
+    "rounds:proceed",
+    "final:vote",
+    "final:revote",
+    "final:host-decision",
+    "rooms:restart"
   ]);
 });
 
@@ -311,89 +432,107 @@ test("round votes can resolve directly into round_result", async () => {
   const handler = createTestHandler();
   const session = await createSession(handler, ["ホスト", "ゲストA", "ゲストB"]);
   await startGame(handler, session, "ホスト");
-  await submitAllForCurrentRound(handler, session, 0);
-
-  const host = findPlayer(session, "ホスト");
-  const guestA = findPlayer(session, "ゲストA");
-  const guestB = findPlayer(session, "ゲストB");
-
-  const afterFirstVote = await voteFor(handler, session, host, 0, guestA.playerId, "vote");
-  assert.equal(afterFirstVote.game.phase, "round_vote");
-  assert.deepEqual(afterFirstVote.game.rounds[0].votedPlayerIds, [host.playerId]);
-  assert.equal("votes" in afterFirstVote.game.rounds[0], false);
-
-  await voteFor(handler, session, guestA, 0, guestB.playerId, "vote");
-  const resultRoom = await voteFor(handler, session, guestB, 0, guestA.playerId, "vote");
+  const resultRoom = await playRound(handler, session, 0, [
+    ["ホスト", "ゲストA"],
+    ["ゲストA", "ゲストB"],
+    ["ゲストB", "ゲストA"]
+  ]);
 
   assert.equal(resultRoom.game.phase, "round_result");
-  assert.equal(resultRoom.game.rounds[0].winner.playerId, guestA.playerId);
+  assert.equal(resultRoom.game.rounds[0].winner.playerId, findPlayer(session, "ゲストA").playerId);
   assert.equal(resultRoom.game.rounds[0].winner.source, "initial");
-  assert.equal(resultRoom.game.rounds[0].voteSummary.counts.find((item) => item.playerId === guestA.playerId).count, 2);
+  assert.deepEqual(resultRoom.game.rounds[0].votedPlayerIds.sort(), session.players.map((player) => player.playerId).sort());
 });
 
 test("tie can progress through revote and host decision", async () => {
   const handler = createTestHandler();
   const session = await createSession(handler, ["ホスト", "ゲストA", "ゲストB"]);
   await startGame(handler, session, "ホスト");
-  await submitAllForCurrentRound(handler, session, 0);
-
-  const host = findPlayer(session, "ホスト");
-  const guestA = findPlayer(session, "ゲストA");
-  const guestB = findPlayer(session, "ゲストB");
-
-  await voteFor(handler, session, host, 0, guestA.playerId, "vote");
-  await voteFor(handler, session, guestA, 0, guestB.playerId, "vote");
-  const revoteRoom = await voteFor(handler, session, guestB, 0, host.playerId, "vote");
-
-  assert.equal(revoteRoom.game.phase, "round_revote");
-  assert.deepEqual(
-    [...revoteRoom.game.rounds[0].voteSummary.tiedPlayerIds].sort(),
-    [host.playerId, guestA.playerId, guestB.playerId].sort()
+  const resultRoom = await playRound(
+    handler,
+    session,
+    0,
+    [
+      ["ホスト", "ゲストA"],
+      ["ゲストA", "ゲストB"],
+      ["ゲストB", "ホスト"]
+    ],
+    {
+      revotePlan: [
+        ["ホスト", "ゲストA"],
+        ["ゲストA", "ゲストB"],
+        ["ゲストB", "ホスト"]
+      ],
+      hostDecisionDisplayName: "ゲストA"
+    }
   );
 
-  await voteFor(handler, session, host, 0, guestA.playerId, "revote");
-  await voteFor(handler, session, guestA, 0, guestB.playerId, "revote");
-  const hostDecideRoom = await voteFor(handler, session, guestB, 0, host.playerId, "revote");
-
-  assert.equal(hostDecideRoom.game.phase, "round_host_decide");
-  assert.deepEqual(
-    [...hostDecideRoom.game.rounds[0].voteSummary.tiedPlayerIds].sort(),
-    [host.playerId, guestA.playerId, guestB.playerId].sort()
-  );
-
-  const resultRoom = await hostDecisionFor(handler, session, 0, guestA.playerId);
   assert.equal(resultRoom.game.phase, "round_result");
-  assert.equal(resultRoom.game.rounds[0].winner.playerId, guestA.playerId);
+  assert.equal(resultRoom.game.rounds[0].winner.playerId, findPlayer(session, "ゲストA").playerId);
   assert.equal(resultRoom.game.rounds[0].winner.source, "host_decide");
+  assert.deepEqual(resultRoom.game.rounds[0].revotedPlayerIds.sort(), session.players.map((player) => player.playerId).sort());
 });
 
 test("host can proceed from round_result into next round", async () => {
   const handler = createTestHandler();
   const session = await createSession(handler, ["ホスト", "ゲストA", "ゲストB"]);
   await startGame(handler, session, "ホスト");
-  await submitAllForCurrentRound(handler, session, 0);
-
-  const host = findPlayer(session, "ホスト");
-  const guestA = findPlayer(session, "ゲストA");
-  const guestB = findPlayer(session, "ゲストB");
-  await voteFor(handler, session, host, 0, guestA.playerId, "vote");
-  await voteFor(handler, session, guestA, 0, guestB.playerId, "vote");
-  await voteFor(handler, session, guestB, 0, guestA.playerId, "vote");
+  await playRound(handler, session, 0, [
+    ["ホスト", "ゲストA"],
+    ["ゲストA", "ゲストB"],
+    ["ゲストB", "ゲストA"]
+  ]);
 
   const nextRoundRoom = await proceedRound(handler, session, 0);
   assert.equal(nextRoundRoom.game.phase, "round_submit");
   assert.equal(nextRoundRoom.game.roundIndex, 1);
   assert.equal(nextRoundRoom.game.rounds[1].phaseStatus, "submit");
-  assert.equal(nextRoundRoom.game.currentTurnPlayerId, host.playerId);
+  assert.equal(nextRoundRoom.game.currentTurnPlayerId, findPlayer(session, "ホスト").playerId);
   assert.equal(nextRoundRoom.game.players.every((player) => player.handCount === 8), true);
 });
 
-test("POST final vote still returns not implemented in lambda", async () => {
+test("final vote can resolve directly into final_result and restart to lobby", async () => {
   const handler = createTestHandler();
-  const response = await handler(createEvent("POST", "/v1/rooms/room_x/final-vote", { body: {} }));
-  const body = await parseResponse(response);
+  const session = await createSession(handler, ["ホスト", "ゲストA", "ゲストB"]);
+  let room = await reachFinalVote(handler, session);
 
-  assert.equal(response.statusCode, 501);
-  assert.equal(body.ok, false);
-  assert.equal(body.error.code, "NOT_IMPLEMENTED");
+  room = await voteFinalFor(handler, session, room, "ホスト", "ゲストA", "vote");
+  room = await voteFinalFor(handler, session, room, "ゲストA", "ホスト", "vote");
+  room = await voteFinalFor(handler, session, room, "ゲストB", "ホスト", "vote");
+
+  assert.equal(room.game.phase, "final_result");
+  assert.equal(room.status, "finished");
+  assert.equal(room.game.champion.playerId, findPlayer(session, "ホスト").playerId);
+  assert.equal(room.game.champion.source, "initial");
+  assert.equal(room.game.finalVote.phaseStatus, "finished");
+  assert.deepEqual(room.game.finalVote.votedPlayerIds.sort(), session.players.map((player) => player.playerId).sort());
+
+  const restartedRoom = await restartGame(handler, session);
+  assert.equal(restartedRoom.status, "lobby");
+  assert.equal(restartedRoom.game.phase, "lobby");
+  assert.equal(restartedRoom.game.roundIndex, null);
+  assert.equal(restartedRoom.game.finalVote, null);
+  assert.equal(restartedRoom.myHand.length, 0);
+});
+
+test("final tie can progress through final_revote and final_host_decide", async () => {
+  const handler = createTestHandler();
+  const session = await createSession(handler, ["ホスト", "ゲストA", "ゲストB"]);
+  let room = await reachFinalVote(handler, session);
+
+  room = await voteFinalFor(handler, session, room, "ホスト", "ゲストA", "vote");
+  room = await voteFinalFor(handler, session, room, "ゲストA", "ゲストB", "vote");
+  room = await voteFinalFor(handler, session, room, "ゲストB", "ホスト", "vote");
+  assert.equal(room.game.phase, "final_revote");
+
+  room = await voteFinalFor(handler, session, room, "ホスト", "ゲストA", "revote");
+  room = await voteFinalFor(handler, session, room, "ゲストA", "ゲストB", "revote");
+  room = await voteFinalFor(handler, session, room, "ゲストB", "ホスト", "revote");
+  assert.equal(room.game.phase, "final_host_decide");
+
+  room = await finalHostDecisionFor(handler, session, room, "ゲストB");
+  assert.equal(room.game.phase, "final_result");
+  assert.equal(room.game.champion.playerId, findPlayer(session, "ゲストB").playerId);
+  assert.equal(room.game.champion.source, "host_decide");
+  assert.deepEqual(room.game.finalVote.revotedPlayerIds.sort(), session.players.map((player) => player.playerId).sort());
 });

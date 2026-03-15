@@ -39,8 +39,8 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub omojan-api-${StageName}
-      CodeUri: ../../
-      Handler: backend/lambda/api/handler.handler
+      CodeUri: ../../backend/lambda/.dist
+      Handler: handler.handler
       Environment:
         Variables:
           APP_STAGE: !Ref StageName

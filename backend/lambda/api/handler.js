@@ -3,7 +3,8 @@ const fs = require("fs");
 const path = require("path");
 
 const ROOT_DIR = path.resolve(__dirname, "..", "..", "..");
-const MOCK_DIR = path.join(ROOT_DIR, "mock_api");
+const LOCAL_DATA_DIR = path.join(__dirname, "data");
+const MOCK_DIR = fs.existsSync(LOCAL_DATA_DIR) ? LOCAL_DATA_DIR : path.join(ROOT_DIR, "mock_api");
 const ROOM_TTL_SECONDS = 60 * 60 * 24 * 3;
 const STARTING_HAND_SIZE = 10;
 

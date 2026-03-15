@@ -6,6 +6,7 @@
     "@aws-sdk/lib-dynamodb": "^3.888.0"
   },
   "scripts": {
+    "build:lambda-bundle": "bash backend/lambda/api/build_bundle.sh",
     "start:mock-api": "node backend/mock_api/local_server.js",
     "start:lambda-api": "node backend/lambda/api/local_server.js",
     "test:mock-api": "node --test backend/mock_api/handler.test.js",

@@ -19,6 +19,9 @@ cleanup() {
 }
 trap cleanup EXIT
 
+echo "==> Building Lambda bundle"
+bash "$ROOT_DIR/backend/lambda/api/build_bundle.sh"
+
 echo "==> Using artifact bucket: ${ARTIFACT_BUCKET_NAME}"
 if ! aws s3api head-bucket --bucket "$ARTIFACT_BUCKET_NAME" --profile "$PROFILE" --region "$REGION" >/dev/null 2>&1; then
   echo "==> Creating artifact bucket"

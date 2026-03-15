@@ -35,6 +35,7 @@
   - API 実装前に使うモックデータ
 - `backend/lambda/api/`
   - Lambda 本実装の入口。現在は lobby 系 API を DynamoDB で扱う
+  - `build_bundle.sh` で deploy 用の最小 bundle を生成
 - `infra/sam/`
   - Lambda + API Gateway + DynamoDB の AWS 雛形
   - `deploy_dev.sh` で dev 環境をそのままデプロイ可能
@@ -96,6 +97,7 @@ http://127.0.0.1:8000/omojan_phase_prototype.html?data=fixture
 ```bash
 npm run test:mock-api
 npm run test:lambda-api
+npm run build:lambda-bundle
 npm run test:e2e:phase
 ```
 

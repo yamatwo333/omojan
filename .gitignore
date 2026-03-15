@@ -7,6 +7,7 @@ omojan_*.png
 
 # Playwright output
 test-results/
+backend/lambda/.dist/
 
 # Unrelated local export artifacts
 offline_cv_*.csv

@@ -624,6 +624,15 @@ function beginFinalVote(updatedRoom) {
   };
 }
 
+function getEligibleFinalVoterIds(finalVote, players, mode = "vote") {
+  const validTargetIds =
+    mode === "revote" ? finalVote.voteSummary?.tiedCandidateIds || [] : finalVote.candidates.map((candidate) => candidate.candidateId);
+  const validCandidates = finalVote.candidates.filter((candidate) => validTargetIds.includes(candidate.candidateId));
+  return players
+    .filter((player) => validCandidates.some((candidate) => candidate.playerId !== player.playerId))
+    .map((player) => player.playerId);
+}
+
 function buildFinalVotedRoom(room, mePlayer, candidateId, mode = "vote") {
   const expectedPhase = mode === "revote" ? "final_revote" : "final_vote";
   if (room.game?.phase !== expectedPhase) {
@@ -657,7 +666,7 @@ function buildFinalVotedRoom(room, mePlayer, candidateId, mode = "vote") {
     [mePlayer.playerId]: candidateId
   };
 
-  const expectedVoterCount = updatedRoom.players.length;
+  const expectedVoterCount = getEligibleFinalVoterIds(finalVote, updatedRoom.players, mode).length;
   if (Object.keys(finalVote[ballotKey]).length < expectedVoterCount) {
     updatedRoom.updatedAt = nowIso();
     updatedRoom.expiresAt = Math.floor(Date.now() / 1000) + ROOM_TTL_SECONDS;

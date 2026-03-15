@@ -258,6 +258,7 @@ type FinalCandidate = {
   - 全員ラウンド結果画面
 - `phase = final_vote / final_revote / final_host_decide / final_result`
   - 上と同じ考え方
+  - ただし最終投票では、投票可能な候補が 0 件のプレイヤーは待機画面扱いにする
 
 ### 6-2. なぜこの形にするか
 

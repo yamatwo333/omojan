@@ -536,3 +536,47 @@ test("final tie can progress through final_revote and final_host_decide", async 
   assert.equal(room.game.champion.source, "host_decide");
   assert.deepEqual(room.game.finalVote.revotedPlayerIds.sort(), session.players.map((player) => player.playerId).sort());
 });
+
+test("final vote excludes players who only have their own words as candidates", async () => {
+  const handler = createTestHandler();
+  const session = await createSession(handler, ["ホスト", "ゲストA", "ゲストB", "ゲストC"]);
+  await startGame(handler, session, "ホスト");
+
+  await playRound(handler, session, 0, [
+    ["ホスト", "ゲストA"],
+    ["ゲストA", "ホスト"],
+    ["ゲストB", "ゲストA"],
+    ["ゲストC", "ゲストA"]
+  ]);
+  await proceedRound(handler, session, 0);
+
+  await playRound(handler, session, 1, [
+    ["ホスト", "ゲストA"],
+    ["ゲストA", "ホスト"],
+    ["ゲストB", "ゲストA"],
+    ["ゲストC", "ゲストA"]
+  ]);
+  await proceedRound(handler, session, 1);
+
+  await playRound(handler, session, 2, [
+    ["ホスト", "ゲストA"],
+    ["ゲストA", "ホスト"],
+    ["ゲストB", "ゲストA"],
+    ["ゲストC", "ゲストA"]
+  ]);
+
+  let room = await proceedRound(handler, session, 2);
+  assert.equal(room.game.phase, "final_vote");
+  assert.equal(room.game.finalVote.candidates.every((candidate) => candidate.playerId === findPlayer(session, "ゲストA").playerId), true);
+
+  room = await voteFinalFor(handler, session, room, "ホスト", "ゲストA", "vote");
+  room = await voteFinalFor(handler, session, room, "ゲストB", "ゲストA", "vote");
+  room = await voteFinalFor(handler, session, room, "ゲストC", "ゲストA", "vote");
+
+  assert.equal(room.game.phase, "final_result");
+  assert.equal(room.game.champion.playerId, findPlayer(session, "ゲストA").playerId);
+  assert.deepEqual(
+    room.game.finalVote.votedPlayerIds.sort(),
+    [findPlayer(session, "ホスト").playerId, findPlayer(session, "ゲストB").playerId, findPlayer(session, "ゲストC").playerId].sort()
+  );
+});

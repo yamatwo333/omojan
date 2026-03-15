@@ -7,6 +7,7 @@
   },
   "scripts": {
     "start:mock-api": "node backend/mock_api/local_server.js",
+    "start:lambda-api": "node backend/lambda/api/local_server.js",
     "test:mock-api": "node --test backend/mock_api/handler.test.js",
     "test:lambda-api": "node --test backend/lambda/api/handler.test.js",
     "test:e2e:phase": "playwright test tests/phase_live.spec.js --reporter=line"

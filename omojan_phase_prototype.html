@@ -487,7 +487,7 @@
         <header class="page-header">
           <h1>おもじゃん</h1>
           <p>
-            mock API を優先して room 状態を読み込み、使えないときは fixture JSON にフォールバックする
+            API を優先して room 状態を読み込み、使えないときは fixture JSON にフォールバックする
             phase 駆動の試作です。見た目確認用とは分けて、実装の土台を固める目的で使います。
           </p>
         </header>
@@ -542,6 +542,9 @@
       const DATA_MODES = new Set(["auto", "api", "fixture"]);
       const LIVE_ROOM_ID_KEY = "omojan-live-room-id";
       const LIVE_PLAYER_TOKEN_KEY = "omojan-live-player-token";
+      const LIVE_BOT_SESSIONS_KEY = "omojan-live-bot-sessions";
+      const DEMO_BOT_NAMES = ["やまだ", "たなか", "みき"];
+      const DEMO_FONT_IDS = ["broadcast", "classic", "playful", "heavy", "round"];
 
       const state = {
         fixtureScenarios: null,
@@ -551,6 +554,7 @@
         selectedScenarioId: "lobby",
         liveRoomId: "",
         livePlayerToken: "",
+        liveBotSessions: [],
         liveRoomActive: false,
         selectedStartPlayerId: "player_you",
         dataMode: "auto",
@@ -604,17 +608,40 @@
         return Boolean(window.localStorage.getItem(LIVE_ROOM_ID_KEY) && window.localStorage.getItem(LIVE_PLAYER_TOKEN_KEY));
       }
 
+      function normalizeBotSessions(value) {
+        if (!Array.isArray(value)) {
+          return [];
+        }
+        return value
+          .map((session) => ({
+            playerId: String(session?.playerId || "").trim(),
+            displayName: String(session?.displayName || "").trim() || "bot",
+            playerToken: String(session?.playerToken || "").trim()
+          }))
+          .filter((session) => session.playerId && session.playerToken);
+      }
+
+      function getStoredBotSessions() {
+        try {
+          return normalizeBotSessions(JSON.parse(window.localStorage.getItem(LIVE_BOT_SESSIONS_KEY) || "[]"));
+        } catch {
+          return [];
+        }
+      }
+
       function persistLiveSession() {
         if (!state.liveRoomId || !state.livePlayerToken) {
           return;
         }
         window.localStorage.setItem(LIVE_ROOM_ID_KEY, state.liveRoomId);
         window.localStorage.setItem(LIVE_PLAYER_TOKEN_KEY, state.livePlayerToken);
+        window.localStorage.setItem(LIVE_BOT_SESSIONS_KEY, JSON.stringify(normalizeBotSessions(state.liveBotSessions)));
       }
 
       function clearStoredLiveSession() {
         window.localStorage.removeItem(LIVE_ROOM_ID_KEY);
         window.localStorage.removeItem(LIVE_PLAYER_TOKEN_KEY);
+        window.localStorage.removeItem(LIVE_BOT_SESSIONS_KEY);
       }
 
       function getCurrentRound(room = getRoom()) {
@@ -674,6 +701,13 @@
           return "loading";
         }
         const phase = room.game.phase;
+        const round = getCurrentRound(room);
+        const meVoted = round?.votedPlayerIds?.includes(room.me.playerId);
+        const meRevoted = round?.revotedPlayerIds?.includes(room.me.playerId);
+        const meFinalVoted = room.game.finalVote?.votedPlayerIds?.includes(room.me.playerId);
+        const meFinalRevoted = room.game.finalVote?.revotedPlayerIds?.includes(room.me.playerId);
+        const meCanFinalVote = canPlayerVoteFinal(room, room.me.playerId, "vote");
+        const meCanFinalRevote = canPlayerVoteFinal(room, room.me.playerId, "revote");
         if (phase === "lobby") {
           return "lobby";
         }
@@ -681,10 +715,10 @@
           return room.game.currentTurnPlayerId === room.me.playerId ? "submit" : "wait";
         }
         if (phase === "round_vote") {
-          return "vote";
+          return meVoted ? "wait" : "vote";
         }
         if (phase === "round_revote") {
-          return "revote";
+          return meRevoted ? "wait" : "revote";
         }
         if (phase === "round_host_decide") {
           return room.me.isHost ? "hostDecide" : "wait";
@@ -693,10 +727,10 @@
           return "roundResult";
         }
         if (phase === "final_vote") {
-          return "finalVote";
+          return meFinalVoted || !meCanFinalVote ? "wait" : "finalVote";
         }
         if (phase === "final_revote") {
-          return "finalVote";
+          return meFinalRevoted || !meCanFinalRevote ? "wait" : "finalVote";
         }
         if (phase === "final_host_decide") {
           return room.me.isHost ? "finalHostDecide" : "wait";
@@ -920,13 +954,25 @@
       function renderWait(room) {
         const currentRound = getCurrentRound(room);
         const currentPlayer = room.game.players.find((player) => player.playerId === room.game.currentTurnPlayerId);
+        const cannotVoteFinal = room.game.phase === "final_vote" && !canPlayerVoteFinal(room, room.me.playerId, "vote");
+        const cannotRevoteFinal = room.game.phase === "final_revote" && !canPlayerVoteFinal(room, room.me.playerId, "revote");
+        const phaseMessageMap = {
+          round_vote: "あなたは投票済みです。ほかの参加者の投票を待っています。",
+          round_revote: "あなたは再投票済みです。ほかの参加者の投票を待っています。",
+          final_vote: cannotVoteFinal
+            ? "投票できる候補がないため、ほかの参加者の最終投票を待っています。"
+            : "あなたは最終投票済みです。ほかの参加者の投票を待っています。",
+          final_revote: cannotRevoteFinal
+            ? "再投票できる候補がないため、ほかの参加者の最終投票を待っています。"
+            : "あなたは最終再投票済みです。ほかの参加者の投票を待っています。"
+        };
         return `
           <section class="screen-card">
             <h3>待機</h3>
             <p>${
               currentPlayer
                 ? `${escapeHtml(currentPlayer.displayName)} の手番です。`
-                : `${escapeHtml(currentRound?.label || "現在ラウンド")} が進行中です。`
+                : phaseMessageMap[room.game.phase] || `${escapeHtml(currentRound?.label || "現在ラウンド")} が進行中です。`
             }</p>
             <section class="summary-panel">
               <h4>公開済みワード</h4>
@@ -1315,7 +1361,7 @@
 
       function describeDataSource(source, reason = "") {
         if (source === "api") {
-          return `接続先: mock API (${state.apiBaseUrl})`;
+          return `接続先: API (${state.apiBaseUrl})`;
         }
         if (source === "fixture") {
           return reason || "接続先: fixture JSON";
@@ -1338,15 +1384,45 @@
         return response.json();
       }
 
-      async function postApi(path, body = {}) {
+      async function apiRequest(path, options = {}) {
+        const { method = "GET", body, playerToken = state.livePlayerToken } = options;
         return fetchJson(`${state.apiBaseUrl}${path}`, {
-          method: "POST",
+          method,
           headers: {
-            "content-type": "application/json",
-            ...(state.livePlayerToken ? { "X-Omojan-Player-Token": state.livePlayerToken } : {})
+            ...(body === undefined ? {} : { "content-type": "application/json" }),
+            ...(playerToken ? { "X-Omojan-Player-Token": playerToken } : {})
           },
-          body: JSON.stringify(body)
+          ...(body === undefined ? {} : { body: JSON.stringify(body) })
         });
+      }
+
+      async function postApi(path, body = {}) {
+        return apiRequest(path, {
+          method: "POST",
+          body
+        });
+      }
+
+      async function postApiAs(playerToken, path, body = {}) {
+        return apiRequest(path, {
+          method: "POST",
+          body,
+          playerToken
+        });
+      }
+
+      async function fetchRoomForToken(roomId, playerToken) {
+        const payload = await apiRequest(`/rooms/${encodeURIComponent(roomId)}`, {
+          playerToken
+        });
+        return clone(payload.data.room);
+      }
+
+      async function fetchHostViewRoom(roomId = state.liveRoomId) {
+        if (!roomId || !state.livePlayerToken) {
+          return getRoom();
+        }
+        return fetchRoomForToken(roomId, state.livePlayerToken);
       }
 
       async function loadFixtureScenarios() {
@@ -1396,14 +1472,24 @@
         state.recentChampions = await fetchApiChampions();
       }
 
-      function setLiveRoom(room, playerToken = state.livePlayerToken) {
+      function setLiveRoom(room, sessionOptions = {}) {
+        const options =
+          typeof sessionOptions === "string"
+            ? { playerToken: sessionOptions }
+            : sessionOptions && typeof sessionOptions === "object"
+              ? sessionOptions
+              : {};
+        const playerIds = new Set((room.game?.players || []).map((player) => player.playerId));
         state.room = room;
         state.liveRoomActive = true;
         state.liveRoomId = room.roomId;
-        state.livePlayerToken = playerToken;
+        state.livePlayerToken = options.playerToken ?? state.livePlayerToken;
+        state.liveBotSessions = normalizeBotSessions(options.botSessions ?? state.liveBotSessions).filter((session) =>
+          playerIds.has(session.playerId)
+        );
         state.selectedStartPlayerId = room.startPlayerId || room.me.playerId;
         state.dataSource = "api";
-        state.dataStatusText = `接続先: live mock API (${state.apiBaseUrl}) / ${room.roomId}`;
+        state.dataStatusText = `接続先: ライブ API (${state.apiBaseUrl}) / ${room.roomId}`;
         state.isLoading = false;
         state.errorMessage = "";
         syncLocalDraft();
@@ -1418,19 +1504,236 @@
         }
         state.liveRoomId = roomId;
         state.livePlayerToken = playerToken;
-        const payload = await fetchJson(`${state.apiBaseUrl}/rooms/${encodeURIComponent(roomId)}/reconnect`, {
+        state.liveBotSessions = getStoredBotSessions();
+        const payload = await apiRequest(`/rooms/${encodeURIComponent(roomId)}/reconnect`, {
           method: "POST",
-          headers: {
-            "content-type": "application/json",
-            "X-Omojan-Player-Token": playerToken
-          },
-          body: "{}"
+          body: {},
+          playerToken
         });
-        setLiveRoom(clone(payload.data.room), playerToken);
+        setLiveRoom(clone(payload.data.room), {
+          playerToken,
+          botSessions: getStoredBotSessions()
+        });
         await refreshRecentChampions();
         renderScenarioGrid();
         renderApp();
         return true;
+      }
+
+      function getPlayerSeatIndex(room, playerId) {
+        return Math.max(
+          0,
+          room.game.players.findIndex((player) => player.playerId === playerId)
+        );
+      }
+
+      function getBotSession(playerId) {
+        return state.liveBotSessions.find((session) => session.playerId === playerId) || null;
+      }
+
+      function getVoteCandidates(room, mode = "vote") {
+        const round = getCurrentRound(room);
+        if (!round) {
+          return [];
+        }
+        if (mode === "revote" && round.voteSummary?.tiedPlayerIds?.length) {
+          return round.submissions.filter((submission) => round.voteSummary.tiedPlayerIds.includes(submission.playerId));
+        }
+        return round.submissions || [];
+      }
+
+      function getFinalCandidates(room, mode = "vote") {
+        const finalVote = room.game.finalVote;
+        if (!finalVote) {
+          return [];
+        }
+        if (mode === "revote" && finalVote.voteSummary?.tiedCandidateIds?.length) {
+          return finalVote.candidates.filter((candidate) => finalVote.voteSummary.tiedCandidateIds.includes(candidate.candidateId));
+        }
+        return finalVote.candidates || [];
+      }
+
+      function canPlayerVoteFinal(room, playerId, mode = "vote") {
+        return getFinalCandidates(room, mode).some((candidate) => candidate.playerId !== playerId);
+      }
+
+      function chooseBotRoundTarget(room, botPlayerId, mode = "vote") {
+        const validCandidates = getVoteCandidates(room, mode).filter((candidate) => candidate.playerId !== botPlayerId);
+        if (!validCandidates.length) {
+          return "";
+        }
+        const seatIndex = getPlayerSeatIndex(room, botPlayerId);
+        const roundBias = (room.game.roundIndex || 0) + (mode === "revote" ? 1 : 0);
+        return validCandidates[(seatIndex + roundBias) % validCandidates.length].playerId;
+      }
+
+      function chooseBotFinalTarget(room, botPlayerId, mode = "vote") {
+        const validCandidates = getFinalCandidates(room, mode).filter((candidate) => candidate.playerId !== botPlayerId);
+        if (!validCandidates.length) {
+          return "";
+        }
+        const seatIndex = getPlayerSeatIndex(room, botPlayerId);
+        const phaseBias = mode === "revote" ? 2 : 1;
+        return validCandidates[(seatIndex + phaseBias) % validCandidates.length].candidateId;
+      }
+
+      async function ensureLiveDemoParticipants(room = getRoom()) {
+        if (!room || !room.me.isHost || room.game.phase !== "lobby") {
+          return room;
+        }
+
+        let currentRoom = room;
+        let botSessions = normalizeBotSessions(state.liveBotSessions);
+        const existingNames = new Set(currentRoom.game.players.map((player) => player.displayName));
+
+        while (currentRoom.game.players.length < currentRoom.playerCount) {
+          const fallbackName = `bot${botSessions.length + 1}`;
+          const displayName = DEMO_BOT_NAMES.find((name) => !existingNames.has(name)) || fallbackName;
+          existingNames.add(displayName);
+          const payload = await apiRequest("/rooms/join", {
+            method: "POST",
+            body: {
+              inviteCode: currentRoom.inviteCode,
+              displayName
+            },
+            playerToken: ""
+          });
+          botSessions = [
+            ...botSessions,
+            {
+              playerId: payload.data.room.me.playerId,
+              displayName: payload.data.room.me.displayName,
+              playerToken: payload.data.playerToken
+            }
+          ];
+          currentRoom = await fetchHostViewRoom(currentRoom.roomId);
+        }
+
+        setLiveRoom(currentRoom, {
+          botSessions
+        });
+        return currentRoom;
+      }
+
+      async function submitBotWord(room, botSession) {
+        const botRoom = await fetchRoomForToken(room.roomId, botSession.playerToken);
+        const availableTiles = botRoom.myHand.filter((tile) => !tile.isUsed);
+        const selectedTiles = availableTiles.slice(0, 2);
+        if (selectedTiles.length < 2) {
+          return room;
+        }
+        const fontId = DEMO_FONT_IDS[getPlayerSeatIndex(room, botSession.playerId) % DEMO_FONT_IDS.length];
+        const payload = await postApiAs(botSession.playerToken, `/rooms/${encodeURIComponent(room.roomId)}/rounds/${room.game.roundIndex}/submit`, {
+          tileIds: selectedTiles.map((tile) => tile.tileId),
+          tileOrder: [0, 1],
+          phrase: selectedTiles.map((tile) => tile.text).join(""),
+          fontId,
+          lineMode: "boundary",
+          manualBreaks: [],
+          renderedLines: selectedTiles.map((tile) => tile.text)
+        });
+        if (!payload?.ok) {
+          return room;
+        }
+        return fetchHostViewRoom(room.roomId);
+      }
+
+      async function performLiveBotStep(room = getRoom()) {
+        if (!room || !state.liveBotSessions.length) {
+          return null;
+        }
+
+        if (room.game.phase === "round_submit") {
+          if (room.game.currentTurnPlayerId === room.me.playerId) {
+            return null;
+          }
+          const botSession = getBotSession(room.game.currentTurnPlayerId);
+          if (!botSession) {
+            return null;
+          }
+          return submitBotWord(room, botSession);
+        }
+
+        if (room.game.phase === "round_vote" || room.game.phase === "round_revote") {
+          const round = getCurrentRound(room);
+          const actedPlayerIds = new Set(
+            room.game.phase === "round_revote" ? round?.revotedPlayerIds || [] : round?.votedPlayerIds || []
+          );
+          if (!actedPlayerIds.has(room.me.playerId)) {
+            return null;
+          }
+          const nextBot = state.liveBotSessions.find((session) => !actedPlayerIds.has(session.playerId));
+          if (!nextBot) {
+            return null;
+          }
+          const mode = room.game.phase === "round_revote" ? "revote" : "vote";
+          const targetPlayerId = chooseBotRoundTarget(room, nextBot.playerId, mode);
+          if (!targetPlayerId) {
+            return null;
+          }
+          const endpoint = mode === "revote" ? "revote" : "vote";
+          const payload = await postApiAs(
+            nextBot.playerToken,
+            `/rooms/${encodeURIComponent(room.roomId)}/rounds/${room.game.roundIndex}/${endpoint}`,
+            {
+              targetPlayerId
+            }
+          );
+          if (!payload?.ok) {
+            return room;
+          }
+          return fetchHostViewRoom(room.roomId);
+        }
+
+        if (room.game.phase === "final_vote" || room.game.phase === "final_revote") {
+          const mode = room.game.phase === "final_revote" ? "revote" : "vote";
+          const actedPlayerIds = new Set(
+            room.game.phase === "final_revote"
+              ? room.game.finalVote?.revotedPlayerIds || []
+              : room.game.finalVote?.votedPlayerIds || []
+          );
+          if (canPlayerVoteFinal(room, room.me.playerId, mode) && !actedPlayerIds.has(room.me.playerId)) {
+            return null;
+          }
+          const nextBot = state.liveBotSessions.find(
+            (session) => !actedPlayerIds.has(session.playerId) && canPlayerVoteFinal(room, session.playerId, mode)
+          );
+          if (!nextBot) {
+            return null;
+          }
+          const candidateId = chooseBotFinalTarget(room, nextBot.playerId, mode);
+          if (!candidateId) {
+            return null;
+          }
+          const endpoint = mode === "revote" ? "final-revote" : "final-vote";
+          const payload = await postApiAs(nextBot.playerToken, `/rooms/${encodeURIComponent(room.roomId)}/${endpoint}`, {
+            candidateId
+          });
+          if (!payload?.ok) {
+            return room;
+          }
+          return fetchHostViewRoom(room.roomId);
+        }
+
+        return null;
+      }
+
+      async function stabilizeLiveRoom() {
+        if (!state.liveRoomActive) {
+          return;
+        }
+
+        let room = getRoom();
+        room = await ensureLiveDemoParticipants(room);
+
+        for (let step = 0; step < 24; step += 1) {
+          const nextRoom = await performLiveBotStep(room);
+          if (!nextRoom) {
+            break;
+          }
+          room = nextRoom;
+          setLiveRoom(room);
+        }
       }
 
       async function runLiveAction(action) {
@@ -1440,6 +1743,7 @@
         renderApp();
         try {
           await action();
+          await stabilizeLiveRoom();
           await refreshRecentChampions();
         } catch (error) {
           state.errorMessage = error instanceof Error ? error.message : "API 呼び出しに失敗しました。";
@@ -1483,7 +1787,7 @@
                 : describeDataSource(
                     "fixture",
                     state.dataMode === "auto" && lastError
-                      ? `接続先: fixture JSON (mock API に接続できなかったため自動フォールバック)`
+                      ? `接続先: fixture JSON (API に接続できなかったため自動フォールバック)`
                       : "接続先: fixture JSON"
                   );
             state.isLoading = false;
@@ -1525,10 +1829,10 @@
 
         state.dataStatusText =
           state.dataMode === "api"
-            ? `接続先: mock API を固定 (${state.apiBaseUrl})`
+            ? `接続先: API を固定 (${state.apiBaseUrl})`
             : state.dataMode === "fixture"
               ? "接続先: fixture JSON を固定"
-              : `接続先: mock API を優先 (${state.apiBaseUrl})`;
+              : `接続先: API を優先 (${state.apiBaseUrl})`;
 
         renderScenarioGrid();
         renderApp();
@@ -1536,12 +1840,16 @@
           try {
             const restored = await restoreLiveDemo();
             if (restored) {
+              await stabilizeLiveRoom();
+              renderScenarioGrid();
+              renderApp();
               return;
             }
           } catch {
             clearStoredLiveSession();
             state.liveRoomId = "";
             state.livePlayerToken = "";
+            state.liveBotSessions = [];
           }
         }
         await loadScenarioData(state.selectedScenarioId);

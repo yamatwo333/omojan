@@ -692,4 +692,5 @@ X-Omojan-Player-Token: pt_...
 - 投票確定や提出確定のレスポンスは、画面差分ではなく最新 room を返す
 - フロントは `phase` と `me` を見て画面を決める
 - `round_vote / round_revote / final_vote / final_revote` では、必要に応じて `votedPlayerIds / revotedPlayerIds` で自分の行動済みを判定する
+- 最終投票では、自分のワードしか候補に残っていないプレイヤーはその投票フェーズの必須投票者から外す
 - モックデータは `mock_api/` 配下を参照する

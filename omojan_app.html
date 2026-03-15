@@ -1,0 +1,2334 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>おもじゃん</title>
+    <style>
+      :root {
+        --paper: #f6efdb;
+        --paper-deep: #ead8a9;
+        --ink: #1f1812;
+        --green: #23442f;
+        --green-soft: rgba(36, 69, 47, 0.08);
+        --gold: #b28a32;
+        --gold-soft: rgba(178, 138, 50, 0.12);
+        --red: #b84431;
+        --red-soft: rgba(184, 68, 49, 0.12);
+        --line: rgba(118, 89, 63, 0.2);
+        --muted: #6f6255;
+        --shadow: 0 24px 42px rgba(29, 22, 15, 0.16);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        color: var(--ink);
+        font-family: "Hiragino Sans", "Yu Gothic", sans-serif;
+        background:
+          radial-gradient(circle at top, rgba(255, 255, 255, 0.72), transparent 30%),
+          repeating-linear-gradient(
+            -35deg,
+            rgba(102, 86, 58, 0.04) 0,
+            rgba(102, 86, 58, 0.04) 2px,
+            transparent 2px,
+            transparent 15px
+          ),
+          linear-gradient(180deg, #f7f1df, #ecdfb7);
+      }
+
+      main {
+        width: min(100%, 1100px);
+        margin: 0 auto;
+        padding: 22px 14px 48px;
+      }
+
+      .page-header {
+        text-align: center;
+        margin-bottom: 14px;
+      }
+
+      .page-header h1 {
+        margin: 0;
+        color: var(--green);
+        font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+        font-size: clamp(34px, 8vw, 52px);
+      }
+
+      .page-header p {
+        margin: 8px auto 0;
+        max-width: 720px;
+        color: var(--muted);
+        line-height: 1.7;
+        font-size: 13px;
+      }
+
+      .phone-shell {
+        display: flex;
+        justify-content: center;
+      }
+
+      .phone {
+        width: min(100%, 430px);
+        min-height: calc(100vh - 120px);
+        padding: 14px;
+        border-radius: 34px;
+        border: 3px solid #1f1710;
+        background:
+          linear-gradient(180deg, rgba(245, 235, 209, 0.98), rgba(253, 247, 235, 0.98)),
+          var(--paper);
+        box-shadow: var(--shadow);
+      }
+
+      .status-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .status-row strong {
+        color: var(--green);
+        font-size: 12px;
+      }
+
+      .hero-banner {
+        margin-top: 12px;
+        padding: 14px;
+        border-radius: 22px;
+        background: linear-gradient(180deg, rgba(36, 69, 47, 0.98), rgba(22, 45, 31, 0.98));
+        color: #f6eddc;
+      }
+
+      .hero-banner small {
+        display: block;
+        color: rgba(246, 237, 220, 0.76);
+        font-size: 12px;
+      }
+
+      .hero-banner strong {
+        display: block;
+        margin-top: 4px;
+        font-size: 20px;
+      }
+
+      .hero-banner .subline {
+        margin-top: 8px;
+        color: rgba(246, 237, 220, 0.88);
+        font-size: 12px;
+        line-height: 1.5;
+      }
+
+      .card,
+      .panel,
+      .history-card,
+      .player-card,
+      .action-card,
+      .preview-card,
+      .result-stage,
+      .champion-stage {
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.66);
+      }
+
+      .card,
+      .panel {
+        margin-top: 14px;
+        padding: 15px;
+        border-radius: 22px;
+      }
+
+      .card h2,
+      .panel h3 {
+        margin: 0;
+        color: var(--green);
+        font-size: 18px;
+      }
+
+      .card p,
+      .panel p {
+        margin: 8px 0 0;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.65;
+      }
+
+      .field-stack,
+      .player-list,
+      .history-list,
+      .action-grid,
+      .vote-grid {
+        display: grid;
+        gap: 10px;
+        margin-top: 14px;
+      }
+
+      .field {
+        display: grid;
+        gap: 6px;
+      }
+
+      .field label,
+      .section-label {
+        color: var(--green);
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .input {
+        width: 100%;
+        min-height: 48px;
+        padding: 0 14px;
+        border-radius: 16px;
+        border: 1px solid rgba(118, 89, 63, 0.22);
+        background: rgba(255, 252, 245, 0.98);
+        color: var(--ink);
+        font: inherit;
+      }
+
+      .input:focus {
+        outline: 2px solid rgba(184, 138, 50, 0.36);
+        outline-offset: 2px;
+      }
+
+      .chip-row,
+      .button-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .chip,
+      .break-dot,
+      .tile,
+      .action-card {
+        appearance: none;
+        border: 1px solid rgba(118, 89, 63, 0.18);
+        background: rgba(255, 255, 255, 0.8);
+        color: var(--ink);
+      }
+
+      .chip {
+        min-height: 40px;
+        padding: 0 12px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .chip.active {
+        border-color: rgba(184, 68, 49, 0.32);
+        background: rgba(248, 220, 210, 0.88);
+        color: #8d2d1d;
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 52px;
+        padding: 0 16px;
+        border: 0;
+        border-radius: 16px;
+        font-size: 15px;
+        font-weight: 800;
+      }
+
+      .btn.primary {
+        background: linear-gradient(180deg, #c7523d, #b0402d);
+        color: #fff7ef;
+      }
+
+      .btn.subtle {
+        border: 1px solid rgba(184, 138, 50, 0.38);
+        background: rgba(255, 250, 238, 0.96);
+        color: var(--green);
+      }
+
+      .btn:disabled,
+      .chip:disabled,
+      .tile:disabled,
+      .action-card:disabled {
+        opacity: 0.42;
+      }
+
+      .room-code {
+        display: inline-flex;
+        align-items: center;
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: rgba(255, 250, 238, 0.98);
+        border: 1px solid rgba(184, 138, 50, 0.38);
+        color: var(--green);
+        font-size: 13px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+      }
+
+      .player-card,
+      .history-card {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 13px 14px;
+        border-radius: 18px;
+      }
+
+      .player-card strong,
+      .history-card strong {
+        display: block;
+      }
+
+      .player-card span,
+      .history-card span,
+      .muted {
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.55;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 5px 9px;
+        border-radius: 999px;
+        background: var(--green-soft);
+        color: var(--green);
+        font-size: 12px;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+
+      .preview-card,
+      .result-stage,
+      .champion-stage {
+        margin-top: 14px;
+        padding: 16px 15px;
+        border-radius: 22px;
+        background:
+          linear-gradient(180deg, rgba(255, 250, 241, 0.96), rgba(251, 244, 227, 0.96)),
+          #fff9ef;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
+      }
+
+      .preview-card small,
+      .result-stage small,
+      .champion-stage small {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .word-board {
+        margin-top: 10px;
+        min-height: 124px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        line-height: 1.06;
+        word-break: keep-all;
+      }
+
+      .word-board.is-single-line {
+        white-space: nowrap;
+      }
+
+      .word-line {
+        display: block;
+      }
+
+      .font-classic {
+        font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+      }
+
+      .font-broadcast,
+      .font-heavy {
+        font-family: "Hiragino Sans", "Yu Gothic", sans-serif;
+        font-weight: 800;
+      }
+
+      .font-playful,
+      .font-round {
+        font-family: "Hiragino Maru Gothic ProN", "Yu Gothic", sans-serif;
+        font-weight: 700;
+      }
+
+      .preview-word {
+        min-height: 142px;
+      }
+
+      .vote-word {
+        min-height: 116px;
+      }
+
+      .result-word {
+        min-height: 132px;
+      }
+
+      .champion-word {
+        min-height: 152px;
+      }
+
+      .preview-caption {
+        margin: 10px 0 0;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.6;
+        text-align: center;
+      }
+
+      .break-panel {
+        margin-top: 14px;
+        padding: 14px;
+        border-radius: 18px;
+        border: 1px solid rgba(118, 89, 63, 0.16);
+        background: rgba(255, 255, 255, 0.72);
+      }
+
+      .break-panel p {
+        margin: 0 0 10px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.55;
+      }
+
+      .break-track {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .char-box {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 34px;
+        min-height: 42px;
+        padding: 0 8px;
+        border-radius: 12px;
+        border: 1px solid rgba(184, 138, 50, 0.18);
+        background: rgba(248, 239, 216, 0.76);
+        font-size: 17px;
+      }
+
+      .break-dot {
+        position: relative;
+        width: 24px;
+        height: 24px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.92);
+      }
+
+      .break-dot.active {
+        border-color: rgba(184, 68, 49, 0.36);
+        background: rgba(248, 220, 210, 0.92);
+      }
+
+      .break-dot.active::after {
+        content: "";
+        position: absolute;
+        inset: 6px;
+        border-radius: 999px;
+        background: var(--red);
+      }
+
+      .tile-grid {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 8px;
+        margin-top: 14px;
+      }
+
+      .tile {
+        min-height: 76px;
+        padding: 8px 4px;
+        border-radius: 14px;
+        background:
+          linear-gradient(180deg, rgba(255, 251, 241, 0.96), rgba(248, 239, 216, 0.94)),
+          #fff7ea;
+        font-size: 14px;
+        line-height: 1.2;
+        word-break: break-word;
+      }
+
+      .tile.selected {
+        border-color: rgba(184, 68, 49, 0.36);
+        background: rgba(250, 230, 222, 0.96);
+        color: #8d2d1d;
+      }
+
+      .tile.used {
+        opacity: 0.34;
+      }
+
+      .action-grid {
+        display: grid;
+        gap: 10px;
+      }
+
+      .action-card {
+        width: 100%;
+        padding: 14px;
+        border-radius: 18px;
+        text-align: left;
+      }
+
+      .action-card > * {
+        pointer-events: none;
+      }
+
+      .action-card.selected {
+        border-color: rgba(184, 68, 49, 0.36);
+        background: rgba(250, 230, 222, 0.92);
+      }
+
+      .action-card.disabled {
+        opacity: 0.38;
+        cursor: default;
+      }
+
+      .action-card .muted {
+        margin-top: 8px;
+      }
+
+      .empty-state,
+      .error-box,
+      .info-box {
+        margin-top: 14px;
+        padding: 14px;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.74);
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.7;
+      }
+
+      .error-box {
+        border: 1px solid rgba(184, 68, 49, 0.28);
+        color: #8d2d1d;
+        background: rgba(250, 226, 218, 0.82);
+      }
+
+      .info-box {
+        border: 1px solid rgba(184, 138, 50, 0.2);
+        background: rgba(255, 250, 238, 0.8);
+      }
+
+      .reveal-overlay {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 18px;
+        background: rgba(28, 21, 14, 0.28);
+        backdrop-filter: blur(3px);
+        z-index: 20;
+      }
+
+      .reveal-overlay[hidden] {
+        display: none;
+      }
+
+      .reveal-card {
+        width: min(100%, 430px);
+        padding: 18px 16px 16px;
+        border-radius: 28px;
+        border: 3px solid rgba(35, 68, 47, 0.9);
+        background:
+          linear-gradient(180deg, rgba(255, 250, 241, 0.98), rgba(251, 244, 227, 0.98)),
+          #fff9ef;
+        box-shadow:
+          0 22px 36px rgba(29, 22, 15, 0.22),
+          0 0 0 6px rgba(178, 138, 50, 0.16);
+      }
+
+      .reveal-card.is-champion {
+        box-shadow:
+          0 22px 38px rgba(29, 22, 15, 0.24),
+          0 0 0 6px rgba(178, 138, 50, 0.26),
+          0 0 42px rgba(178, 138, 50, 0.22);
+      }
+
+      .reveal-badge {
+        display: inline-flex;
+        align-items: center;
+        min-height: 34px;
+        padding: 0 12px;
+        border-radius: 999px;
+        border: 1px solid rgba(184, 138, 50, 0.24);
+        background: rgba(255, 255, 255, 0.86);
+        color: var(--green);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .reveal-actions {
+        display: flex;
+        justify-content: center;
+        margin-top: 14px;
+      }
+
+      .measure-word {
+        position: fixed;
+        left: -9999px;
+        top: -9999px;
+        visibility: hidden;
+        overflow: hidden;
+      }
+
+      @media (max-width: 520px) {
+        main {
+          padding-inline: 10px;
+        }
+
+        .phone {
+          min-height: calc(100vh - 44px);
+          border-radius: 28px;
+          padding: 12px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header class="page-header">
+        <h1>おもじゃん</h1>
+        <p>友達に URL を共有して、そのままブラウザで遊べる最小アプリです。ロビー作成、招待参加、提出、投票、再投票、ホスト裁定、総合優勝まで API で進みます。</p>
+      </header>
+
+      <section class="phone-shell">
+        <div class="phone">
+          <div class="status-row">
+            <span>online board game</span>
+            <strong id="statusLabel">接続を確認中</strong>
+          </div>
+          <section id="heroBanner" class="hero-banner">
+            <small id="bannerLabel">準備中</small>
+            <strong id="bannerTitle">読み込み中</strong>
+            <div id="bannerSubline" class="subline">API へ接続しています。</div>
+          </section>
+          <section id="app"></section>
+        </div>
+      </section>
+    </main>
+
+    <div id="revealOverlay" class="reveal-overlay" hidden>
+      <div id="revealCard" class="reveal-card">
+        <span id="revealBadge" class="reveal-badge">公開</span>
+        <div id="revealWord" class="word-board champion-word"></div>
+        <p id="revealMeta" class="preview-caption"></p>
+        <div class="reveal-actions">
+          <button id="closeRevealBtn" class="btn primary" type="button">閉じる</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="measureWord" class="word-board measure-word" aria-hidden="true"></div>
+
+    <script>
+      const LOCAL_API_BASE_URL = "http://127.0.0.1:8788/v1";
+      const PUBLIC_DEV_API_BASE_URL = "https://nglzfg3co5.execute-api.ap-northeast-1.amazonaws.com/dev/v1";
+      const FIXTURE_CHAMPIONS_URL = "./mock_api/champions_recent.json";
+      const APP_ROOM_ID_KEY = "omojan-app-room-id";
+      const APP_PLAYER_TOKEN_KEY = "omojan-app-player-token";
+      const POLL_INTERVAL_MS = 3000;
+
+      const lineModes = [
+        { id: "boundary", label: "ワードの境目で改行" },
+        { id: "manual", label: "手動で改行" },
+        { id: "single", label: "1行で固定" }
+      ];
+
+      const fonts = [
+        { id: "classic", label: "勝負明朝", className: "font-classic" },
+        { id: "broadcast", label: "実況ゴシック", className: "font-broadcast" },
+        { id: "playful", label: "ゆるポップ", className: "font-playful" },
+        { id: "heavy", label: "極太ゴシック", className: "font-heavy" },
+        { id: "round", label: "丸ゴシック", className: "font-round" }
+      ];
+
+      const state = {
+        apiBaseUrl: "",
+        room: null,
+        roomId: "",
+        playerToken: "",
+        recentChampions: [],
+        isLoading: true,
+        pendingAction: false,
+        errorMessage: "",
+        copyMessage: "",
+        createDisplayName: "",
+        joinDisplayName: "",
+        inviteCode: "",
+        playerCount: 4,
+        selectedStartPlayerId: "",
+        draftSelectedTileIds: [],
+        draftFontId: "broadcast",
+        draftLineMode: "boundary",
+        draftManualBreaks: [],
+        selectedVoteTarget: "",
+        selectedHostTarget: "",
+        selectedFinalTarget: "",
+        reveal: null,
+        revealTimer: 0,
+        pollTimer: 0,
+        lastSyncAt: ""
+      };
+
+      const els = {
+        statusLabel: document.getElementById("statusLabel"),
+        bannerLabel: document.getElementById("bannerLabel"),
+        bannerTitle: document.getElementById("bannerTitle"),
+        bannerSubline: document.getElementById("bannerSubline"),
+        app: document.getElementById("app"),
+        revealOverlay: document.getElementById("revealOverlay"),
+        revealCard: document.getElementById("revealCard"),
+        revealBadge: document.getElementById("revealBadge"),
+        revealWord: document.getElementById("revealWord"),
+        revealMeta: document.getElementById("revealMeta"),
+        closeRevealBtn: document.getElementById("closeRevealBtn"),
+        measureWord: document.getElementById("measureWord")
+      };
+
+      function escapeHtml(value) {
+        return String(value)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#39;");
+      }
+
+      function clone(value) {
+        return JSON.parse(JSON.stringify(value));
+      }
+
+      function resolveDefaultApiBaseUrl() {
+        const { hostname, protocol } = window.location;
+        if (protocol === "file:") {
+          return LOCAL_API_BASE_URL;
+        }
+        if (hostname === "localhost" || hostname === "127.0.0.1") {
+          return LOCAL_API_BASE_URL;
+        }
+        return PUBLIC_DEV_API_BASE_URL;
+      }
+
+      function getCurrentRound(room = state.room) {
+        if (!room || room.game.roundIndex === null || room.game.roundIndex === undefined) {
+          return null;
+        }
+        return room.game.rounds?.[room.game.roundIndex] || null;
+      }
+
+      function getSelectedTiles(room = state.room) {
+        if (!room) {
+          return [];
+        }
+        const tileMap = new Map(room.myHand.map((tile) => [tile.tileId, tile]));
+        return state.draftSelectedTileIds.map((tileId) => tileMap.get(tileId)).filter(Boolean);
+      }
+
+      function getDraftText(room = state.room) {
+        return getSelectedTiles(room).map((tile) => tile.text).join("");
+      }
+
+      function getBoundaryIndex(room = state.room) {
+        const [first] = getSelectedTiles(room);
+        return Array.from(first?.text || "").length || 0;
+      }
+
+      function normalizeBreaks(breaks, length) {
+        return [...new Set(breaks)]
+          .filter((value) => Number.isInteger(value) && value > 0 && value < length)
+          .sort((a, b) => a - b);
+      }
+
+      function sanitizeManualBreaks(room = state.room) {
+        const chars = Array.from(getDraftText(room));
+        if (chars.length <= 1) {
+          state.draftManualBreaks = [];
+          return;
+        }
+        state.draftManualBreaks = normalizeBreaks(state.draftManualBreaks, chars.length);
+      }
+
+      function getFontClass(fontId) {
+        return fonts.find((font) => font.id === fontId)?.className || "font-classic";
+      }
+
+      function applyWordMarkup(container, lines, fontClass, lineMode, fontSize) {
+        container.className = `word-board ${fontClass}`;
+        if (container.dataset.variant) {
+          container.classList.add(container.dataset.variant);
+        }
+        if (lineMode === "single") {
+          container.classList.add("is-single-line");
+        }
+        container.style.fontSize = `${fontSize}px`;
+        container.innerHTML = lines.map((line) => `<span class="word-line">${escapeHtml(line)}</span>`).join("");
+      }
+
+      function doesWordFit(lines, fontClass, lineMode, fontSize, width, height) {
+        els.measureWord.dataset.variant = "";
+        els.measureWord.style.width = `${width}px`;
+        els.measureWord.style.height = `${height}px`;
+        applyWordMarkup(els.measureWord, lines, fontClass, lineMode, fontSize);
+        const lineEls = Array.from(els.measureWord.querySelectorAll(".word-line"));
+        const tooWide = lineEls.some((line) => line.scrollWidth > width - 1);
+        const tooTall = els.measureWord.scrollHeight > height - 1;
+        return !(tooWide || tooTall);
+      }
+
+      function getMinimumFontSize(charsLength, lineMode) {
+        if (lineMode === "single") {
+          if (charsLength >= 18) {
+            return 16;
+          }
+          if (charsLength >= 14) {
+            return 18;
+          }
+          if (charsLength >= 10) {
+            return 20;
+          }
+          return 24;
+        }
+        if (charsLength >= 16) {
+          return 26;
+        }
+        if (charsLength >= 12) {
+          return 28;
+        }
+        return 32;
+      }
+
+      function measureLineFits(text, fontClass, fontSize, width) {
+        els.measureWord.dataset.variant = "";
+        els.measureWord.style.width = `${width}px`;
+        els.measureWord.style.height = "120px";
+        applyWordMarkup(els.measureWord, [text || " "], fontClass, "single", fontSize);
+        const lineEl = els.measureWord.querySelector(".word-line");
+        return lineEl ? lineEl.scrollWidth <= width - 1 : true;
+      }
+
+      function getLastFittingEnd(chars, start, endLimit, fontClass, fontSize, width) {
+        let lastFit = start;
+        for (let end = start + 1; end <= endLimit; end += 1) {
+          const sample = chars.slice(start, end).join("");
+          if (measureLineFits(sample, fontClass, fontSize, width)) {
+            lastFit = end;
+            continue;
+          }
+          break;
+        }
+        return lastFit > start ? lastFit : Math.min(start + 1, endLimit);
+      }
+
+      function splitForcedRange(chars, start, endLimit, fontClass, fontSize, width) {
+        const lines = [];
+        let cursor = start;
+        while (cursor < endLimit) {
+          const next = getLastFittingEnd(chars, cursor, endLimit, fontClass, fontSize, width);
+          lines.push(chars.slice(cursor, next).join(""));
+          cursor = next;
+        }
+        return lines;
+      }
+
+      function buildBoundaryLines(chars, fontClass, fontSize, width) {
+        const boundary = getBoundaryIndex();
+        const breaks = normalizeBreaks([boundary], chars.length);
+        if (!breaks.length) {
+          return splitForcedRange(chars, 0, chars.length, fontClass, fontSize, width);
+        }
+        const lines = [];
+        let start = 0;
+        [...breaks, chars.length].forEach((end) => {
+          lines.push(...splitForcedRange(chars, start, end, fontClass, fontSize, width));
+          start = end;
+        });
+        return lines.filter(Boolean);
+      }
+
+      function buildManualLines(chars, fontClass, fontSize, width) {
+        sanitizeManualBreaks();
+        const forcedBreaks = normalizeBreaks(state.draftManualBreaks, chars.length);
+        if (!forcedBreaks.length) {
+          return splitForcedRange(chars, 0, chars.length, fontClass, fontSize, width).filter(Boolean);
+        }
+
+        const lines = [];
+        let start = 0;
+        let forcedIndex = 0;
+
+        while (start < chars.length) {
+          const forcedEnd = forcedBreaks[forcedIndex];
+          if (forcedEnd) {
+            const forcedText = chars.slice(start, forcedEnd).join("");
+            if (measureLineFits(forcedText, fontClass, fontSize, width)) {
+              lines.push(forcedText);
+              start = forcedEnd;
+              forcedIndex += 1;
+              continue;
+            }
+
+            lines.push(...splitForcedRange(chars, start, forcedEnd, fontClass, fontSize, width));
+            start = forcedEnd;
+            forcedIndex += 1;
+            continue;
+          }
+
+          lines.push(...splitForcedRange(chars, start, chars.length, fontClass, fontSize, width));
+          break;
+        }
+
+        return lines.filter(Boolean);
+      }
+
+      function buildDraftLines(chars, fontClass, fontSize, width) {
+        if (state.draftLineMode === "single") {
+          return [chars.join("")];
+        }
+        if (state.draftLineMode === "manual") {
+          return buildManualLines(chars, fontClass, fontSize, width);
+        }
+        return buildBoundaryLines(chars, fontClass, fontSize, width);
+      }
+
+      function getBreaksFromLines(lines) {
+        const breaks = [];
+        let cursor = 0;
+        lines.forEach((line, index) => {
+          cursor += Array.from(line).length;
+          if (index < lines.length - 1) {
+            breaks.push(cursor);
+          }
+        });
+        return breaks;
+      }
+
+      function computeDraftLayout() {
+        const text = getDraftText();
+        if (!text) {
+          return { lines: ["牌を2つ選ぶ"], fontSize: 36, effectiveBreaks: [], safetyAdjusted: false };
+        }
+
+        const previewBox = document.getElementById("previewWord");
+        const width = previewBox?.clientWidth || 320;
+        const height = previewBox?.clientHeight || 148;
+        const chars = Array.from(text);
+        const fontClass = getFontClass(state.draftFontId);
+        const maxFontSize = state.draftLineMode === "single" ? 72 : 60;
+        const minFontSize = getMinimumFontSize(chars.length, state.draftLineMode);
+        let fallbackLayout = null;
+
+        for (let fontSize = maxFontSize; fontSize >= minFontSize; fontSize -= 1) {
+          const lines = buildDraftLines(chars, fontClass, fontSize, width);
+          const effectiveBreaks = getBreaksFromLines(lines);
+          const manualBreaks = normalizeBreaks(state.draftManualBreaks, chars.length);
+          const safetyAdjusted =
+            fontSize < maxFontSize ||
+            (state.draftLineMode === "manual" && effectiveBreaks.some((point) => !manualBreaks.includes(point))) ||
+            (state.draftLineMode === "boundary" && effectiveBreaks.some((point) => point !== getBoundaryIndex()));
+
+          if (doesWordFit(lines, fontClass, state.draftLineMode, fontSize, width, height)) {
+            return { lines, fontSize, effectiveBreaks, safetyAdjusted };
+          }
+
+          fallbackLayout = { lines, fontSize, effectiveBreaks, safetyAdjusted: true };
+        }
+
+        return fallbackLayout || {
+          lines: [text],
+          fontSize: minFontSize,
+          effectiveBreaks: [],
+          safetyAdjusted: true
+        };
+      }
+
+      function renderWordBoard(lines, fontId, variant, options = {}) {
+        const mode = options.lineMode || (lines.length <= 1 ? "single" : "manual");
+        const maxFont = options.maxFont || 46;
+        const minFont = options.minFont || 18;
+        return `
+          <div
+            class="word-board auto-fit-word ${variant} ${getFontClass(fontId)}${mode === "single" ? " is-single-line" : ""}"
+            data-font-id="${escapeHtml(fontId)}"
+            data-line-mode="${mode}"
+            data-max-font="${maxFont}"
+            data-min-font="${minFont}"
+          >
+            ${lines.map((line) => `<span class="word-line">${escapeHtml(line)}</span>`).join("")}
+          </div>
+        `;
+      }
+
+      function hydrateWordBoards() {
+        document.querySelectorAll(".auto-fit-word").forEach((node) => {
+          const lines = Array.from(node.querySelectorAll(".word-line")).map((line) => line.textContent || "");
+          const fontClass = getFontClass(node.dataset.fontId || "classic");
+          const lineMode = node.dataset.lineMode || (lines.length <= 1 ? "single" : "manual");
+          const maxFont = Number(node.dataset.maxFont || "46");
+          const minFont = Number(node.dataset.minFont || "18");
+          const width = node.clientWidth || 300;
+          const height = node.clientHeight || 120;
+          let chosen = minFont;
+          for (let fontSize = maxFont; fontSize >= minFont; fontSize -= 1) {
+            if (doesWordFit(lines, fontClass, lineMode, fontSize, width, height)) {
+              chosen = fontSize;
+              break;
+            }
+          }
+          node.dataset.variant = Array.from(node.classList).find((className) => className.endsWith("-word")) || "";
+          applyWordMarkup(node, lines, fontClass, lineMode, chosen);
+        });
+      }
+
+      function getInviteUrl(code) {
+        const url = new URL(window.location.href);
+        url.search = "";
+        url.searchParams.set("invite", code);
+        return url.toString();
+      }
+
+      function getVoteCandidates(room, mode = "vote") {
+        const round = getCurrentRound(room);
+        if (!round) {
+          return [];
+        }
+        if (mode === "revote" && round.voteSummary?.tiedPlayerIds?.length) {
+          return round.submissions.filter((submission) => round.voteSummary.tiedPlayerIds.includes(submission.playerId));
+        }
+        return round.submissions || [];
+      }
+
+      function getFinalCandidates(room, mode = "vote") {
+        const finalVote = room.game.finalVote;
+        if (!finalVote) {
+          return [];
+        }
+        if (mode === "revote" && finalVote.voteSummary?.tiedCandidateIds?.length) {
+          return finalVote.candidates.filter((candidate) => finalVote.voteSummary.tiedCandidateIds.includes(candidate.candidateId));
+        }
+        return finalVote.candidates || [];
+      }
+
+      function canPlayerVoteFinal(room, playerId, mode = "vote") {
+        return getFinalCandidates(room, mode).some((candidate) => candidate.playerId !== playerId);
+      }
+
+      function deriveView(room = state.room) {
+        if (!room) {
+          return "welcome";
+        }
+        const phase = room.game.phase;
+        const round = getCurrentRound(room);
+        const meVoted = round?.votedPlayerIds?.includes(room.me.playerId);
+        const meRevoted = round?.revotedPlayerIds?.includes(room.me.playerId);
+        const meFinalVoted = room.game.finalVote?.votedPlayerIds?.includes(room.me.playerId);
+        const meFinalRevoted = room.game.finalVote?.revotedPlayerIds?.includes(room.me.playerId);
+        const meCanFinalVote = canPlayerVoteFinal(room, room.me.playerId, "vote");
+        const meCanFinalRevote = canPlayerVoteFinal(room, room.me.playerId, "revote");
+
+        if (phase === "lobby") {
+          return "lobby";
+        }
+        if (phase === "round_submit") {
+          return room.game.currentTurnPlayerId === room.me.playerId ? "submit" : "wait";
+        }
+        if (phase === "round_vote") {
+          return meVoted ? "wait" : "vote";
+        }
+        if (phase === "round_revote") {
+          return meRevoted ? "wait" : "revote";
+        }
+        if (phase === "round_host_decide") {
+          return room.me.isHost ? "hostDecide" : "wait";
+        }
+        if (phase === "round_result") {
+          return "roundResult";
+        }
+        if (phase === "final_vote") {
+          return meFinalVoted || !meCanFinalVote ? "wait" : "finalVote";
+        }
+        if (phase === "final_revote") {
+          return meFinalRevoted || !meCanFinalRevote ? "wait" : "finalVote";
+        }
+        if (phase === "final_host_decide") {
+          return room.me.isHost ? "finalHostDecide" : "wait";
+        }
+        if (phase === "final_result") {
+          return "finalResult";
+        }
+        return "welcome";
+      }
+
+      function getStatusText() {
+        if (state.pendingAction) {
+          return "送信中";
+        }
+        if (state.isLoading) {
+          return "同期中";
+        }
+        return "接続中";
+      }
+
+      function formatLastSync() {
+        if (!state.lastSyncAt) {
+          return "まだ同期していません。";
+        }
+        return `最終同期 ${new Date(state.lastSyncAt).toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}`;
+      }
+
+      function setBanner() {
+        els.statusLabel.textContent = getStatusText();
+
+        const view = deriveView();
+        const room = state.room;
+        const bannerMap = {
+          welcome: {
+            label: "URL共有で友達と遊ぶ",
+            title: "ルームを作るか、招待コードで参加",
+            subline: `接続先: ${state.apiBaseUrl} / ${formatLastSync()}`
+          },
+          lobby: {
+            label: `ROOM / ${room?.inviteCode || "----"}`,
+            title: room?.me.isHost ? "メンバーが集まったら開始" : "ホストの開始を待っています",
+            subline: room?.me.isHost
+              ? "開始順を決めてからゲームを始めます。"
+              : "プレイヤーがそろうとホストが開始できます。"
+          },
+          submit: {
+            label: getCurrentRound(room)?.wind || "提出",
+            title: `${room?.me.displayName || "あなた"} の手番`,
+            subline: "2枚選んで見た目を整え、そのまま提出します。"
+          },
+          wait: {
+            label: getCurrentRound(room)?.wind || "待機",
+            title: "ほかのプレイヤーの進行を待っています",
+            subline: `${formatLastSync()} / 3秒ごとに自動で更新します。`
+          },
+          vote: {
+            label: getCurrentRound(room)?.label || "投票",
+            title: "このラウンドで一番おもしろいワードに投票",
+            subline: "自分のワードには投票できません。"
+          },
+          revote: {
+            label: getCurrentRound(room)?.label || "再投票",
+            title: "同率ワードの再投票",
+            subline: "同率だった候補だけに絞って投票します。"
+          },
+          hostDecide: {
+            label: getCurrentRound(room)?.label || "ホスト裁定",
+            title: "ホストが勝ちワードを選ぶ",
+            subline: "同率のまま決まらなかったため、ホスト裁定に入っています。"
+          },
+          roundResult: {
+            label: getCurrentRound(room)?.label || "ラウンド結果",
+            title: "ラウンド勝者発表",
+            subline: room?.me.isHost ? "確認したら次へ進めます。" : "ホストが次へ進めるまで待ちます。"
+          },
+          finalVote: {
+            label: "最終投票",
+            title: room?.game.phase === "final_revote" ? "最終再投票" : "総合優勝を決める最終投票",
+            subline: "各ラウンドの勝ちワードから、いちばんおもしろいワードを選びます。"
+          },
+          finalHostDecide: {
+            label: "最終ホスト裁定",
+            title: "ホストが総合優勝ワードを選ぶ",
+            subline: "最終投票も同率だったため、ホスト裁定に入っています。"
+          },
+          finalResult: {
+            label: "総合優勝",
+            title: "本日の総合優勝",
+            subline: room?.me.isHost ? "このルームで続けてもう1試合できます。" : "ホストが再開するまで待機できます。"
+          }
+        };
+
+        const banner = bannerMap[view] || bannerMap.welcome;
+        els.bannerLabel.textContent = banner.label;
+        els.bannerTitle.textContent = banner.title;
+        els.bannerSubline.textContent = banner.subline;
+      }
+
+      function persistSession() {
+        if (!state.roomId || !state.playerToken) {
+          return;
+        }
+        window.localStorage.setItem(APP_ROOM_ID_KEY, state.roomId);
+        window.localStorage.setItem(APP_PLAYER_TOKEN_KEY, state.playerToken);
+      }
+
+      function clearSession() {
+        window.localStorage.removeItem(APP_ROOM_ID_KEY);
+        window.localStorage.removeItem(APP_PLAYER_TOKEN_KEY);
+      }
+
+      async function fetchJson(url, options = {}) {
+        const response = await fetch(url, options);
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || payload.ok === false) {
+          const detail = payload?.error?.message || payload?.message || `${url} の取得に失敗しました。`;
+          throw new Error(detail);
+        }
+        return payload;
+      }
+
+      async function apiRequest(path, options = {}) {
+        const { method = "GET", body, playerToken = state.playerToken } = options;
+        return fetchJson(`${state.apiBaseUrl}${path}`, {
+          method,
+          headers: {
+            ...(body === undefined ? {} : { "content-type": "application/json" }),
+            ...(playerToken ? { "X-Omojan-Player-Token": playerToken } : {})
+          },
+          ...(body === undefined ? {} : { body: JSON.stringify(body) })
+        });
+      }
+
+      async function postApi(path, body = {}) {
+        return apiRequest(path, { method: "POST", body });
+      }
+
+      async function loadRecentChampions() {
+        try {
+          const payload = await fetchJson(`${state.apiBaseUrl}/champions/recent?limit=5`);
+          state.recentChampions = payload.data.items || [];
+        } catch {
+          const payload = await fetchJson(FIXTURE_CHAMPIONS_URL);
+          state.recentChampions = payload.data.items || [];
+        }
+      }
+
+      function syncDraftWithRoom(room = state.room) {
+        if (!room || deriveView(room) !== "submit") {
+          state.draftSelectedTileIds = [];
+          state.draftManualBreaks = [];
+          return;
+        }
+
+        const availableTiles = room.myHand.filter((tile) => !tile.isUsed);
+        const currentValid = state.draftSelectedTileIds.filter((tileId) => availableTiles.some((tile) => tile.tileId === tileId));
+
+        if (currentValid.length === 2) {
+          state.draftSelectedTileIds = currentValid;
+        } else {
+          state.draftSelectedTileIds = availableTiles.slice(0, 2).map((tile) => tile.tileId);
+        }
+
+        sanitizeManualBreaks(room);
+      }
+
+      function detectReveal(previousRoom, nextRoom) {
+        if (!previousRoom || previousRoom.roomId !== nextRoom.roomId) {
+          return null;
+        }
+
+        const previousChampion = previousRoom.game?.champion?.phrase || "";
+        const nextChampion = nextRoom.game?.champion?.phrase || "";
+        if (!previousChampion && nextChampion) {
+          return {
+            kind: "champion",
+            badge: "総合優勝",
+            lines: clone(nextRoom.game.champion.renderedLines || [nextChampion]),
+            fontId: nextRoom.game.champion.fontId || "classic",
+            meta: `${nextRoom.game.champion.displayName}`
+          };
+        }
+
+        for (let roundIndex = 0; roundIndex < 3; roundIndex += 1) {
+          const previousSubmissions = previousRoom.game?.rounds?.[roundIndex]?.submissions || [];
+          const nextSubmissions = nextRoom.game?.rounds?.[roundIndex]?.submissions || [];
+          if (nextSubmissions.length <= previousSubmissions.length) {
+            continue;
+          }
+          const previousKeys = new Set(previousSubmissions.map((item) => `${item.playerId}:${item.submittedAt}`));
+          const fresh = nextSubmissions.find((item) => !previousKeys.has(`${item.playerId}:${item.submittedAt}`));
+          if (fresh) {
+            return {
+              kind: "submission",
+              badge: fresh.displayName,
+              lines: clone(fresh.renderedLines || [fresh.phrase]),
+              fontId: fresh.fontId || "broadcast",
+              meta: `東${roundIndex + 1}局で公開`
+            };
+          }
+        }
+
+        return null;
+      }
+
+      function openReveal(reveal) {
+        if (state.revealTimer) {
+          window.clearTimeout(state.revealTimer);
+          state.revealTimer = 0;
+        }
+        state.reveal = reveal;
+        renderReveal();
+        if (reveal.kind === "submission") {
+          state.revealTimer = window.setTimeout(() => {
+            state.revealTimer = 0;
+            closeReveal();
+          }, 1800);
+        }
+      }
+
+      function closeReveal() {
+        if (state.revealTimer) {
+          window.clearTimeout(state.revealTimer);
+          state.revealTimer = 0;
+        }
+        state.reveal = null;
+        renderReveal();
+      }
+
+      function setRoom(room, options = {}) {
+        const previousRoom = options.skipReveal ? null : state.room ? clone(state.room) : null;
+        state.room = clone(room);
+        state.roomId = room.roomId;
+        state.selectedStartPlayerId = room.startPlayerId || room.me.playerId;
+        state.lastSyncAt = new Date().toISOString();
+        if (options.playerToken) {
+          state.playerToken = options.playerToken;
+        }
+        syncDraftWithRoom(state.room);
+
+        const reveal = options.skipReveal ? null : detectReveal(previousRoom, state.room);
+        if (reveal) {
+          openReveal(reveal);
+        }
+        persistSession();
+      }
+
+      async function refreshRoom() {
+        if (!state.roomId || !state.playerToken) {
+          return;
+        }
+        const payload = await apiRequest(`/rooms/${encodeURIComponent(state.roomId)}`);
+        setRoom(payload.data.room);
+      }
+
+      function clearPollTimer() {
+        if (state.pollTimer) {
+          window.clearTimeout(state.pollTimer);
+          state.pollTimer = 0;
+        }
+      }
+
+      function shouldPoll() {
+        const view = deriveView();
+        return ["lobby", "wait", "roundResult", "finalResult"].includes(view);
+      }
+
+      function schedulePoll() {
+        clearPollTimer();
+        if (!shouldPoll() || state.pendingAction || !state.roomId || !state.playerToken) {
+          return;
+        }
+        state.pollTimer = window.setTimeout(async () => {
+          try {
+            await refreshRoom();
+            render();
+          } catch (error) {
+            state.errorMessage = error instanceof Error ? error.message : "最新状態の取得に失敗しました。";
+            render();
+          }
+        }, POLL_INTERVAL_MS);
+      }
+
+      async function restoreSession() {
+        const storedRoomId = window.localStorage.getItem(APP_ROOM_ID_KEY);
+        const storedToken = window.localStorage.getItem(APP_PLAYER_TOKEN_KEY);
+        if (!storedRoomId || !storedToken) {
+          return false;
+        }
+
+        state.roomId = storedRoomId;
+        state.playerToken = storedToken;
+        const payload = await apiRequest(`/rooms/${encodeURIComponent(storedRoomId)}/reconnect`, {
+          method: "POST",
+          body: {},
+          playerToken: storedToken
+        });
+        setRoom(payload.data.room, { playerToken: storedToken, skipReveal: true });
+        return true;
+      }
+
+      function getWaitingMessage(room) {
+        const currentRound = getCurrentRound(room);
+        const currentPlayer = room.game.players.find((player) => player.playerId === room.game.currentTurnPlayerId);
+        const cannotVoteFinal = room.game.phase === "final_vote" && !canPlayerVoteFinal(room, room.me.playerId, "vote");
+        const cannotRevoteFinal = room.game.phase === "final_revote" && !canPlayerVoteFinal(room, room.me.playerId, "revote");
+
+        const phaseMessageMap = {
+          lobby: room.me.isHost ? "プレイヤーがそろったら開始順を決めてゲームを始めます。" : "ホストが開始するまでこの画面で待機します。",
+          round_vote: "あなたは投票済みです。ほかの参加者の投票を待っています。",
+          round_revote: "あなたは再投票済みです。ほかの参加者の投票を待っています。",
+          final_vote: cannotVoteFinal
+            ? "投票できる候補がないため、ほかの参加者の最終投票を待っています。"
+            : "あなたは最終投票済みです。ほかの参加者の投票を待っています。",
+          final_revote: cannotRevoteFinal
+            ? "再投票できる候補がないため、ほかの参加者の最終投票を待っています。"
+            : "あなたは最終再投票済みです。ほかの参加者の投票を待っています。",
+          round_result: room.me.isHost ? "確認したら次のラウンドへ進めます。" : "ホストが次へ進めるまで待っています。",
+          final_result: room.me.isHost ? "このルームでもう一度遊べます。" : "ホストが再開するまで待っています。"
+        };
+
+        if (currentPlayer) {
+          return `${currentPlayer.displayName} の手番です。`;
+        }
+        return phaseMessageMap[room.game.phase] || `${escapeHtml(currentRound?.label || "現在ラウンド")} が進行中です。`;
+      }
+
+      function renderRecentChampions() {
+        if (!state.recentChampions.length) {
+          return `<div class="empty-state">最近の総合優勝ワードはまだありません。</div>`;
+        }
+        return `
+          <div class="history-list">
+            ${state.recentChampions
+              .map(
+                (item) => `
+                  <div class="history-card">
+                    <div>
+                      <strong>${escapeHtml(item.phrase)}</strong>
+                      <span>${escapeHtml(item.displayName)}</span>
+                    </div>
+                    <span>${new Date(item.wonAt).toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" })}</span>
+                  </div>
+                `
+              )
+              .join("")}
+          </div>
+        `;
+      }
+
+      function renderLanding() {
+        return `
+          ${state.errorMessage ? `<div class="error-box">${escapeHtml(state.errorMessage)}</div>` : ""}
+          ${state.copyMessage ? `<div class="info-box">${escapeHtml(state.copyMessage)}</div>` : ""}
+
+          <section class="card">
+            <h2>ルームを作る</h2>
+            <p>ホストとしてルームを作り、招待 URL をそのまま友達に共有します。</p>
+            <div class="field-stack">
+              <div class="field">
+                <label for="createDisplayName">表示名</label>
+                <input id="createDisplayName" class="input" type="text" maxlength="20" placeholder="例: やまだ" value="${escapeHtml(state.createDisplayName)}" data-field="createDisplayName" />
+              </div>
+            </div>
+            <div class="section-label">人数</div>
+            <div class="chip-row">
+              ${[2, 3, 4]
+                .map(
+                  (count) => `
+                    <button class="chip${state.playerCount === count ? " active" : ""}" type="button" data-player-count="${count}">
+                      ${count}人
+                    </button>
+                  `
+                )
+                .join("")}
+            </div>
+            <div class="button-row">
+              <button class="btn primary" type="button" data-action="create-room" ${state.pendingAction ? "disabled" : ""}>ルームを作る</button>
+            </div>
+          </section>
+
+          <section class="card">
+            <h2>招待 URL から参加</h2>
+            <p>受け取った招待コードを入れて参加します。URL に招待コードが入っていれば自動で埋まります。</p>
+            <div class="field-stack">
+              <div class="field">
+                <label for="inviteCode">招待コード</label>
+                <input id="inviteCode" class="input" type="text" maxlength="20" placeholder="例: OMO-2048" value="${escapeHtml(state.inviteCode)}" data-field="inviteCode" />
+              </div>
+              <div class="field">
+                <label for="joinDisplayName">表示名</label>
+                <input id="joinDisplayName" class="input" type="text" maxlength="20" placeholder="例: たなか" value="${escapeHtml(state.joinDisplayName)}" data-field="joinDisplayName" />
+              </div>
+            </div>
+            <div class="button-row">
+              <button class="btn primary" type="button" data-action="join-room" ${state.pendingAction ? "disabled" : ""}>参加する</button>
+            </div>
+          </section>
+
+          <section class="panel">
+            <h3>最近の総合優勝ワード</h3>
+            ${renderRecentChampions()}
+          </section>
+        `;
+      }
+
+      function renderLobby(room) {
+        return `
+          ${state.errorMessage ? `<div class="error-box">${escapeHtml(state.errorMessage)}</div>` : ""}
+          ${state.copyMessage ? `<div class="info-box">${escapeHtml(state.copyMessage)}</div>` : ""}
+
+          <section class="card">
+            <h2>ルーム待機中</h2>
+            <div class="button-row">
+              <span class="room-code">${escapeHtml(room.inviteCode)}</span>
+              <button class="btn subtle" type="button" data-action="copy-invite-url">招待URLをコピー</button>
+            </div>
+            <div class="player-list">
+              ${room.game.players
+                .map(
+                  (player) => `
+                    <div class="player-card">
+                      <div>
+                        <strong>${escapeHtml(player.displayName)}</strong>
+                        <span>${player.playerId === room.me.playerId ? "あなた" : `席順 ${player.seatOrder}`}</span>
+                      </div>
+                      <span class="badge">${player.isHost ? "ホスト" : "参加中"}</span>
+                    </div>
+                  `
+                )
+                .join("")}
+            </div>
+          </section>
+
+          <section class="panel">
+            <h3>開始順</h3>
+            ${
+              room.me.isHost
+                ? `
+                  <div class="chip-row">
+                    ${room.game.players
+                      .map(
+                        (player) => `
+                          <button class="chip${state.selectedStartPlayerId === player.playerId ? " active" : ""}" type="button" data-start-player-id="${player.playerId}">
+                            ${escapeHtml(player.displayName)}
+                          </button>
+                        `
+                      )
+                      .join("")}
+                  </div>
+                  <div class="button-row">
+                    <button class="btn primary" type="button" data-action="start-game" ${state.pendingAction ? "disabled" : ""}>この順で開始</button>
+                  </div>
+                `
+                : `<div class="info-box">ホストが開始順を決めてゲームを始めるまで待っています。</div>`
+            }
+          </section>
+
+          <section class="panel">
+            <h3>最近の総合優勝ワード</h3>
+            ${renderRecentChampions()}
+          </section>
+        `;
+      }
+
+      function renderSubmit(room) {
+        const layout = computeDraftLayout();
+        const selectedTiles = getSelectedTiles(room);
+        const modeLabel = lineModes.find((mode) => mode.id === state.draftLineMode)?.label || "";
+        const fontLabel = fonts.find((font) => font.id === state.draftFontId)?.label || "";
+        const chars = Array.from(getDraftText(room));
+
+        return `
+          ${state.errorMessage ? `<div class="error-box">${escapeHtml(state.errorMessage)}</div>` : ""}
+
+          <section class="card">
+            <h2>${escapeHtml(getCurrentRound(room)?.wind || "提出")}</h2>
+            <p>${escapeHtml(room.me.displayName)} の手番です。見せ方まで整えてから提出します。</p>
+            <section class="preview-card">
+              <small>提出前プレビュー</small>
+              <div id="previewWord" class="word-board preview-word ${getFontClass(state.draftFontId)}${state.draftLineMode === "single" ? " is-single-line" : ""}">
+                ${layout.lines.map((line) => `<span class="word-line">${escapeHtml(line)}</span>`).join("")}
+              </div>
+              <p class="preview-caption">
+                ${
+                  getDraftText(room)
+                    ? layout.safetyAdjusted
+                      ? `改行: ${escapeHtml(modeLabel)} / 書体: ${escapeHtml(fontLabel)} / 保護改行または縮小あり`
+                      : `改行: ${escapeHtml(modeLabel)} / 書体: ${escapeHtml(fontLabel)}`
+                    : "まずは牌を2つ選ぶと、ここに見た目が出ます。"
+                }
+              </p>
+            </section>
+          </section>
+
+          <section class="panel">
+            <h3>改行モード</h3>
+            <div class="chip-row">
+              ${lineModes
+                .map(
+                  (mode) => `
+                    <button class="chip${state.draftLineMode === mode.id ? " active" : ""}" type="button" data-line-mode="${mode.id}">
+                      ${escapeHtml(mode.label)}
+                    </button>
+                  `
+                )
+                .join("")}
+            </div>
+            ${state.draftLineMode === "manual" && chars.length > 1
+              ? `
+                <section class="break-panel">
+                  <p>${state.draftManualBreaks.length ? `${state.draftManualBreaks.join(" / ")}文字目のあとで改行` : "改行を入れない"}</p>
+                  <div class="break-track">
+                    ${chars
+                      .map((char, index) => {
+                        const gap =
+                          index < chars.length - 1
+                            ? `<button class="break-dot${state.draftManualBreaks.includes(index + 1) ? " active" : ""}" type="button" data-break="${index + 1}" aria-label="${index + 1}文字目のあとで改行"></button>`
+                            : "";
+                        return `<span class="char-box">${escapeHtml(char)}</span>${gap}`;
+                      })
+                      .join("")}
+                  </div>
+                </section>
+              `
+              : ""}
+          </section>
+
+          <section class="panel">
+            <h3>書体</h3>
+            <div class="chip-row">
+              ${fonts
+                .map(
+                  (font) => `
+                    <button class="chip${state.draftFontId === font.id ? " active" : ""}" type="button" data-font-id="${font.id}">
+                      ${escapeHtml(font.label)}
+                    </button>
+                  `
+                )
+                .join("")}
+            </div>
+          </section>
+
+          <section class="panel">
+            <h3>手札</h3>
+            <div class="tile-grid">
+              ${room.myHand
+                .map(
+                  (tile) => `
+                    <button class="tile${state.draftSelectedTileIds.includes(tile.tileId) ? " selected" : ""}${tile.isUsed ? " used" : ""}" type="button" data-tile-id="${tile.tileId}" ${tile.isUsed ? "disabled" : ""}>
+                      ${escapeHtml(tile.text)}
+                    </button>
+                  `
+                )
+                .join("")}
+            </div>
+            <div class="button-row">
+              <button class="btn subtle" type="button" data-action="swap-selection" ${selectedTiles.length === 2 ? "" : "disabled"}>順番入替</button>
+              <button class="btn subtle" type="button" data-action="clear-selection">選択をクリア</button>
+              <button class="btn primary" type="button" data-action="submit-word" ${selectedTiles.length === 2 && !state.pendingAction ? "" : "disabled"}>この見た目で提出</button>
+            </div>
+          </section>
+        `;
+      }
+
+      function renderWait(room) {
+        const submissions = getCurrentRound(room)?.submissions || [];
+        return `
+          ${state.errorMessage ? `<div class="error-box">${escapeHtml(state.errorMessage)}</div>` : ""}
+          <section class="card">
+            <h2>待機</h2>
+            <p>${escapeHtml(getWaitingMessage(room))}</p>
+            <div class="info-box">${escapeHtml(formatLastSync())} / 自動更新中</div>
+          </section>
+
+          <section class="panel">
+            <h3>公開済みワード</h3>
+            ${
+              submissions.length
+                ? `
+                  <div class="action-grid">
+                    ${submissions
+                      .map(
+                        (submission) => `
+                          <article class="action-card disabled">
+                            <span class="badge">${escapeHtml(submission.displayName)}</span>
+                            ${renderWordBoard(submission.renderedLines, submission.fontId, "vote-word", { maxFont: 34, minFont: 18 })}
+                          </article>
+                        `
+                      )
+                      .join("")}
+                  </div>
+                `
+                : `<div class="empty-state">まだ公開されたワードはありません。</div>`
+            }
+          </section>
+        `;
+      }
+
+      function renderVoteCards(candidates, selectedId, dataAttr, selfId, options = {}) {
+        return `
+          <div class="action-grid">
+            ${candidates
+              .map((candidate) => {
+                const disabled = options.disableSelf !== false && candidate.playerId === selfId;
+                const value = candidate.candidateId ?? candidate.playerId;
+                return `
+                  <button
+                    class="action-card${selectedId === value ? " selected" : ""}${disabled ? " disabled" : ""}"
+                    type="button"
+                    aria-pressed="${selectedId === value ? "true" : "false"}"
+                    data-${dataAttr}="${escapeHtml(value)}"
+                    ${disabled ? "disabled" : ""}
+                  >
+                    <span class="badge">${escapeHtml(candidate.displayName)}</span>
+                    ${renderWordBoard(candidate.renderedLines, candidate.fontId, "vote-word", { maxFont: 34, minFont: 18 })}
+                    <div class="muted">${escapeHtml(candidate.phrase)}</div>
+                  </button>
+                `;
+              })
+              .join("")}
+          </div>
+        `;
+      }
+
+      function renderVote(room, mode = "vote") {
+        const round = getCurrentRound(room);
+        const candidates = getVoteCandidates(room, mode);
+        const selectedId = mode === "revote" ? state.selectedHostTarget : state.selectedVoteTarget;
+        return `
+          ${state.errorMessage ? `<div class="error-box">${escapeHtml(state.errorMessage)}</div>` : ""}
+          <section class="card">
+            <h2>${mode === "revote" ? "再投票" : "このラウンドで一番おもしろいワードに投票"}</h2>
+            ${
+              mode === "revote" && round?.voteSummary
+                ? `
+                  <div class="history-list">
+                    ${round.voteSummary.counts
+                      .filter((item) => round.voteSummary.tiedPlayerIds.includes(item.playerId))
+                      .map(
+                        (item) => `
+                          <div class="history-card">
+                            <strong>${escapeHtml(item.phrase)}</strong>
+                            <span>${item.count}票</span>
+                          </div>
+                        `
+                      )
+                      .join("")}
+                  </div>
+                `
+                : ""
+            }
+            ${renderVoteCards(candidates, selectedId, mode === "revote" ? "revote-id" : "vote-id", room.me.playerId)}
+            <div class="button-row">
+              <button class="btn primary" type="button" data-action="${mode === "revote" ? "submit-revote" : "submit-vote"}" ${selectedId && !state.pendingAction ? "" : "disabled"}>
+                ${mode === "revote" ? "このワードに再投票" : "このワードに投票"}
+              </button>
+            </div>
+          </section>
+        `;
+      }
+
+      function renderHostDecide(room, isFinal = false) {
+        const source = isFinal ? room.game.finalVote : getCurrentRound(room);
+        const counts = source?.voteSummary?.counts || [];
+        const tiedIds = isFinal ? source?.voteSummary?.tiedCandidateIds || [] : source?.voteSummary?.tiedPlayerIds || [];
+        const candidates = isFinal
+          ? source.candidates.filter((candidate) => tiedIds.includes(candidate.candidateId))
+          : getVoteCandidates(room, "revote");
+        const selectedId = isFinal ? state.selectedFinalTarget : state.selectedHostTarget;
+        const dataAttr = isFinal ? "final-pick-id" : "host-pick-id";
+
+        return `
+          ${state.errorMessage ? `<div class="error-box">${escapeHtml(state.errorMessage)}</div>` : ""}
+          <section class="card">
+            <h2>${isFinal ? "最終ホスト裁定" : "ホスト裁定"}</h2>
+            <div class="history-list">
+              ${counts
+                .filter((item) => tiedIds.includes(item.playerId || item.candidateId))
+                .map(
+                  (item) => `
+                    <div class="history-card">
+                      <strong>${escapeHtml(item.phrase)}</strong>
+                      <span>${item.count}票</span>
+                    </div>
+                  `
+                )
+                .join("")}
+            </div>
+            ${renderVoteCards(candidates, selectedId, dataAttr, "__none__", { disableSelf: false })}
+            <div class="button-row">
+              <button class="btn primary" type="button" data-action="${isFinal ? "submit-final-host-pick" : "submit-host-pick"}" ${selectedId && !state.pendingAction ? "" : "disabled"}>
+                このワードで確定
+              </button>
+            </div>
+          </section>
+        `;
+      }
+
+      function renderRoundResult(room) {
+        const round = getCurrentRound(room);
+        const winner = round?.winner;
+        return `
+          ${state.errorMessage ? `<div class="error-box">${escapeHtml(state.errorMessage)}</div>` : ""}
+          <section class="card">
+            <h2>${escapeHtml(round?.label || "ラウンド結果")}</h2>
+            <section class="result-stage">
+              <small>勝利ワード</small>
+              ${winner ? renderWordBoard(winner.renderedLines, winner.fontId, "result-word", { maxFont: 40, minFont: 20 }) : `<div class="empty-state">結果待ちです。</div>`}
+              ${winner ? `<p><strong>${escapeHtml(winner.displayName)}</strong> / ${winner.voteCount}票</p>` : ""}
+            </section>
+            <section class="panel">
+              <h3>票数内訳</h3>
+              <div class="history-list">
+                ${(round?.voteSummary?.counts || [])
+                  .map(
+                    (item) => `
+                      <div class="history-card">
+                        <strong>${escapeHtml(item.phrase)}</strong>
+                        <span>${item.count}票 / ${escapeHtml(item.displayName)}</span>
+                      </div>
+                    `
+                  )
+                  .join("")}
+              </div>
+            </section>
+            ${
+              room.me.isHost
+                ? `
+                  <div class="button-row">
+                    <button class="btn primary" type="button" data-action="proceed-round" ${state.pendingAction ? "disabled" : ""}>
+                      ${room.game.roundIndex === 2 ? "最終投票へ進む" : "次のラウンドへ"}
+                    </button>
+                  </div>
+                `
+                : `<div class="info-box">ホストが次へ進めるまで待機します。</div>`
+            }
+          </section>
+        `;
+      }
+
+      function renderFinalVote(room) {
+        const isRevote = room.game.phase === "final_revote";
+        const finalVote = room.game.finalVote;
+        const candidates = getFinalCandidates(room, isRevote ? "revote" : "vote");
+        return `
+          ${state.errorMessage ? `<div class="error-box">${escapeHtml(state.errorMessage)}</div>` : ""}
+          <section class="card">
+            <h2>${isRevote ? "最終再投票" : "最終投票"}</h2>
+            ${
+              isRevote && finalVote?.voteSummary
+                ? `
+                  <div class="history-list">
+                    ${finalVote.voteSummary.counts
+                      .filter((item) => finalVote.voteSummary.tiedCandidateIds.includes(item.candidateId))
+                      .map(
+                        (item) => `
+                          <div class="history-card">
+                            <strong>${escapeHtml(item.phrase)}</strong>
+                            <span>${item.count}票</span>
+                          </div>
+                        `
+                      )
+                      .join("")}
+                  </div>
+                `
+                : ""
+            }
+            ${renderVoteCards(candidates, state.selectedFinalTarget, "final-vote-id", room.me.playerId)}
+            <div class="button-row">
+              <button class="btn primary" type="button" data-action="submit-final-vote" ${state.selectedFinalTarget && !state.pendingAction ? "" : "disabled"}>
+                ${isRevote ? "このワードに再投票" : "このワードに投票"}
+              </button>
+            </div>
+          </section>
+        `;
+      }
+
+      function renderFinalResult(room) {
+        const champion = room.game.champion;
+        return `
+          ${state.errorMessage ? `<div class="error-box">${escapeHtml(state.errorMessage)}</div>` : ""}
+          <section class="card">
+            <h2>総合優勝</h2>
+            <section class="champion-stage">
+              <small>総合優勝</small>
+              ${champion ? renderWordBoard(champion.renderedLines, champion.fontId, "champion-word", { maxFont: 48, minFont: 22 }) : `<div class="empty-state">未確定です。</div>`}
+              ${champion ? `<p><strong>${escapeHtml(champion.displayName)}</strong></p>` : ""}
+            </section>
+
+            <section class="panel">
+              <h3>各ラウンドの勝ちワード</h3>
+              <div class="history-list">
+                ${room.game.rounds
+                  .filter((round) => round.winner)
+                  .map(
+                    (round) => `
+                      <div class="history-card">
+                        <strong>${escapeHtml(round.label)}</strong>
+                        <span>${escapeHtml(round.winner.phrase)} / ${escapeHtml(round.winner.displayName)}</span>
+                      </div>
+                    `
+                  )
+                  .join("")}
+              </div>
+            </section>
+
+            ${
+              room.game.finalVote?.voteSummary
+                ? `
+                  <section class="panel">
+                    <h3>最終投票の票数内訳</h3>
+                    <div class="history-list">
+                      ${room.game.finalVote.voteSummary.counts
+                        .map(
+                          (item) => `
+                            <div class="history-card">
+                              <strong>${escapeHtml(item.phrase)}</strong>
+                              <span>${item.count}票 / ${escapeHtml(item.displayName)}</span>
+                            </div>
+                          `
+                        )
+                        .join("")}
+                    </div>
+                  </section>
+                `
+                : ""
+            }
+
+            ${
+              room.me.isHost
+                ? `
+                  <div class="button-row">
+                    <button class="btn primary" type="button" data-action="restart-game" ${state.pendingAction ? "disabled" : ""}>もう一度最初から</button>
+                  </div>
+                `
+                : `<div class="info-box">ホストが再開すると同じルームで続けて遊べます。</div>`
+            }
+          </section>
+        `;
+      }
+
+      function renderApp() {
+        const room = state.room;
+        const view = deriveView(room);
+
+        const renderMap = {
+          welcome: renderLanding,
+          lobby: () => renderLobby(room),
+          submit: () => renderSubmit(room),
+          wait: () => renderWait(room),
+          vote: () => renderVote(room, "vote"),
+          revote: () => renderVote(room, "revote"),
+          hostDecide: () => renderHostDecide(room, false),
+          roundResult: () => renderRoundResult(room),
+          finalVote: () => renderFinalVote(room),
+          finalHostDecide: () => renderHostDecide(room, true),
+          finalResult: () => renderFinalResult(room)
+        };
+
+        els.app.innerHTML = (renderMap[view] || renderLanding)();
+
+        const previewWord = document.getElementById("previewWord");
+        if (previewWord && deriveView(room) === "submit") {
+          const layout = computeDraftLayout();
+          previewWord.dataset.variant = "preview-word";
+          applyWordMarkup(previewWord, layout.lines, getFontClass(state.draftFontId), state.draftLineMode, layout.fontSize);
+        }
+
+        hydrateWordBoards();
+        setBanner();
+        schedulePoll();
+      }
+
+      function renderReveal() {
+        if (!state.reveal) {
+          els.revealOverlay.hidden = true;
+          return;
+        }
+
+        els.revealOverlay.hidden = false;
+        els.revealCard.classList.toggle("is-champion", state.reveal.kind === "champion");
+        els.revealBadge.textContent = state.reveal.badge;
+        els.revealMeta.textContent = state.reveal.meta;
+        els.revealWord.dataset.variant = state.reveal.kind === "champion" ? "champion-word" : "result-word";
+        applyWordMarkup(
+          els.revealWord,
+          state.reveal.lines,
+          getFontClass(state.reveal.fontId || "classic"),
+          state.reveal.lines.length <= 1 ? "single" : "manual",
+          44
+        );
+        hydrateWordBoards();
+      }
+
+      async function copyText(text, successMessage) {
+        try {
+          await navigator.clipboard.writeText(text);
+          state.copyMessage = successMessage;
+        } catch {
+          window.prompt("コピーしてください", text);
+          state.copyMessage = successMessage;
+        }
+        render();
+      }
+
+      async function runAction(action) {
+        state.pendingAction = true;
+        state.errorMessage = "";
+        state.copyMessage = "";
+        render();
+        try {
+          await action();
+          await loadRecentChampions();
+        } catch (error) {
+          state.errorMessage = error instanceof Error ? error.message : "操作に失敗しました。";
+        } finally {
+          state.pendingAction = false;
+          render();
+        }
+      }
+
+      function validateDisplayName(value) {
+        const name = String(value || "").trim().slice(0, 20);
+        if (!name) {
+          throw new Error("表示名を入力してください。");
+        }
+        return name;
+      }
+
+      function buildSubmitPayload(room) {
+        const layout = computeDraftLayout();
+        const selectedTiles = getSelectedTiles(room);
+        return {
+          tileIds: selectedTiles.map((tile) => tile.tileId),
+          tileOrder: [0, 1],
+          phrase: selectedTiles.map((tile) => tile.text).join(""),
+          fontId: state.draftFontId,
+          lineMode: state.draftLineMode,
+          manualBreaks: clone(state.draftManualBreaks),
+          renderedLines: clone(layout.lines)
+        };
+      }
+
+      function updateFieldState(field, value) {
+        if (field in state) {
+          state[field] = value;
+        }
+      }
+
+      document.addEventListener("input", (event) => {
+        const field = event.target.closest("[data-field]");
+        if (!field) {
+          return;
+        }
+        updateFieldState(field.dataset.field, field.value);
+      });
+
+      document.addEventListener("click", async (event) => {
+        const playerCountButton = event.target.closest("[data-player-count]");
+        if (playerCountButton) {
+          state.playerCount = Number(playerCountButton.dataset.playerCount);
+          render();
+          return;
+        }
+
+        const startPlayerButton = event.target.closest("[data-start-player-id]");
+        if (startPlayerButton) {
+          state.selectedStartPlayerId = startPlayerButton.dataset.startPlayerId;
+          render();
+          return;
+        }
+
+        const tileButton = event.target.closest("[data-tile-id]");
+        if (tileButton) {
+          const tileId = tileButton.dataset.tileId;
+          const room = state.room;
+          const tile = room?.myHand.find((item) => item.tileId === tileId);
+          if (!tile || tile.isUsed) {
+            return;
+          }
+          if (state.draftSelectedTileIds.includes(tileId)) {
+            state.draftSelectedTileIds = state.draftSelectedTileIds.filter((id) => id !== tileId);
+          } else if (state.draftSelectedTileIds.length >= 2) {
+            state.draftSelectedTileIds = [state.draftSelectedTileIds[1], tileId];
+          } else {
+            state.draftSelectedTileIds = [...state.draftSelectedTileIds, tileId];
+          }
+          sanitizeManualBreaks(room);
+          render();
+          return;
+        }
+
+        const lineModeButton = event.target.closest("[data-line-mode]");
+        if (lineModeButton) {
+          state.draftLineMode = lineModeButton.dataset.lineMode;
+          sanitizeManualBreaks();
+          render();
+          return;
+        }
+
+        const fontButton = event.target.closest("[data-font-id]");
+        if (fontButton) {
+          state.draftFontId = fontButton.dataset.fontId;
+          render();
+          return;
+        }
+
+        const breakButton = event.target.closest("[data-break]");
+        if (breakButton) {
+          const point = Number(breakButton.dataset.break);
+          if (state.draftManualBreaks.includes(point)) {
+            state.draftManualBreaks = state.draftManualBreaks.filter((value) => value !== point);
+          } else {
+            state.draftManualBreaks = [...state.draftManualBreaks, point];
+          }
+          render();
+          return;
+        }
+
+        const voteButton = event.target.closest("[data-vote-id]");
+        if (voteButton) {
+          state.selectedVoteTarget = voteButton.dataset.voteId;
+          render();
+          return;
+        }
+
+        const revoteButton = event.target.closest("[data-revote-id]");
+        if (revoteButton) {
+          state.selectedHostTarget = revoteButton.dataset.revoteId;
+          render();
+          return;
+        }
+
+        const hostPickButton = event.target.closest("[data-host-pick-id]");
+        if (hostPickButton) {
+          state.selectedHostTarget = hostPickButton.dataset.hostPickId;
+          render();
+          return;
+        }
+
+        const finalVoteButton = event.target.closest("[data-final-vote-id]");
+        if (finalVoteButton) {
+          state.selectedFinalTarget = finalVoteButton.dataset.finalVoteId;
+          render();
+          return;
+        }
+
+        const finalPickButton = event.target.closest("[data-final-pick-id]");
+        if (finalPickButton) {
+          state.selectedFinalTarget = finalPickButton.dataset.finalPickId;
+          render();
+          return;
+        }
+
+        const actionButton = event.target.closest("[data-action]");
+        if (!actionButton) {
+          return;
+        }
+
+        if (actionButton.dataset.action === "create-room") {
+          await runAction(async () => {
+            const payload = await fetchJson(`${state.apiBaseUrl}/rooms`, {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({
+                displayName: validateDisplayName(state.createDisplayName),
+                playerCount: state.playerCount
+              })
+            });
+            setRoom(payload.data.room, { playerToken: payload.data.playerToken, skipReveal: true });
+          });
+          return;
+        }
+
+        if (actionButton.dataset.action === "join-room") {
+          await runAction(async () => {
+            const payload = await fetchJson(`${state.apiBaseUrl}/rooms/join`, {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({
+                inviteCode: String(state.inviteCode || "").trim(),
+                displayName: validateDisplayName(state.joinDisplayName)
+              })
+            });
+            setRoom(payload.data.room, { playerToken: payload.data.playerToken, skipReveal: true });
+          });
+          return;
+        }
+
+        if (actionButton.dataset.action === "copy-invite-url") {
+          if (state.room?.inviteCode) {
+            await copyText(getInviteUrl(state.room.inviteCode), "招待URLをコピーしました。");
+          }
+          return;
+        }
+
+        if (actionButton.dataset.action === "start-game") {
+          await runAction(async () => {
+            let payload = await postApi(`/rooms/${encodeURIComponent(state.roomId)}/start-player`, {
+              startPlayerId: state.selectedStartPlayerId
+            });
+            setRoom(payload.data.room);
+            payload = await postApi(`/rooms/${encodeURIComponent(state.roomId)}/start`, { deckId: "default" });
+            state.selectedVoteTarget = "";
+            state.selectedHostTarget = "";
+            state.selectedFinalTarget = "";
+            setRoom(payload.data.room);
+          });
+          return;
+        }
+
+        if (actionButton.dataset.action === "swap-selection") {
+          if (state.draftSelectedTileIds.length === 2) {
+            state.draftSelectedTileIds = [state.draftSelectedTileIds[1], state.draftSelectedTileIds[0]];
+            sanitizeManualBreaks();
+            render();
+          }
+          return;
+        }
+
+        if (actionButton.dataset.action === "clear-selection") {
+          state.draftSelectedTileIds = [];
+          state.draftManualBreaks = [];
+          render();
+          return;
+        }
+
+        if (actionButton.dataset.action === "submit-word") {
+          await runAction(async () => {
+            const room = state.room;
+            const payload = await postApi(`/rooms/${encodeURIComponent(state.roomId)}/rounds/${room.game.roundIndex}/submit`, buildSubmitPayload(room));
+            state.selectedVoteTarget = "";
+            state.selectedHostTarget = "";
+            setRoom(payload.data.room);
+          });
+          return;
+        }
+
+        if (actionButton.dataset.action === "submit-vote") {
+          await runAction(async () => {
+            const room = state.room;
+            const payload = await postApi(`/rooms/${encodeURIComponent(state.roomId)}/rounds/${room.game.roundIndex}/vote`, {
+              targetPlayerId: state.selectedVoteTarget
+            });
+            state.selectedVoteTarget = "";
+            setRoom(payload.data.room);
+          });
+          return;
+        }
+
+        if (actionButton.dataset.action === "submit-revote") {
+          await runAction(async () => {
+            const room = state.room;
+            const payload = await postApi(`/rooms/${encodeURIComponent(state.roomId)}/rounds/${room.game.roundIndex}/revote`, {
+              targetPlayerId: state.selectedHostTarget
+            });
+            state.selectedHostTarget = "";
+            setRoom(payload.data.room);
+          });
+          return;
+        }
+
+        if (actionButton.dataset.action === "submit-host-pick") {
+          await runAction(async () => {
+            const room = state.room;
+            const payload = await postApi(`/rooms/${encodeURIComponent(state.roomId)}/rounds/${room.game.roundIndex}/host-decision`, {
+              winnerPlayerId: state.selectedHostTarget
+            });
+            state.selectedHostTarget = "";
+            setRoom(payload.data.room);
+          });
+          return;
+        }
+
+        if (actionButton.dataset.action === "proceed-round") {
+          await runAction(async () => {
+            const room = state.room;
+            const payload = await postApi(`/rooms/${encodeURIComponent(state.roomId)}/rounds/${room.game.roundIndex}/proceed`, {});
+            setRoom(payload.data.room);
+          });
+          return;
+        }
+
+        if (actionButton.dataset.action === "submit-final-vote") {
+          await runAction(async () => {
+            const endpoint = state.room.game.phase === "final_revote" ? "final-revote" : "final-vote";
+            const payload = await postApi(`/rooms/${encodeURIComponent(state.roomId)}/${endpoint}`, {
+              candidateId: state.selectedFinalTarget
+            });
+            state.selectedFinalTarget = "";
+            setRoom(payload.data.room);
+          });
+          return;
+        }
+
+        if (actionButton.dataset.action === "submit-final-host-pick") {
+          await runAction(async () => {
+            const payload = await postApi(`/rooms/${encodeURIComponent(state.roomId)}/final-host-decision`, {
+              candidateId: state.selectedFinalTarget
+            });
+            state.selectedFinalTarget = "";
+            setRoom(payload.data.room);
+          });
+          return;
+        }
+
+        if (actionButton.dataset.action === "restart-game") {
+          await runAction(async () => {
+            const payload = await postApi(`/rooms/${encodeURIComponent(state.roomId)}/restart`, {});
+            state.selectedVoteTarget = "";
+            state.selectedHostTarget = "";
+            state.selectedFinalTarget = "";
+            setRoom(payload.data.room, { skipReveal: true });
+          });
+          return;
+        }
+      });
+
+      els.closeRevealBtn.addEventListener("click", closeReveal);
+
+      async function initializeApp() {
+        const params = new URLSearchParams(window.location.search);
+        const apiBaseUrl = params.get("apiBaseUrl");
+        const invite = params.get("invite");
+        state.apiBaseUrl = apiBaseUrl ? apiBaseUrl.replace(/\/$/, "") : resolveDefaultApiBaseUrl();
+        if (invite) {
+          state.inviteCode = invite;
+        }
+
+        state.isLoading = true;
+        setBanner();
+        await loadRecentChampions();
+
+        try {
+          const restored = await restoreSession();
+          if (!restored) {
+            state.isLoading = false;
+            render();
+            return;
+          }
+        } catch {
+          clearSession();
+          state.room = null;
+          state.roomId = "";
+          state.playerToken = "";
+        }
+
+        state.isLoading = false;
+        render();
+      }
+
+      function render() {
+        if (state.isLoading && !state.room) {
+          setBanner();
+          els.app.innerHTML = `<div class="card"><h2>読み込み中</h2><p>ルーム情報と最近の優勝ワードを確認しています。</p></div>`;
+          renderReveal();
+          return;
+        }
+
+        renderApp();
+        renderReveal();
+      }
+
+      initializeApp();
+    </script>
+  </body>
+</html>

@@ -4,6 +4,8 @@
 
 ## 主なファイル
 
+- `omojan_app.html`
+  - 実 API に直接つなぐ本番用の最小フロント。ルーム作成、招待参加、提出、投票、総合優勝までを 1 本で扱う
 - `omojan_flow_prototype.html`
   - ロビーから提出、投票、再投票、ホスト裁定、総合優勝まで通して触れる簡易プロトタイプ
 - `omojan_phase_prototype.html`
@@ -43,6 +45,12 @@
 ## 開き方
 
 静的確認だけならブラウザで各 HTML ファイルをそのまま開けば見られます。
+
+公開中の最小アプリは次です。
+
+```txt
+https://main.dr94wxwisw55z.amplifyapp.com/omojan_app.html
+```
 
 phase 駆動プロトタイプを API 付きで確認したい場合は、別ターミナルで以下を起動します。
 

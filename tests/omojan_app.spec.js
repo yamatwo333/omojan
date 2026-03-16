@@ -377,3 +377,48 @@ test("app restores session after reopening the browser context", async ({ browse
   await hostContext.close();
   await guestContext.close();
 });
+
+test("app shows a friendly message for an invalid invite code", async ({ page }) => {
+  await page.goto(`${STATIC_URL}&invite=${encodeURIComponent("OMO-9999")}`);
+  await page.fill("#joinDisplayName", "InviteMiss");
+  await page.getByRole("button", { name: "参加する" }).click();
+
+  await expect(page.locator(".error-box")).toContainText("招待コードが見つかりません。招待URLかコードをもう一度確認してください。");
+});
+
+test("app shows a friendly message when the room is full", async ({ page }) => {
+  const created = await api("/rooms", {
+    method: "POST",
+    body: JSON.stringify({ displayName: "HostFull", playerCount: 2 })
+  });
+  await api("/rooms/join", {
+    method: "POST",
+    body: JSON.stringify({ inviteCode: created.room.inviteCode, displayName: "GuestFull" })
+  });
+
+  await page.goto(`${STATIC_URL}&invite=${encodeURIComponent(created.room.inviteCode)}`);
+  await page.fill("#joinDisplayName", "LateGuest");
+  await page.getByRole("button", { name: "参加する" }).click();
+
+  await expect(page.locator(".error-box")).toContainText("このルームは満員です。別のルームを使ってください。");
+});
+
+test("app can clear the local room session and return to the welcome screen", async ({ browser }) => {
+  const context = await browser.newContext();
+  const page = await context.newPage();
+
+  await page.goto(STATIC_URL);
+  await page.fill("#createDisplayName", "LeaveHost");
+  await page.getByRole("button", { name: "ルームを作る" }).click();
+  await expect(page.getByRole("heading", { name: "ルーム待機中" })).toBeVisible();
+
+  const inviteCode = ((await page.locator(".room-code").textContent()) || "").trim();
+  page.once("dialog", (dialog) => dialog.accept());
+  await page.getByRole("button", { name: "この端末の参加情報を消す" }).click();
+
+  await expect(page.getByRole("heading", { name: "ルームを作る" })).toBeVisible();
+  await expect(page.locator(".info-box")).toContainText("この端末の参加情報を消しました。");
+  await expect(page.locator("#inviteCode")).toHaveValue(inviteCode);
+
+  await context.close();
+});

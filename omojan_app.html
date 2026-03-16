@@ -895,6 +895,17 @@
         lastSyncAt: ""
       };
 
+      class AppError extends Error {
+        constructor(message, options = {}) {
+          super(message);
+          this.name = "AppError";
+          this.code = options.code || "";
+          this.retryable = Boolean(options.retryable);
+          this.statusCode = Number(options.statusCode || 0);
+          this.cause = options.cause;
+        }
+      }
+
       const els = {
         statusLabel: document.getElementById("statusLabel"),
         refreshTopBtn: document.getElementById("refreshTopBtn"),
@@ -1400,12 +1411,107 @@
         window.localStorage.removeItem(APP_PLAYER_TOKEN_KEY);
       }
 
+      function resetDraftAndDecisionState() {
+        state.selectedStartPlayerId = "";
+        state.draftSelectedTileIds = [];
+        state.draftManualBreaks = [];
+        clearDecisionState();
+      }
+
+      function exitToWelcome(options = {}) {
+        const room = state.room;
+        const inviteCode = options.preserveInviteCode === false ? "" : options.inviteCode || room?.inviteCode || state.inviteCode;
+        const myName = room?.me?.displayName || "";
+
+        clearPollTimer();
+        clearSession();
+        closeReveal();
+
+        state.room = null;
+        state.roomId = "";
+        state.playerToken = "";
+        state.inviteCode = inviteCode;
+        state.errorMessage = options.errorMessage || "";
+        state.copyMessage = options.copyMessage || "";
+
+        if (myName) {
+          if (room?.me?.isHost) {
+            state.createDisplayName = myName;
+          } else {
+            state.joinDisplayName = myName;
+          }
+        }
+
+        resetDraftAndDecisionState();
+      }
+
+      function buildAppError(error, fallbackMessage = "操作に失敗しました。") {
+        if (error instanceof AppError) {
+          return error;
+        }
+        if (error instanceof Error) {
+          return new AppError(error.message || fallbackMessage, {
+            cause: error
+          });
+        }
+        return new AppError(fallbackMessage);
+      }
+
+      function describeAppError(error, context = "") {
+        const appError = buildAppError(error);
+        const messageMap = {
+          INVITE_NOT_FOUND: "招待コードが見つかりません。招待URLかコードをもう一度確認してください。",
+          ROOM_FULL: "このルームは満員です。別のルームを使ってください。",
+          ROOM_ALREADY_STARTED: "このルームはすでに始まっています。ホストに新しいルームを作ってもらってください。",
+          ROOM_NOT_FOUND: context === "restore" || context === "reconnect"
+            ? "このルームは見つかりませんでした。終了した可能性があります。もう一度参加してください。"
+            : "このルームは見つかりませんでした。",
+          PLAYER_TOKEN_INVALID: context === "restore" || context === "reconnect"
+            ? "この端末の参加情報が使えません。もう一度参加してください。"
+            : "この端末の参加情報が使えません。",
+          NETWORK_ERROR: "通信に失敗しました。時間をおいてからもう一度お試しください。",
+          CONFLICT_RETRY: "操作が重なりました。もう一度お試しください。"
+        };
+        return messageMap[appError.code] || appError.message || "操作に失敗しました。";
+      }
+
+      function isLostSessionError(error) {
+        const appError = buildAppError(error);
+        return ["ROOM_NOT_FOUND", "PLAYER_TOKEN_INVALID"].includes(appError.code);
+      }
+
+      function recoverLostSession(error, context = "") {
+        if (!state.roomId && context !== "restore") {
+          return false;
+        }
+        if (!isLostSessionError(error)) {
+          return false;
+        }
+        exitToWelcome({
+          errorMessage: describeAppError(error, context)
+        });
+        return true;
+      }
+
       async function fetchJson(url, options = {}) {
-        const response = await fetch(url, options);
+        let response;
+        try {
+          response = await fetch(url, options);
+        } catch (error) {
+          throw new AppError("通信に失敗しました。", {
+            code: "NETWORK_ERROR",
+            retryable: true,
+            cause: error
+          });
+        }
         const payload = await response.json().catch(() => ({}));
         if (!response.ok || payload.ok === false) {
           const detail = payload?.error?.message || payload?.message || `${url} の取得に失敗しました。`;
-          throw new Error(detail);
+          throw new AppError(detail, {
+            code: payload?.error?.code || "",
+            retryable: Boolean(payload?.error?.retryable),
+            statusCode: response.status
+          });
         }
         return payload;
       }
@@ -1540,20 +1646,34 @@
         if (!state.roomId || !state.playerToken) {
           return;
         }
-        const payload = await apiRequest(`/rooms/${encodeURIComponent(state.roomId)}`);
-        setRoom(payload.data.room);
+        try {
+          const payload = await apiRequest(`/rooms/${encodeURIComponent(state.roomId)}`);
+          setRoom(payload.data.room);
+        } catch (error) {
+          if (recoverLostSession(error, "refresh")) {
+            return;
+          }
+          throw error;
+        }
       }
 
       async function reconnectRoom(roomId = state.roomId, playerToken = state.playerToken) {
         if (!roomId || !playerToken) {
           return;
         }
-        const payload = await apiRequest(`/rooms/${encodeURIComponent(roomId)}/reconnect`, {
-          method: "POST",
-          body: {},
-          playerToken
-        });
-        setRoom(payload.data.room, { playerToken, skipReveal: true });
+        try {
+          const payload = await apiRequest(`/rooms/${encodeURIComponent(roomId)}/reconnect`, {
+            method: "POST",
+            body: {},
+            playerToken
+          });
+          setRoom(payload.data.room, { playerToken, skipReveal: true });
+        } catch (error) {
+          if (recoverLostSession(error, "reconnect")) {
+            return;
+          }
+          throw error;
+        }
       }
 
       function clearPollTimer() {
@@ -1593,7 +1713,14 @@
 
         state.roomId = storedRoomId;
         state.playerToken = storedToken;
-        await reconnectRoom(storedRoomId, storedToken);
+        try {
+          await reconnectRoom(storedRoomId, storedToken);
+        } catch (error) {
+          if (recoverLostSession(error, "restore")) {
+            return false;
+          }
+          throw error;
+        }
         return true;
       }
 
@@ -1602,7 +1729,8 @@
           title = "接続",
           description = "",
           showReconnect = false,
-          showRefresh = true
+          showRefresh = true,
+          showLeave = false
         } = options;
         const pills = [
           { label: "状態", value: getStatusText() },
@@ -1618,6 +1746,7 @@
             <div class="utility-actions">
               ${showRefresh ? `<button class="btn subtle" type="button" data-action="refresh-latest" ${state.pendingAction ? "disabled" : ""}>今の状態を更新</button>` : ""}
               ${showReconnect ? `<button class="btn subtle" type="button" data-action="retry-room-connection" ${state.pendingAction ? "disabled" : ""}>再接続する</button>` : ""}
+              ${showLeave ? `<button class="btn subtle" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>この端末の参加情報を消す</button>` : ""}
             </div>
           </section>
         `;
@@ -2092,7 +2221,8 @@
             ${renderSyncUtility({
               title: "このルーム",
               description: room.me.isHost ? "開始や更新はこの画面で進めます。" : "開始や更新は自動で反映します。",
-              showReconnect: true
+              showReconnect: true,
+              showLeave: true
             })}
           </section>
 
@@ -2247,7 +2377,8 @@
             ${renderSyncUtility({
               title: "同期",
               description: "この画面は自動で更新します。止まったら手動で更新できます。",
-              showReconnect: true
+              showReconnect: true,
+              showLeave: true
             })}
           </section>
 
@@ -2367,9 +2498,15 @@
                     <button class="btn primary" type="button" data-action="proceed-round" ${state.pendingAction ? "disabled" : ""}>
                       ${room.game.roundIndex === 2 ? "最終投票へ進む" : "次のラウンドへ"}
                     </button>
+                    <button class="btn subtle" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>この端末の参加情報を消す</button>
                   </div>
                 `
-                : `<div class="info-box">ホストの進行待ちです。</div>`
+                : `
+                  <div class="button-row">
+                    <div class="info-box">ホストの進行待ちです。</div>
+                    <button class="btn subtle" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>この端末の参加情報を消す</button>
+                  </div>
+                `
             }
           </section>
         `;
@@ -2442,9 +2579,15 @@
                 ? `
                   <div class="button-row">
                     <button class="btn primary" type="button" data-action="restart-game" ${state.pendingAction ? "disabled" : ""}>もう一度最初から</button>
+                    <button class="btn subtle" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>この端末の参加情報を消す</button>
                   </div>
                 `
-                : `<div class="info-box">ホストの再開待ちです。</div>`
+                : `
+                  <div class="button-row">
+                    <div class="info-box">ホストの再開待ちです。</div>
+                    <button class="btn subtle" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>この端末の参加情報を消す</button>
+                  </div>
+                `
             }
           </section>
         `;
@@ -2524,7 +2667,9 @@
           await action();
           await loadRecentChampions();
         } catch (error) {
-          state.errorMessage = error instanceof Error ? error.message : "操作に失敗しました。";
+          if (!recoverLostSession(error, "action")) {
+            state.errorMessage = describeAppError(error, "action");
+          }
         } finally {
           state.pendingAction = false;
           render();
@@ -2688,6 +2833,21 @@
         "clear-messages": async () => {
           state.errorMessage = "";
           state.copyMessage = "";
+          render();
+        },
+        "leave-room": async () => {
+          const isHost = Boolean(state.room?.me?.isHost);
+          const confirmed = window.confirm(
+            isHost
+              ? "この端末の参加情報を消します。ホストとしては入り直せない可能性があります。続けますか？"
+              : "この端末の参加情報を消して、参加し直せる状態に戻します。続けますか？"
+          );
+          if (!confirmed) {
+            return;
+          }
+          exitToWelcome({
+            copyMessage: "この端末の参加情報を消しました。必要なら招待コードですぐ入り直せます。"
+          });
           render();
         },
         "create-room": async () => {
@@ -2867,11 +3027,11 @@
             render();
             return;
           }
-        } catch {
-          clearSession();
-          state.room = null;
-          state.roomId = "";
-          state.playerToken = "";
+        } catch (error) {
+          exitToWelcome({
+            errorMessage: describeAppError(error, "restore"),
+            preserveInviteCode: false
+          });
         }
 
         state.isLoading = false;

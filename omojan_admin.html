@@ -235,35 +235,55 @@
 
       .tile-list {
         display: grid;
-        gap: 12px;
+        gap: 8px;
         margin-top: 16px;
       }
 
       .tile-row {
         display: grid;
+        grid-template-columns: 42px minmax(0, 1fr) auto auto;
         gap: 10px;
-        padding: 14px;
-        border-radius: 18px;
+        align-items: center;
+        padding: 10px 12px;
+        border-radius: 16px;
         border: 1px solid rgba(100, 73, 47, 0.14);
         background: rgba(255, 252, 246, 0.92);
       }
 
-      .tile-row header {
-        display: flex;
-        justify-content: space-between;
-        gap: 10px;
+      .tile-order {
+        display: inline-flex;
         align-items: center;
+        justify-content: center;
+        width: 42px;
+        height: 42px;
+        border-radius: 14px;
+        background: rgba(36, 69, 47, 0.08);
+        color: var(--green);
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      .tile-main {
+        display: grid;
+        gap: 6px;
+        min-width: 0;
+      }
+
+      .tile-input {
+        min-width: 0;
+        padding: 10px 12px;
+        border-radius: 12px;
       }
 
       .tile-id {
         color: rgba(31, 24, 18, 0.62);
         font-size: 12px;
+        line-height: 1.4;
+        word-break: break-all;
       }
 
       .tile-meta {
         display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
         align-items: center;
       }
 
@@ -274,6 +294,7 @@
         color: var(--green);
         font-weight: 700;
         font-size: 14px;
+        white-space: nowrap;
       }
 
       .tile-remove {
@@ -282,6 +303,7 @@
         background: rgba(184, 68, 49, 0.1);
         color: var(--red);
         font-weight: 800;
+        white-space: nowrap;
       }
 
       .hint {
@@ -326,8 +348,17 @@
           padding: 16px;
         }
 
-        .tile-row header {
-          display: grid;
+        .tile-row {
+          grid-template-columns: 42px minmax(0, 1fr);
+        }
+
+        .tile-meta {
+          grid-column: 1 / 2;
+        }
+
+        .tile-remove {
+          grid-column: 2 / 3;
+          justify-self: end;
         }
       }
     </style>
@@ -533,23 +564,18 @@
           .map(
             ({ tile, index }) => `
               <article class="tile-row">
-                <header>
-                  <div>
-                    <strong>牌 ${index + 1}</strong>
-                    <div class="tile-id">${escapeHtml(tile.tileId || "新規牌")}</div>
-                  </div>
-                  <button class="tile-remove" type="button" data-remove-index="${index}">削除</button>
-                </header>
-                <div class="field">
-                  <label for="tile-text-${index}">ワード</label>
+                <div class="tile-order">${index + 1}</div>
+                <div class="tile-main">
                   <input
                     id="tile-text-${index}"
-                    class="input"
+                    class="input tile-input"
                     type="text"
                     maxlength="40"
                     value="${escapeHtml(tile.text || "")}"
                     data-tile-text-index="${index}"
+                    placeholder="ワード"
                   />
+                  <div class="tile-id">${escapeHtml(tile.tileId || "新規牌")}</div>
                 </div>
                 <div class="tile-meta">
                   <label class="toggle">
@@ -557,6 +583,7 @@
                     有効
                   </label>
                 </div>
+                <button class="tile-remove" type="button" data-remove-index="${index}">削除</button>
               </article>
             `
           )
@@ -808,7 +835,7 @@
           state.deck.tiles =
             state.importMode === "replace"
               ? importedTiles
-              : [...state.deck.tiles, ...importedTiles];
+              : [...importedTiles, ...state.deck.tiles];
           state.searchQuery = "";
           state.filterMode = "all";
           setFeedback(
@@ -875,7 +902,7 @@
         }
 
         if (event.target.id === "addTileBtn" && state.deck) {
-          state.deck.tiles.push(createLocalTile());
+          state.deck.tiles.unshift(createLocalTile());
           render();
           return;
         }

@@ -139,6 +139,8 @@ test("admin page supports search, filter, and csv bulk import", async ({ page })
 
   await expect(page.locator("#feedback")).toContainText("2件を追加しました。");
   await expect(page.locator('[data-tile-text-index]')).toHaveCount(5);
+  await expect(page.locator('[data-tile-text-index="0"]')).toHaveValue("爆笑ラーメン");
+  await expect(page.locator('[data-tile-text-index="1"]')).toHaveValue("無言会議");
 
   await page.fill("#searchInput", "爆笑");
   await expect(page.locator('[data-tile-text-index]')).toHaveCount(1);
@@ -169,4 +171,21 @@ test("admin page supports search, filter, and csv bulk import", async ({ page })
   await page.getByRole("button", { name: "無効" }).click();
   await expect(page.locator('[data-tile-text-index]')).toHaveCount(1);
   await expect(page.locator('[data-tile-text-index]')).toHaveValue("拍手喝采");
+});
+
+test("admin page adds a new tile at the top", async ({ page }) => {
+  await page.goto(STATIC_URL);
+  await page.fill("#adminPasscode", ADMIN_PASSCODE);
+  await page.getByRole("button", { name: "デッキを読む" }).click();
+
+  await page.getByRole("button", { name: "牌を追加" }).click();
+  await expect(page.locator('[data-tile-text-index]')).toHaveCount(4);
+  await expect(page.locator('[data-tile-text-index="0"]')).toHaveValue("");
+
+  await page.fill('[data-tile-text-index="0"]', "先頭追加ワード");
+  await page.getByRole("button", { name: "保存する" }).click();
+  await expect(page.locator("#feedback")).toContainText("保存しました。");
+  await page.reload();
+
+  await expect(page.locator('[data-tile-text-index="0"]')).toHaveValue("先頭追加ワード");
 });

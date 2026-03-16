@@ -641,7 +641,7 @@
 
       .reveal-card {
         width: min(100%, 430px);
-        padding: 18px 16px 16px;
+        padding: 18px 16px 18px;
         border-radius: 28px;
         border: 3px solid rgba(35, 68, 47, 0.9);
         background:
@@ -653,6 +653,11 @@
       }
 
       .reveal-card.is-champion {
+        border-color: rgba(178, 138, 50, 0.92);
+        background:
+          radial-gradient(circle at top, rgba(255, 255, 255, 0.86), transparent 40%),
+          linear-gradient(180deg, rgba(255, 250, 238, 0.99), rgba(244, 231, 191, 0.98)),
+          #fff7e7;
         box-shadow:
           0 22px 38px rgba(29, 22, 15, 0.24),
           0 0 0 6px rgba(178, 138, 50, 0.26),
@@ -676,6 +681,59 @@
         display: flex;
         justify-content: center;
         margin-top: 14px;
+      }
+
+      .reveal-card .preview-caption {
+        margin-top: 12px;
+      }
+
+      .reveal-card.is-champion .preview-caption {
+        font-size: 13px;
+        color: #6b5737;
+      }
+
+      .round-winner-grid {
+        display: grid;
+        gap: 10px;
+        margin-top: 14px;
+      }
+
+      .round-winner-card {
+        padding: 14px 14px 12px;
+        border-radius: 20px;
+        border: 1px solid rgba(118, 89, 63, 0.16);
+        background:
+          linear-gradient(180deg, rgba(255, 252, 245, 0.96), rgba(248, 239, 216, 0.9)),
+          #fff8ee;
+      }
+
+      .round-winner-card header {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .round-winner-card header strong {
+        color: var(--green);
+        font-size: 13px;
+      }
+
+      .round-winner-card header span {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .round-winner-card .word-board {
+        min-height: 108px;
+      }
+
+      .round-winner-card footer {
+        margin-top: 8px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.5;
+        text-align: center;
       }
 
       .measure-word {
@@ -1342,7 +1400,7 @@
             badge: "総合優勝",
             lines: clone(nextRoom.game.champion.renderedLines || [nextChampion]),
             fontId: nextRoom.game.champion.fontId || "classic",
-            meta: `${nextRoom.game.champion.displayName}`
+            meta: `${nextRoom.game.champion.displayName} のワード`
           };
         }
 
@@ -1718,6 +1776,31 @@
                   <article class="action-card disabled">
                     <span class="badge">${escapeHtml(submission.displayName)}</span>
                     ${renderWordBoard(submission.renderedLines, submission.fontId, "vote-word", { maxFont: 34, minFont: 18 })}
+                  </article>
+                `
+              )
+              .join("")}
+          </div>
+        `;
+      }
+
+      function renderRoundWinnerGrid(rounds) {
+        const winnerRounds = rounds.filter((round) => round.winner);
+        if (!winnerRounds.length) {
+          return `<div class="empty-state">まだ勝ちワードはありません。</div>`;
+        }
+        return `
+          <div class="round-winner-grid">
+            ${winnerRounds
+              .map(
+                (round) => `
+                  <article class="round-winner-card">
+                    <header>
+                      <strong>${escapeHtml(round.label)}</strong>
+                      <span>${escapeHtml(round.winner.displayName)}</span>
+                    </header>
+                    ${renderWordBoard(round.winner.renderedLines, round.winner.fontId, "result-word", { maxFont: 30, minFont: 18 })}
+                    <footer>${escapeHtml(round.winner.phrase)}</footer>
                   </article>
                 `
               )
@@ -2199,15 +2282,7 @@
 
             ${renderSection(
               "各ラウンドの勝ちワード",
-              renderHistoryList(
-                room.game.rounds.filter((round) => round.winner),
-                (round) => `
-                  <div class="history-card">
-                    <strong>${escapeHtml(round.label)}</strong>
-                    <span>${escapeHtml(round.winner.phrase)} / ${escapeHtml(round.winner.displayName)}</span>
-                  </div>
-                `
-              ),
+              renderRoundWinnerGrid(room.game.rounds),
               { className: "panel" }
             )}
 
@@ -2280,6 +2355,7 @@
           state.reveal.lines.length <= 1 ? "single" : "manual",
           44
         );
+        els.closeRevealBtn.textContent = state.reveal.kind === "champion" ? "結果一覧を見る" : "閉じる";
         hydrateWordBoards();
       }
 

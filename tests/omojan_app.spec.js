@@ -305,7 +305,7 @@ test("app can complete a full game through final champion and restart", async ({
 
   await expect(host.locator("#revealOverlay")).toBeVisible({ timeout: 10000 });
   await expect(host.locator("#revealOverlay")).toContainText("総合優勝");
-  await host.getByRole("button", { name: "閉じる" }).click();
+  await host.locator("#closeRevealBtn").click();
 
   await reconnect(host);
   await reconnect(guest);

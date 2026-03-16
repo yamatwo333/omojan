@@ -689,6 +689,8 @@
       }
 
       .reveal-card {
+        position: relative;
+        overflow: hidden;
         width: min(100%, 430px);
         padding: 18px 16px 18px;
         border-radius: 28px;
@@ -702,6 +704,9 @@
       }
 
       .reveal-card.is-champion {
+        width: min(100%, 450px);
+        padding: 22px 18px 22px;
+        border-width: 4px;
         border-color: rgba(178, 138, 50, 0.92);
         background:
           radial-gradient(circle at top, rgba(255, 255, 255, 0.86), transparent 40%),
@@ -710,7 +715,32 @@
         box-shadow:
           0 22px 38px rgba(29, 22, 15, 0.24),
           0 0 0 6px rgba(178, 138, 50, 0.26),
-          0 0 42px rgba(178, 138, 50, 0.22);
+          0 0 42px rgba(178, 138, 50, 0.22),
+          0 0 90px rgba(255, 214, 110, 0.28);
+        animation: championEntrance 420ms ease-out, championPulse 2.2s ease-in-out infinite;
+      }
+
+      .reveal-card.is-champion::before,
+      .reveal-card.is-champion::after {
+        content: "";
+        position: absolute;
+        pointer-events: none;
+      }
+
+      .reveal-card.is-champion::before {
+        width: 240px;
+        height: 240px;
+        top: -110px;
+        right: -80px;
+        border-radius: 999px;
+        background: radial-gradient(circle, rgba(255, 243, 195, 0.88), rgba(255, 243, 195, 0));
+      }
+
+      .reveal-card.is-champion::after {
+        inset: 10px;
+        border-radius: 22px;
+        border: 1px solid rgba(255, 243, 195, 0.65);
+        box-shadow: inset 0 0 22px rgba(255, 243, 195, 0.34);
       }
 
       .reveal-badge {
@@ -737,8 +767,28 @@
       }
 
       .reveal-card.is-champion .preview-caption {
-        font-size: 13px;
+        font-size: 14px;
         color: #6b5737;
+        font-weight: 700;
+      }
+
+      .reveal-card.is-champion .reveal-badge {
+        min-height: 38px;
+        padding: 0 15px;
+        border-color: rgba(178, 138, 50, 0.42);
+        background: rgba(255, 251, 238, 0.94);
+        color: #7f5c12;
+        font-size: 13px;
+      }
+
+      .reveal-card.is-champion .champion-word {
+        min-height: 186px;
+        padding: 10px 8px;
+        border-radius: 24px;
+        background: linear-gradient(180deg, rgba(255, 252, 244, 0.92), rgba(248, 236, 199, 0.86));
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.9),
+          0 16px 24px rgba(113, 79, 10, 0.12);
       }
 
       .round-winner-grid {
@@ -791,6 +841,35 @@
         top: -9999px;
         visibility: hidden;
         overflow: hidden;
+        pointer-events: none;
+        opacity: 0;
+      }
+
+      @keyframes championEntrance {
+        from {
+          opacity: 0;
+          transform: translateY(14px) scale(0.96);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+      }
+
+      @keyframes championPulse {
+        0%,
+        100% {
+          box-shadow:
+            0 22px 38px rgba(29, 22, 15, 0.24),
+            0 0 0 6px rgba(178, 138, 50, 0.26),
+            0 0 90px rgba(255, 214, 110, 0.24);
+        }
+        50% {
+          box-shadow:
+            0 24px 40px rgba(29, 22, 15, 0.26),
+            0 0 0 8px rgba(178, 138, 50, 0.32),
+            0 0 120px rgba(255, 214, 110, 0.34);
+        }
       }
 
       @media (max-width: 520px) {
@@ -989,14 +1068,22 @@
         return fonts.find((font) => font.id === fontId)?.className || "font-classic";
       }
 
+      function allowsSelfVote(room = state.room) {
+        return Number(room?.playerCount || room?.game?.players?.length || 0) === 2;
+      }
+
       function applyWordMarkup(container, lines, fontClass, lineMode, fontSize) {
-        container.className = `word-board ${fontClass}`;
+        const classNames = ["word-board", fontClass];
+        if (container.classList.contains("measure-word")) {
+          classNames.push("measure-word");
+        }
         if (container.dataset.variant) {
-          container.classList.add(container.dataset.variant);
+          classNames.push(container.dataset.variant);
         }
         if (lineMode === "single") {
-          container.classList.add("is-single-line");
+          classNames.push("is-single-line");
         }
+        container.className = classNames.join(" ");
         container.style.fontSize = `${fontSize}px`;
         container.innerHTML = lines.map((line) => `<span class="word-line">${escapeHtml(line)}</span>`).join("");
       }
@@ -1246,6 +1333,9 @@
       }
 
       function canPlayerVoteFinal(room, playerId, mode = "vote") {
+        if (allowsSelfVote(room)) {
+          return getFinalCandidates(room, mode).length > 0;
+        }
         return getFinalCandidates(room, mode).some((candidate) => candidate.playerId !== playerId);
       }
 
@@ -1356,7 +1446,7 @@
           vote: {
             label: getCurrentRound(room)?.label || "投票",
             title: "このラウンドで一番おもしろいワードに投票",
-            subline: "自分のワードには投票できません。"
+            subline: allowsSelfVote(room) ? "2人戦なので自分のワードにも投票できます。" : "自分のワードには投票できません。"
           },
           revote: {
             label: getCurrentRound(room)?.label || "再投票",
@@ -1376,7 +1466,9 @@
           finalVote: {
             label: "最終投票",
             title: room?.game.phase === "final_revote" ? "最終再投票" : "総合優勝を決める最終投票",
-            subline: "各ラウンドの勝ちワードから、いちばんおもしろいワードを選びます。"
+            subline: allowsSelfVote(room)
+              ? "2人戦なので自分のワードにも投票できます。"
+              : "各ラウンドの勝ちワードから、いちばんおもしろいワードを選びます。"
           },
           finalHostDecide: {
             label: "最終ホスト裁定",
@@ -1463,6 +1555,8 @@
           INVITE_NOT_FOUND: "招待コードが見つかりません。招待URLかコードをもう一度確認してください。",
           ROOM_FULL: "このルームは満員です。別のルームを使ってください。",
           ROOM_ALREADY_STARTED: "このルームはすでに始まっています。ホストに新しいルームを作ってもらってください。",
+          DECK_EMPTY: "デッキに使えるワードがありません。管理画面で有効ワードを確認してください。",
+          DECK_TOO_SMALL: "デッキのワード数が足りません。重複なしで配るため、管理画面で有効ワードを増やしてください。",
           ROOM_NOT_FOUND: context === "restore" || context === "reconnect"
             ? "このルームは見つかりませんでした。終了した可能性があります。もう一度参加してください。"
             : "このルームは見つかりませんでした。",
@@ -1607,12 +1701,6 @@
         }
         state.reveal = reveal;
         renderReveal();
-        if (reveal.kind === "submission") {
-          state.revealTimer = window.setTimeout(() => {
-            state.revealTimer = 0;
-            closeReveal();
-          }, 1800);
-        }
       }
 
       function closeReveal() {
@@ -1931,6 +2019,7 @@
           selectedId,
           dataAttr,
           selfId,
+          allowSelfVote = false,
           action,
           buttonLabel
         } = options;
@@ -1952,7 +2041,7 @@
               ]
             })}
             ${summaryHtml}
-            ${renderVoteCards(candidates, selectedId, dataAttr, selfId)}
+            ${renderVoteCards(candidates, selectedId, dataAttr, selfId, { allowSelfVote })}
             <div class="button-row">
               <button class="btn primary" type="button" data-action="${action}" ${selectedId && !state.pendingAction ? "" : "disabled"}>
                 ${escapeHtml(buttonLabel)}
@@ -2391,7 +2480,7 @@
           <div class="action-grid">
             ${candidates
               .map((candidate) => {
-                const disabled = options.disableSelf !== false && candidate.playerId === selfId;
+                const disabled = options.disableSelf !== false && candidate.playerId === selfId && !Boolean(options.allowSelfVote);
                 const value = candidate.candidateId ?? candidate.playerId;
                 return `
                   <button
@@ -2415,14 +2504,15 @@
       function renderVote(room, mode = "vote") {
         const round = getCurrentRound(room);
         const candidates = getVoteCandidates(room, mode);
+        const allowSelfVote = allowsSelfVote(room);
         const selectedId = mode === "revote" ? state.selectedHostTarget : state.selectedVoteTarget;
         return renderVoteDecisionScreen({
           label: mode === "revote" ? "同票の再投票" : getCurrentRound(room)?.label || "投票",
           title: mode === "revote" ? "再投票" : "このラウンドで一番おもしろいワードに投票",
           description:
             mode === "revote"
-              ? "同票のワードから選びます。"
-              : "自分以外のワードから選びます。",
+              ? allowSelfVote ? "2人戦なので自分のワードも選べます。" : "同票のワードから選びます。"
+              : allowSelfVote ? "2人戦なので自分のワードも選べます。" : "自分以外のワードから選びます。",
           summaryHtml:
             mode === "revote" && round?.voteSummary
               ? renderSection(
@@ -2435,6 +2525,7 @@
           selectedId,
           dataAttr: mode === "revote" ? "revote-id" : "vote-id",
           selfId: room.me.playerId,
+          allowSelfVote,
           action: mode === "revote" ? "submit-revote" : "submit-vote",
           buttonLabel: mode === "revote" ? "このワードに再投票" : "このワードに投票"
         });
@@ -2516,12 +2607,13 @@
         const isRevote = room.game.phase === "final_revote";
         const finalVote = room.game.finalVote;
         const candidates = getFinalCandidates(room, isRevote ? "revote" : "vote");
+        const allowSelfVote = allowsSelfVote(room);
         return renderVoteDecisionScreen({
           label: isRevote ? "最終再投票" : "総合優勝を決める投票",
           title: isRevote ? "最終再投票" : "最終投票",
           description: isRevote
-            ? "同票の候補から選びます。"
-            : "総合優勝を1つ選びます。",
+            ? allowSelfVote ? "2人戦なので自分のワードも選べます。" : "同票の候補から選びます。"
+            : allowSelfVote ? "2人戦なので自分のワードも選べます。" : "総合優勝を1つ選びます。",
           summaryHtml:
             isRevote && finalVote?.voteSummary
               ? renderSection(
@@ -2534,6 +2626,7 @@
           selectedId: state.selectedFinalTarget,
           dataAttr: "final-vote-id",
           selfId: room.me.playerId,
+          allowSelfVote,
           action: "submit-final-vote",
           buttonLabel: isRevote ? "このワードに再投票" : "このワードに投票"
         });
@@ -2643,7 +2736,7 @@
           state.reveal.lines.length <= 1 ? "single" : "manual",
           44
         );
-        els.closeRevealBtn.textContent = state.reveal.kind === "champion" ? "結果一覧を見る" : "閉じる";
+        els.closeRevealBtn.textContent = state.reveal.kind === "champion" ? "結果一覧を見る" : "場を見る";
         hydrateWordBoards();
       }
 
@@ -2665,7 +2758,6 @@
         render();
         try {
           await action();
-          await loadRecentChampions();
         } catch (error) {
           if (!recoverLostSession(error, "action")) {
             state.errorMessage = describeAppError(error, "action");

@@ -346,7 +346,18 @@ function getPlayableDeck(deck) {
     throw domainError(404, "DECK_NOT_FOUND", "指定されたデッキは存在しません。");
   }
 
-  const enabledTiles = (deck.tiles || []).filter((tile) => tile.enabled !== false);
+  const seenTexts = new Set();
+  const enabledTiles = (deck.tiles || []).filter((tile) => {
+    if (tile.enabled === false) {
+      return false;
+    }
+    const text = String(tile.text || "").trim();
+    if (!text || seenTexts.has(text)) {
+      return false;
+    }
+    seenTexts.add(text);
+    return true;
+  });
   if (!enabledTiles.length) {
     throw domainError(409, "DECK_EMPTY", "使用可能な牌がデッキにありません。");
   }
@@ -368,20 +379,14 @@ function shuffleArray(items) {
 }
 
 function buildDrawPile(deck, totalCards) {
-  const copyCount = Math.max(1, Math.ceil(totalCards / deck.tiles.length));
-  const expanded = [];
-
-  for (let copyIndex = 0; copyIndex < copyCount; copyIndex += 1) {
-    for (const tile of deck.tiles) {
-      expanded.push({
-        tileId: tile.tileId,
-        text: tile.text,
-        copyIndex
-      });
-    }
+  if (deck.tiles.length < totalCards) {
+    throw domainError(
+      409,
+      "DECK_TOO_SMALL",
+      `このデッキは ${totalCards} 個の重複しないワードが必要です。管理画面で有効ワードを増やしてください。`
+    );
   }
-
-  return shuffleArray(expanded).slice(0, totalCards);
+  return shuffleArray(deck.tiles).slice(0, totalCards);
 }
 
 function dealInitialHands(players, deck) {
@@ -737,7 +742,7 @@ function buildVotedRoom(room, mePlayer, roundIndex, targetPlayerId, mode = "vote
   if (!validTargetIds.includes(targetPlayerId)) {
     throw domainError(400, "INVALID_TARGET", "投票先が不正です。");
   }
-  if (targetPlayerId === mePlayer.playerId) {
+  if (targetPlayerId === mePlayer.playerId && room.playerCount !== 2) {
     throw domainError(409, "SELF_VOTE_FORBIDDEN", "自分のワードには投票できません。");
   }
 
@@ -829,6 +834,9 @@ function beginFinalVote(updatedRoom) {
 }
 
 function getEligibleFinalVoterIds(finalVote, players, mode = "vote") {
+  if (players.length === 2) {
+    return players.map((player) => player.playerId);
+  }
   const validTargetIds =
     mode === "revote" ? finalVote.voteSummary?.tiedCandidateIds || [] : finalVote.candidates.map((candidate) => candidate.candidateId);
   const validCandidates = finalVote.candidates.filter((candidate) => validTargetIds.includes(candidate.candidateId));
@@ -861,7 +869,7 @@ function buildFinalVotedRoom(room, mePlayer, candidateId, mode = "vote") {
   if (!validTargetIds.includes(candidateId) || !selectedCandidate) {
     throw domainError(400, "INVALID_TARGET", "投票先が不正です。");
   }
-  if (selectedCandidate.playerId === mePlayer.playerId) {
+  if (selectedCandidate.playerId === mePlayer.playerId && updatedRoom.players.length !== 2) {
     throw domainError(409, "SELF_VOTE_FORBIDDEN", "自分のワードには投票できません。");
   }
 

@@ -617,6 +617,70 @@ test("start-player and start enter round_submit with dealt hands", async () => {
   assert.equal(room.game.rounds[0].phaseStatus, "submit");
 });
 
+test("start deals non-duplicate words across all players", async () => {
+  const handler = createTestHandler();
+  const session = await createSession(handler, ["ホスト", "ゲストA", "ゲストB", "ゲストC"]);
+  await startGame(handler, session, "ホスト");
+
+  const allWords = [];
+  for (const player of session.players) {
+    const room = await getRoom(handler, session.roomId, player.playerToken);
+    const words = room.myHand.map((tile) => tile.text);
+    assert.equal(new Set(words).size, words.length);
+    allWords.push(...words);
+  }
+
+  assert.equal(new Set(allWords).size, allWords.length);
+});
+
+test("start rejects decks that are too small for non-duplicate dealing", async () => {
+  const adminPasscode = "test-admin-passcode";
+  const handler = createTestHandler({ adminSharedPasscode: adminPasscode });
+
+  const initialResponse = await handler(
+    createEvent("GET", "/v1/admin/decks/default", {
+      headers: createAdminHeaders(adminPasscode)
+    })
+  );
+  const initialBody = await parseResponse(initialResponse);
+
+  const saveResponse = await handler(
+    createEvent("PUT", "/v1/admin/decks/default", {
+      headers: createAdminHeaders(adminPasscode),
+      body: {
+        deckName: "default",
+        version: initialBody.data.version,
+        tiles: Array.from({ length: 12 }, (_, index) => ({
+          tileId: `tile_small_${index + 1}`,
+          text: `少数牌${index + 1}`,
+          enabled: true
+        }))
+      }
+    })
+  );
+  const saveBody = await parseResponse(saveResponse);
+  assert.equal(saveResponse.statusCode, 200);
+  assert.equal(saveBody.ok, true);
+
+  const session = await createSession(handler, ["ホスト", "ゲストA"]);
+  const host = session.players[0];
+  const response = await handler(
+    createEvent("POST", `/v1/rooms/${session.roomId}/start`, {
+      headers: {
+        "X-Omojan-Player-Token": host.playerToken
+      },
+      body: {
+        deckId: "default"
+      }
+    })
+  );
+  const body = await parseResponse(response);
+
+  assert.equal(response.statusCode, 409);
+  assert.equal(body.ok, false);
+  assert.equal(body.error.code, "DECK_TOO_SMALL");
+});
+
 test("submit advances turn and last submission moves to round_vote", async () => {
   const handler = createTestHandler();
   const session = await createSession(handler, ["ホスト", "ゲストA", "ゲストB"]);
@@ -679,6 +743,19 @@ test("tie can progress through revote and host decision", async () => {
   assert.deepEqual(resultRoom.game.rounds[0].revotedPlayerIds.sort(), session.players.map((player) => player.playerId).sort());
 });
 
+test("two-player round vote allows voting for your own word", async () => {
+  const handler = createTestHandler();
+  const session = await createSession(handler, ["ホスト", "ゲストA"]);
+  await startGame(handler, session, "ホスト");
+  await submitAllForCurrentRound(handler, session, 0);
+
+  let room = await voteFor(handler, session, "ホスト", 0, "ホスト", "vote");
+  room = await voteFor(handler, session, "ゲストA", 0, "ゲストA", "vote");
+
+  assert.equal(room.game.phase, "round_revote");
+  assert.deepEqual(room.game.rounds[0].voteSummary.tiedPlayerIds.sort(), session.players.map((player) => player.playerId).sort());
+});
+
 test("host can proceed from round_result into next round", async () => {
   const handler = createTestHandler();
   const session = await createSession(handler, ["ホスト", "ゲストA", "ゲストB"]);
@@ -719,6 +796,56 @@ test("final vote can resolve directly into final_result and restart to lobby", a
   assert.equal(restartedRoom.game.roundIndex, null);
   assert.equal(restartedRoom.game.finalVote, null);
   assert.equal(restartedRoom.myHand.length, 0);
+});
+
+test("two-player final vote allows voting for your own winning word", async () => {
+  const handler = createTestHandler();
+  const session = await createSession(handler, ["ホスト", "ゲストA"]);
+  await startGame(handler, session, "ホスト");
+
+  await playRound(handler, session, 0, [
+    ["ホスト", "ホスト"],
+    ["ゲストA", "ゲストA"]
+  ], {
+    revotePlan: [
+      ["ホスト", "ホスト"],
+      ["ゲストA", "ゲストA"]
+    ],
+    hostDecisionDisplayName: "ホスト"
+  });
+  await proceedRound(handler, session, 0);
+
+  await playRound(handler, session, 1, [
+    ["ホスト", "ホスト"],
+    ["ゲストA", "ゲストA"]
+  ], {
+    revotePlan: [
+      ["ホスト", "ホスト"],
+      ["ゲストA", "ゲストA"]
+    ],
+    hostDecisionDisplayName: "ゲストA"
+  });
+  await proceedRound(handler, session, 1);
+
+  await playRound(handler, session, 2, [
+    ["ホスト", "ホスト"],
+    ["ゲストA", "ゲストA"]
+  ], {
+    revotePlan: [
+      ["ホスト", "ホスト"],
+      ["ゲストA", "ゲストA"]
+    ],
+    hostDecisionDisplayName: "ホスト"
+  });
+
+  let room = await proceedRound(handler, session, 2);
+  assert.equal(room.game.phase, "final_vote");
+
+  room = await voteFinalFor(handler, session, room, "ホスト", "ホスト", "vote");
+  room = await voteFinalFor(handler, session, room, "ゲストA", "ゲストA", "vote");
+
+  assert.equal(room.game.phase, "final_revote");
+  assert.equal(room.game.finalVote.voteSummary.tiedCandidateIds.length, 2);
 });
 
 test("recent champions includes newly finished game at the top", async () => {

@@ -168,6 +168,8 @@ async function submitCurrentDraft(page) {
   const submitButton = page.locator('button[data-action="submit-word"]');
   await expect(submitButton).toBeEnabled();
   await submitButton.click();
+  await expect(page.locator("#revealOverlay")).toBeVisible({ timeout: 5000 });
+  await page.locator("#closeRevealBtn").click();
   await expect(page.locator("#revealOverlay")).toBeHidden({ timeout: 5000 });
 }
 
@@ -188,13 +190,30 @@ async function reopenWithStoredSession(browser, context, expectHeading) {
   return { context: reopenedContext, page };
 }
 
-async function submitCurrentVote(page, action = "submit-vote") {
-  const candidate = page.locator(
-    action === "submit-final-vote" ? "[data-final-vote-id]:not([disabled])" : "[data-vote-id]:not([disabled])"
-  ).first();
+async function submitCurrentVote(page, action = "submit-vote", targetDisplayName = "") {
+  const selector = action === "submit-final-vote" ? "[data-final-vote-id]:not([disabled])" : "[data-vote-id]:not([disabled])";
+  const candidate = targetDisplayName
+    ? page.locator(selector, { hasText: targetDisplayName }).first()
+    : page.locator(selector).first();
   await candidate.click();
   await expect(candidate).toHaveAttribute("aria-pressed", "true");
-  await page.locator(`button[data-action="${action}"]`).click();
+  const actionButton = page.locator(`button[data-action="${action}"]`);
+  await Promise.all([
+    page.waitForResponse((response) => {
+      if (response.request().method() !== "POST" || response.status() !== 200) {
+        return false;
+      }
+      const url = response.url();
+      if (action === "submit-vote") {
+        return /\/rounds\/\d+\/vote$/.test(url);
+      }
+      if (action === "submit-final-vote") {
+        return /\/(final-vote|final-revote)$/.test(url);
+      }
+      return false;
+    }),
+    actionButton.click()
+  ]);
 }
 
 async function completeRoundByHostDecision(host, guest, roundLabel, hostDecisionWinnerName) {
@@ -212,16 +231,16 @@ async function completeRoundByHostDecision(host, guest, roundLabel, hostDecision
   await expect(host.getByRole("heading", { name: "このラウンドで一番おもしろいワードに投票" })).toBeVisible({ timeout: 10000 });
   await expect(guest.getByRole("heading", { name: "このラウンドで一番おもしろいワードに投票" })).toBeVisible({ timeout: 10000 });
 
-  await submitCurrentVote(host, "submit-vote");
-  await submitCurrentVote(guest, "submit-vote");
+  await submitCurrentVote(host, "submit-vote", "HostFlowTest");
+  await submitCurrentVote(guest, "submit-vote", "GuestFlowTest");
 
   await reconnect(host);
   await reconnect(guest);
   await expect(host.getByRole("heading", { name: "再投票" })).toBeVisible({ timeout: 10000 });
   await expect(guest.getByRole("heading", { name: "再投票" })).toBeVisible({ timeout: 10000 });
 
-  await host.locator("[data-revote-id]:not([disabled])").first().click();
-  await guest.locator("[data-revote-id]:not([disabled])").first().click();
+  await host.locator("[data-revote-id]:not([disabled])", { hasText: "HostFlowTest" }).first().click();
+  await guest.locator("[data-revote-id]:not([disabled])", { hasText: "GuestFlowTest" }).first().click();
   await host.locator('button[data-action="submit-revote"]').click();
   await guest.locator('button[data-action="submit-revote"]').click();
 
@@ -296,15 +315,15 @@ test("app can complete a full game through final champion and restart", async ({
 
   await expect(host.getByRole("heading", { name: "最終投票" })).toBeVisible({ timeout: 10000 });
   await expect(guest.getByRole("heading", { name: "最終投票" })).toBeVisible({ timeout: 10000 });
-  await submitCurrentVote(host, "submit-final-vote");
-  await submitCurrentVote(guest, "submit-final-vote");
+  await submitCurrentVote(host, "submit-final-vote", "HostFlowTest");
+  await submitCurrentVote(guest, "submit-final-vote", "GuestFlowTest");
 
   await reconnect(host);
   await reconnect(guest);
   await expect(host.getByRole("heading", { name: "最終再投票" })).toBeVisible({ timeout: 10000 });
   await expect(guest.getByRole("heading", { name: "最終再投票" })).toBeVisible({ timeout: 10000 });
-  await host.locator("[data-final-vote-id]:not([disabled])").first().click();
-  await guest.locator("[data-final-vote-id]:not([disabled])").first().click();
+  await host.locator("[data-final-vote-id]:not([disabled])", { hasText: "HostFlowTest" }).first().click();
+  await guest.locator("[data-final-vote-id]:not([disabled])", { hasText: "GuestFlowTest" }).first().click();
   await host.locator('button[data-action="submit-final-vote"]').click();
   await guest.locator('button[data-action="submit-final-vote"]').click();
 
@@ -356,14 +375,14 @@ test("app restores session after reopening the browser context", async ({ browse
   ({ context: hostContext, page: host } = await reopenWithStoredSession(browser, hostContext, "このラウンドで一番おもしろいワードに投票"));
   ({ context: guestContext, page: guest } = await reopenWithStoredSession(browser, guestContext, "このラウンドで一番おもしろいワードに投票"));
 
-  await submitCurrentVote(host, "submit-vote");
-  await submitCurrentVote(guest, "submit-vote");
+  await submitCurrentVote(host, "submit-vote", "HostFlowTest");
+  await submitCurrentVote(guest, "submit-vote", "GuestFlowTest");
 
   ({ context: hostContext, page: host } = await reopenWithStoredSession(browser, hostContext, "再投票"));
   ({ context: guestContext, page: guest } = await reopenWithStoredSession(browser, guestContext, "再投票"));
 
-  await host.locator("[data-revote-id]:not([disabled])").first().click();
-  await guest.locator("[data-revote-id]:not([disabled])").first().click();
+  await host.locator("[data-revote-id]:not([disabled])", { hasText: "HostFlowTest" }).first().click();
+  await guest.locator("[data-revote-id]:not([disabled])", { hasText: "GuestFlowTest" }).first().click();
   await host.locator('button[data-action="submit-revote"]').click();
   await guest.locator('button[data-action="submit-revote"]').click();
 

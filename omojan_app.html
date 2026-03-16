@@ -98,6 +98,26 @@
         font-size: 12px;
       }
 
+      .status-actions {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .mini-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 32px;
+        padding: 0 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(184, 138, 50, 0.28);
+        background: rgba(255, 250, 238, 0.92);
+        color: var(--green);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
       .hero-banner {
         margin-top: 12px;
         padding: 14px;
@@ -524,6 +544,35 @@
         background: rgba(255, 250, 238, 0.8);
       }
 
+      .alert-actions,
+      .utility-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 10px;
+      }
+
+      .utility-card {
+        margin-top: 14px;
+        padding: 14px;
+        border-radius: 18px;
+        border: 1px solid rgba(118, 89, 63, 0.16);
+        background: rgba(255, 255, 255, 0.7);
+      }
+
+      .utility-card h3 {
+        margin: 0;
+        color: var(--green);
+        font-size: 15px;
+      }
+
+      .utility-card p {
+        margin: 8px 0 0;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.6;
+      }
+
       .focus-callout {
         margin-top: 14px;
         padding: 15px 16px;
@@ -768,7 +817,10 @@
         <div class="phone">
           <div class="status-row">
             <span>online board game</span>
-            <strong id="statusLabel">接続を確認中</strong>
+            <div class="status-actions">
+              <strong id="statusLabel">接続を確認中</strong>
+              <button id="refreshTopBtn" class="mini-btn" type="button" data-action="refresh-latest">更新</button>
+            </div>
           </div>
           <section id="heroBanner" class="hero-banner">
             <small id="bannerLabel">準備中</small>
@@ -845,6 +897,7 @@
 
       const els = {
         statusLabel: document.getElementById("statusLabel"),
+        refreshTopBtn: document.getElementById("refreshTopBtn"),
         bannerLabel: document.getElementById("bannerLabel"),
         bannerTitle: document.getElementById("bannerTitle"),
         bannerSubline: document.getElementById("bannerSubline"),
@@ -1238,7 +1291,20 @@
         if (state.isLoading) {
           return "同期中";
         }
+        if (state.errorMessage) {
+          return "要確認";
+        }
         return "接続中";
+      }
+
+      function formatLastSyncValue() {
+        if (!state.lastSyncAt) {
+          return "未同期";
+        }
+        return new Date(state.lastSyncAt).toLocaleTimeString("ja-JP", {
+          hour: "2-digit",
+          minute: "2-digit"
+        });
       }
 
       function formatLastSync() {
@@ -1317,6 +1383,8 @@
         els.bannerLabel.textContent = banner.label;
         els.bannerTitle.textContent = banner.title;
         els.bannerSubline.textContent = banner.subline;
+        els.refreshTopBtn.disabled = state.pendingAction || state.isLoading;
+        els.refreshTopBtn.textContent = state.roomId ? "更新" : "再読込";
       }
 
       function persistSession() {
@@ -1476,6 +1544,18 @@
         setRoom(payload.data.room);
       }
 
+      async function reconnectRoom(roomId = state.roomId, playerToken = state.playerToken) {
+        if (!roomId || !playerToken) {
+          return;
+        }
+        const payload = await apiRequest(`/rooms/${encodeURIComponent(roomId)}/reconnect`, {
+          method: "POST",
+          body: {},
+          playerToken
+        });
+        setRoom(payload.data.room, { playerToken, skipReveal: true });
+      }
+
       function clearPollTimer() {
         if (state.pollTimer) {
           window.clearTimeout(state.pollTimer);
@@ -1513,13 +1593,34 @@
 
         state.roomId = storedRoomId;
         state.playerToken = storedToken;
-        const payload = await apiRequest(`/rooms/${encodeURIComponent(storedRoomId)}/reconnect`, {
-          method: "POST",
-          body: {},
-          playerToken: storedToken
-        });
-        setRoom(payload.data.room, { playerToken: storedToken, skipReveal: true });
+        await reconnectRoom(storedRoomId, storedToken);
         return true;
+      }
+
+      function renderSyncUtility(options = {}) {
+        const {
+          title = "接続",
+          description = "",
+          showReconnect = false,
+          showRefresh = true
+        } = options;
+        const pills = [
+          { label: "状態", value: getStatusText() },
+          { label: "最終同期", value: formatLastSyncValue() },
+          { label: "更新", value: shouldPoll() ? "自動" : "手動" }
+        ];
+
+        return `
+          <section class="utility-card">
+            <h3>${escapeHtml(title)}</h3>
+            ${description ? `<p>${escapeHtml(description)}</p>` : ""}
+            ${renderSummaryPills(pills)}
+            <div class="utility-actions">
+              ${showRefresh ? `<button class="btn subtle" type="button" data-action="refresh-latest" ${state.pendingAction ? "disabled" : ""}>今の状態を更新</button>` : ""}
+              ${showReconnect ? `<button class="btn subtle" type="button" data-action="retry-room-connection" ${state.pendingAction ? "disabled" : ""}>再接続する</button>` : ""}
+            </div>
+          </section>
+        `;
       }
 
       function getWaitingMessage(room) {
@@ -1566,9 +1667,35 @@
 
       function renderScreenAlerts(options = {}) {
         const { includeCopy = false } = options;
+        const canReconnect = Boolean(state.roomId && state.playerToken);
         return `
-          ${state.errorMessage ? `<div class="error-box">${escapeHtml(state.errorMessage)}</div>` : ""}
-          ${includeCopy && state.copyMessage ? `<div class="info-box">${escapeHtml(state.copyMessage)}</div>` : ""}
+          ${
+            state.errorMessage
+              ? `
+                <div class="error-box">
+                  ${escapeHtml(state.errorMessage)}
+                  <div class="alert-actions">
+                    <button class="btn subtle" type="button" data-action="${canReconnect ? "retry-room-connection" : "refresh-latest"}" ${state.pendingAction ? "disabled" : ""}>
+                      ${canReconnect ? "再接続する" : "もう一度更新"}
+                    </button>
+                    <button class="btn subtle" type="button" data-action="clear-messages">閉じる</button>
+                  </div>
+                </div>
+              `
+              : ""
+          }
+          ${
+            includeCopy && state.copyMessage
+              ? `
+                <div class="info-box">
+                  ${escapeHtml(state.copyMessage)}
+                  <div class="alert-actions">
+                    <button class="btn subtle" type="button" data-action="clear-messages">閉じる</button>
+                  </div>
+                </div>
+              `
+              : ""
+          }
         `;
       }
 
@@ -1905,6 +2032,15 @@
           <section class="card">
             <h2>招待 URL から参加</h2>
             <p>招待コードを入れて参加します。</p>
+            ${
+              state.inviteCode
+                ? renderFocusCallout({
+                    label: "招待コード入力済み",
+                    title: state.inviteCode,
+                    description: "表示名を入れるだけで参加できます。"
+                  })
+                : ""
+            }
             <div class="field-stack">
               <div class="field">
                 <label for="inviteCode">招待コード</label>
@@ -1953,6 +2089,11 @@
                 )
                 .join("")}
             </div>
+            ${renderSyncUtility({
+              title: "このルーム",
+              description: room.me.isHost ? "開始や更新はこの画面で進めます。" : "開始や更新は自動で反映します。",
+              showReconnect: true
+            })}
           </section>
 
           <section class="panel">
@@ -2099,9 +2240,14 @@
               title: getWaitingMessage(room),
               description: "自動で更新します。",
               pills: [
-                { label: "同期", value: formatLastSync() },
+                { label: "最終同期", value: formatLastSyncValue() },
                 { label: "公開", value: submissions.length ? `${submissions.length}語` : "まだなし" }
               ]
+            })}
+            ${renderSyncUtility({
+              title: "同期",
+              description: "この画面は自動で更新します。止まったら手動で更新できます。",
+              showReconnect: true
             })}
           </section>
 
@@ -2525,6 +2671,25 @@
       ];
 
       const actionHandlers = {
+        "refresh-latest": async () => {
+          await runAction(async () => {
+            if (state.roomId && state.playerToken) {
+              await refreshRoom();
+              return;
+            }
+            await loadRecentChampions();
+          });
+        },
+        "retry-room-connection": async () => {
+          await runAction(async () => {
+            await reconnectRoom();
+          });
+        },
+        "clear-messages": async () => {
+          state.errorMessage = "";
+          state.copyMessage = "";
+          render();
+        },
         "create-room": async () => {
           await runAction(async () => {
             const payload = await fetchJson(`${state.apiBaseUrl}/rooms`, {

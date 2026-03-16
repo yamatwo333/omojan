@@ -183,7 +183,7 @@ async function reopenWithStoredSession(browser, context, expectHeading) {
   const page = await reopenedContext.newPage();
   await page.goto(STATIC_URL);
   if (expectHeading) {
-    await expect(page.getByRole("heading", { name: expectHeading })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole("heading", { name: expectHeading, exact: true })).toBeVisible({ timeout: 10000 });
   }
   return { context: reopenedContext, page };
 }

@@ -524,6 +524,72 @@
         background: rgba(255, 250, 238, 0.8);
       }
 
+      .focus-callout {
+        margin-top: 14px;
+        padding: 15px 16px;
+        border-radius: 20px;
+        border: 1px solid rgba(184, 138, 50, 0.24);
+        background:
+          linear-gradient(180deg, rgba(255, 251, 242, 0.96), rgba(246, 236, 208, 0.96)),
+          #fff8ec;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
+      }
+
+      .focus-callout small {
+        display: block;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .focus-callout strong {
+        display: block;
+        margin-top: 5px;
+        color: var(--green);
+        font-size: 19px;
+        line-height: 1.45;
+      }
+
+      .focus-callout p {
+        margin: 8px 0 0;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.6;
+      }
+
+      .summary-pills {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .summary-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 34px;
+        padding: 0 12px;
+        border-radius: 999px;
+        border: 1px solid rgba(184, 138, 50, 0.22);
+        background: rgba(255, 255, 255, 0.9);
+        color: var(--green);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .summary-pill strong {
+        color: var(--ink);
+        font-size: 12px;
+      }
+
+      .stage-footnote {
+        margin-top: 10px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.55;
+        text-align: center;
+      }
+
       .reveal-overlay {
         position: fixed;
         inset: 0;
@@ -1436,6 +1502,38 @@
         `;
       }
 
+      function renderSummaryPills(items) {
+        if (!items.length) {
+          return "";
+        }
+        return `
+          <div class="summary-pills">
+            ${items
+              .map(
+                (item) => `
+                  <span class="summary-pill">
+                    ${escapeHtml(item.label)}
+                    <strong>${escapeHtml(item.value)}</strong>
+                  </span>
+                `
+              )
+              .join("")}
+          </div>
+        `;
+      }
+
+      function renderFocusCallout(options) {
+        const { label, title, description = "", pills = [] } = options;
+        return `
+          <section class="focus-callout">
+            <small>${escapeHtml(label)}</small>
+            <strong>${escapeHtml(title)}</strong>
+            ${description ? `<p>${escapeHtml(description)}</p>` : ""}
+            ${renderSummaryPills(pills)}
+          </section>
+        `;
+      }
+
       function renderWordStage(options) {
         const {
           stageClass,
@@ -1782,11 +1880,18 @@
           ${renderScreenAlerts()}
           <section class="card">
             <h2>待機</h2>
-            <p>${escapeHtml(getWaitingMessage(room))}</p>
-            <div class="info-box">${escapeHtml(formatLastSync())} / 自動更新中</div>
+            ${renderFocusCallout({
+              label: getCurrentRound(room)?.label || "進行中",
+              title: getWaitingMessage(room),
+              description: "ほかのプレイヤーの操作が終わると、自動更新または再接続で次の画面へ進みます。",
+              pills: [
+                { label: "同期", value: formatLastSync() },
+                { label: "公開", value: submissions.length ? `${submissions.length}語` : "まだなし" }
+              ]
+            })}
           </section>
 
-          ${renderSection("公開済みワード", renderSubmissionList(submissions), { className: "panel" })}
+          ${renderSection(`公開済みワード${submissions.length ? ` (${submissions.length})` : ""}`, renderSubmissionList(submissions), { className: "panel" })}
         `;
       }
 
@@ -1872,7 +1977,15 @@
               maxFont: 40,
               minFont: 20,
               emptyText: "結果待ちです。",
-              footerHtml: winner ? `<p><strong>${escapeHtml(winner.displayName)}</strong> / ${winner.voteCount}票</p>` : ""
+              footerHtml: winner
+                ? `
+                    ${renderSummaryPills([
+                      { label: "勝ちワードの持ち主", value: winner.displayName },
+                      { label: "得票", value: `${winner.voteCount}票` }
+                    ])}
+                    <p class="stage-footnote">この局でいちばん支持を集めたワードです。</p>
+                  `
+                : ""
             })}
             ${renderCountBreakdown("票数内訳", round?.voteSummary?.counts || [], (item) => `${item.count}票 / ${item.displayName}`)}
             ${
@@ -1915,6 +2028,12 @@
           ${renderScreenAlerts()}
           <section class="card">
             <h2>総合優勝</h2>
+            ${renderFocusCallout({
+              label: "本日の決着",
+              title: champion ? `${champion.phrase}` : "総合優勝を集計中",
+              description: champion ? "3ラウンドの勝ちワードから、最終投票で選ばれた総合優勝ワードです。" : "",
+              pills: champion ? [{ label: "持ち主", value: champion.displayName }] : []
+            })}
             ${renderWordStage({
               stageClass: "champion-stage",
               label: "総合優勝",
@@ -1923,7 +2042,7 @@
               maxFont: 48,
               minFont: 22,
               emptyText: "未確定です。",
-              footerHtml: champion ? `<p><strong>${escapeHtml(champion.displayName)}</strong></p>` : ""
+              footerHtml: champion ? `<p class="stage-footnote">${escapeHtml(champion.displayName)} のワード</p>` : ""
             })}
 
             ${renderSection(

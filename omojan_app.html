@@ -582,6 +582,39 @@
         font-size: 12px;
       }
 
+      .order-preview {
+        display: grid;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .order-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        border-radius: 16px;
+        border: 1px solid rgba(118, 89, 63, 0.16);
+        background: rgba(255, 255, 255, 0.72);
+      }
+
+      .order-item strong {
+        color: var(--green);
+        font-size: 12px;
+        min-width: 40px;
+      }
+
+      .order-item span {
+        color: var(--ink);
+        font-size: 14px;
+        font-weight: 700;
+      }
+
+      .order-item.is-first {
+        border-color: rgba(184, 68, 49, 0.26);
+        background: rgba(250, 230, 222, 0.82);
+      }
+
       .stage-footnote {
         margin-top: 10px;
         color: var(--muted);
@@ -1661,6 +1694,69 @@
         `;
       }
 
+      function getLobbyPlayerOrder(room) {
+        const players = [...room.game.players].sort((left, right) => left.seatOrder - right.seatOrder);
+        const startPlayerId = state.selectedStartPlayerId || room.startPlayerId || players[0]?.playerId;
+        const startIndex = players.findIndex((player) => player.playerId === startPlayerId);
+        if (startIndex <= 0) {
+          return players;
+        }
+        return [...players.slice(startIndex), ...players.slice(0, startIndex)];
+      }
+
+      function renderPlayerOrderPreview(room) {
+        return `
+          <div class="order-preview">
+            ${getLobbyPlayerOrder(room)
+              .map(
+                (player, index) => `
+                  <div class="order-item${index === 0 ? " is-first" : ""}">
+                    <strong>${index === 0 ? "1番手" : `${index + 1}番手`}</strong>
+                    <span>${escapeHtml(player.displayName)}</span>
+                  </div>
+                `
+              )
+              .join("")}
+          </div>
+        `;
+      }
+
+      function renderLobbyHero(room) {
+        const players = room.game.players || [];
+        const maxPlayers = room.game.playerCount || players.length;
+        return renderFocusCallout({
+          label: `ROOM / ${room.inviteCode}`,
+          title: room.me.isHost ? "メンバーがそろったら開始" : "ホストの開始を待っています",
+          description: room.me.isHost
+            ? "招待URLを共有して、最初に動く人を決めたらそのまま開始できます。"
+            : "このルームコードのまま待機すれば、ホストが開始したあと自動で次の画面へ進みます。",
+          pills: [
+            { label: "参加", value: `${players.length}/${maxPlayers}人` },
+            { label: "あなた", value: room.me.isHost ? "ホスト" : room.me.displayName }
+          ]
+        });
+      }
+
+      function renderSubmitHero(room, layout) {
+        const draftText = getDraftText(room);
+        const modeLabel = lineModes.find((mode) => mode.id === state.draftLineMode)?.label || "";
+        const fontLabel = fonts.find((font) => font.id === state.draftFontId)?.label || "";
+        const selectedTiles = getSelectedTiles(room);
+        return renderFocusCallout({
+          label: getCurrentRound(room)?.label || "提出中",
+          title: draftText || "まずは2牌を選ぶ",
+          description: draftText
+            ? "この見た目のまま、提出すると全員の画面中央に大きく公開されます。"
+            : "自動で選ばれている2牌をそのまま使っても、手札から選び直しても大丈夫です。",
+          pills: [
+            { label: "選択", value: `${selectedTiles.length}/2牌` },
+            { label: "改行", value: modeLabel || "-" },
+            { label: "書体", value: fontLabel || "-" },
+            ...(layout.safetyAdjusted ? [{ label: "調整", value: "自動補正あり" }] : [])
+          ]
+        });
+      }
+
       function renderLanding() {
         return `
           ${renderScreenAlerts({ includeCopy: true })}
@@ -1722,6 +1818,7 @@
 
           <section class="card">
             <h2>ルーム待機中</h2>
+            ${renderLobbyHero(room)}
             <div class="button-row">
               <span class="room-code">${escapeHtml(room.inviteCode)}</span>
               <button class="btn subtle" type="button" data-action="copy-invite-url">招待URLをコピー</button>
@@ -1759,11 +1856,15 @@
                       )
                       .join("")}
                   </div>
+                  ${renderPlayerOrderPreview(room)}
                   <div class="button-row">
                     <button class="btn primary" type="button" data-action="start-game" ${state.pendingAction ? "disabled" : ""}>この順で開始</button>
                   </div>
                 `
-                : `<div class="info-box">ホストが開始順を決めてゲームを始めるまで待っています。</div>`
+                : `
+                    <div class="info-box">ホストが開始順を決めてゲームを始めるまで待っています。</div>
+                    ${renderPlayerOrderPreview(room)}
+                  `
             }
           </section>
 
@@ -1777,8 +1878,6 @@
       function renderSubmit(room) {
         const layout = computeDraftLayout();
         const selectedTiles = getSelectedTiles(room);
-        const modeLabel = lineModes.find((mode) => mode.id === state.draftLineMode)?.label || "";
-        const fontLabel = fonts.find((font) => font.id === state.draftFontId)?.label || "";
         const chars = Array.from(getDraftText(room));
 
         return `
@@ -1786,7 +1885,7 @@
 
           <section class="card">
             <h2>${escapeHtml(getCurrentRound(room)?.wind || "提出")}</h2>
-            <p>${escapeHtml(room.me.displayName)} の手番です。見せ方まで整えてから提出します。</p>
+            ${renderSubmitHero(room, layout)}
             <section class="preview-card">
               <small>提出前プレビュー</small>
               <div id="previewWord" class="word-board preview-word ${getFontClass(state.draftFontId)}${state.draftLineMode === "single" ? " is-single-line" : ""}">
@@ -1796,8 +1895,8 @@
                 ${
                   getDraftText(room)
                     ? layout.safetyAdjusted
-                      ? `改行: ${escapeHtml(modeLabel)} / 書体: ${escapeHtml(fontLabel)} / 保護改行または縮小あり`
-                      : `改行: ${escapeHtml(modeLabel)} / 書体: ${escapeHtml(fontLabel)}`
+                      ? "長いワードでも提出時に崩れないよう、自動で改行や縮小を補正します。"
+                      : "提出される見え方をそのまま確認できます。"
                     : "まずは牌を2つ選ぶと、ここに見た目が出ます。"
                 }
               </p>

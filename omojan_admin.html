@@ -235,10 +235,10 @@
 
       .message,
       .error {
-        margin-top: 14px;
         padding: 12px 14px;
         border-radius: 14px;
         line-height: 1.6;
+        box-shadow: 0 10px 24px rgba(29, 22, 15, 0.08);
       }
 
       .message {
@@ -249,6 +249,17 @@
       .error {
         background: rgba(184, 68, 49, 0.1);
         color: #8b2319;
+      }
+
+      .feedback-dock {
+        position: sticky;
+        top: 12px;
+        z-index: 12;
+        margin-top: 14px;
+      }
+
+      .feedback-dock:empty {
+        display: none;
       }
 
       .tile-list {
@@ -389,6 +400,8 @@
         <div class="meta" id="apiMeta">API 接続先を確認中</div>
       </section>
 
+      <div class="feedback-dock" id="feedback"></div>
+
       <section class="stack">
         <section class="card">
           <h2>接続</h2>
@@ -406,7 +419,6 @@
             <button class="btn primary" id="loadDeckBtn" type="button">デッキを読む</button>
             <button class="btn secondary" id="clearPasscodeBtn" type="button">パスコードを消す</button>
           </div>
-          <div id="feedback"></div>
         </section>
 
         <section class="card" id="deckCard" hidden>

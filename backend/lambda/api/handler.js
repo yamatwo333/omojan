@@ -7,6 +7,7 @@ const LOCAL_DATA_DIR = path.join(__dirname, "data");
 const MOCK_DIR = fs.existsSync(LOCAL_DATA_DIR) ? LOCAL_DATA_DIR : path.join(ROOT_DIR, "mock_api");
 const ROOM_TTL_SECONDS = 60 * 60 * 24 * 3;
 const STARTING_HAND_SIZE = 10;
+const ADMIN_PASSCODE_HEADER = "X-Omojan-Admin-Passcode";
 
 const defaultDeck = readJson("deck_default.json").data;
 const recentChampions = readJson("champions_recent.json").data.items;
@@ -26,8 +27,8 @@ function buildHeaders() {
     "content-type": "application/json; charset=utf-8",
     "cache-control": "no-store",
     "access-control-allow-origin": "*",
-    "access-control-allow-methods": "GET,POST,OPTIONS",
-    "access-control-allow-headers": "content-type,x-omojan-player-token"
+    "access-control-allow-methods": "GET,POST,PUT,OPTIONS",
+    "access-control-allow-headers": "content-type,x-omojan-player-token,x-omojan-admin-passcode"
   };
 }
 
@@ -83,6 +84,7 @@ function parseRoute(method, pathname) {
     { method: "GET", pattern: /^\/v1\/health$/, route: "health" },
     { method: "GET", pattern: /^\/v1\/champions\/recent$/, route: "getChampionsRecent" },
     { method: "GET", pattern: /^\/v1\/admin\/decks\/([^/]+)$/, route: "getDeck" },
+    { method: "PUT", pattern: /^\/v1\/admin\/decks\/([^/]+)$/, route: "putDeck" },
     { method: "POST", pattern: /^\/v1\/rooms$/, route: "createRoom" },
     { method: "POST", pattern: /^\/v1\/rooms\/join$/, route: "joinRoom" },
     { method: "GET", pattern: /^\/v1\/rooms\/([^/]+)$/, route: "getRoom" },
@@ -137,6 +139,8 @@ function handleHealth() {
     tableName: process.env.APP_TABLE_NAME || "",
     region: process.env.AWS_REGION || "",
     implementedRoutes: [
+      "admin:decks:get",
+      "admin:decks:put",
       "rooms:create",
       "rooms:join",
       "rooms:get",
@@ -189,6 +193,10 @@ function normalizeDisplayName(value) {
   return String(value || "").trim().slice(0, 20) || "あなた";
 }
 
+function normalizeDeckName(value, deckId) {
+  return String(value || "").trim().slice(0, 40) || deckId;
+}
+
 function normalizePlayerCount(value) {
   const count = Number(value);
   return [2, 3, 4].includes(count) ? count : 4;
@@ -204,6 +212,86 @@ function makeId(prefix) {
 
 function makeInviteCode() {
   return `OMO-${String(Math.floor(1000 + Math.random() * 9000))}`;
+}
+
+function makeTileId(index = 0) {
+  const seed = crypto.randomUUID().replace(/-/g, "").slice(0, 8);
+  return `tile_${String(index + 1).padStart(3, "0")}_${seed}`;
+}
+
+function safeSecretEqual(expected, provided) {
+  const expectedBuffer = Buffer.from(String(expected || ""), "utf8");
+  const providedBuffer = Buffer.from(String(provided || ""), "utf8");
+  if (expectedBuffer.length === 0 || expectedBuffer.length !== providedBuffer.length) {
+    return false;
+  }
+  return crypto.timingSafeEqual(expectedBuffer, providedBuffer);
+}
+
+function requireAdminPasscode(event, configuredPasscode) {
+  if (!configuredPasscode) {
+    throw domainError(503, "ADMIN_DISABLED", "管理用パスコードが未設定です。");
+  }
+  const providedPasscode = getHeader(event, ADMIN_PASSCODE_HEADER);
+  if (!providedPasscode) {
+    throw domainError(401, "ADMIN_PASSCODE_REQUIRED", "管理用パスコードが必要です。");
+  }
+  if (!safeSecretEqual(configuredPasscode, providedPasscode)) {
+    throw domainError(403, "ADMIN_PASSCODE_INVALID", "管理用パスコードが正しくありません。");
+  }
+}
+
+function buildDeckState(deckId, source = {}, version = 1) {
+  return {
+    deckId,
+    deckName: normalizeDeckName(source.deckName || source.name, deckId),
+    version: Number(source.version || version) || version,
+    status: source.status === "archived" ? "archived" : "active",
+    tiles: clone(source.tiles || []),
+    createdAt: source.createdAt || nowIso(),
+    updatedAt: source.updatedAt || nowIso()
+  };
+}
+
+function normalizeDeckForStorage(deckId, payload = {}, existingDeck = null) {
+  const sourceTiles = Array.isArray(payload.tiles) ? payload.tiles : [];
+  const usedTileIds = new Set();
+  const normalizedTiles = sourceTiles.map((tile, index) => {
+    const text = String(tile?.text || "").trim().slice(0, 40);
+    if (!text) {
+      throw domainError(400, "INVALID_TILE_TEXT", `牌 ${index + 1} のテキストが空です。`);
+    }
+
+    let tileId = String(tile?.tileId || "").trim().slice(0, 64).replace(/[^A-Za-z0-9_-]/g, "_");
+    if (!tileId) {
+      tileId = makeTileId(index);
+    }
+    while (usedTileIds.has(tileId)) {
+      tileId = `${tileId}_${index + 1}`;
+    }
+    usedTileIds.add(tileId);
+
+    return {
+      tileId,
+      text,
+      enabled: tile?.enabled !== false
+    };
+  });
+
+  if (!normalizedTiles.length) {
+    throw domainError(400, "DECK_EMPTY", "デッキには1枚以上の牌が必要です。");
+  }
+
+  const previousDeck = existingDeck ? buildDeckState(deckId, existingDeck, 1) : buildDeckState(deckId, { deckId }, 1);
+  return {
+    deckId,
+    deckName: normalizeDeckName(payload.deckName, deckId),
+    version: previousDeck.version + 1,
+    status: "active",
+    tiles: normalizedTiles,
+    createdAt: previousDeck.createdAt,
+    updatedAt: nowIso()
+  };
 }
 
 function createEmptyRounds() {
@@ -247,19 +335,19 @@ function createEmptyRounds() {
   ];
 }
 
-function getPlayableDeck(deckId) {
-  if (deckId !== "default") {
+function getPlayableDeck(deck) {
+  if (!deck?.deckId) {
     throw domainError(404, "DECK_NOT_FOUND", "指定されたデッキは存在しません。");
   }
 
-  const enabledTiles = (defaultDeck.tiles || []).filter((tile) => tile.enabled !== false);
+  const enabledTiles = (deck.tiles || []).filter((tile) => tile.enabled !== false);
   if (!enabledTiles.length) {
     throw domainError(409, "DECK_EMPTY", "使用可能な牌がデッキにありません。");
   }
 
   return {
-    deckId: defaultDeck.deckId,
-    version: defaultDeck.version || 1,
+    deckId: deck.deckId,
+    version: deck.version || 1,
     tiles: enabledTiles
   };
 }
@@ -283,8 +371,8 @@ function dealInitialHands(players, deck) {
   return hands;
 }
 
-function buildStartedRoom(room, deckId) {
-  const deck = getPlayableDeck(deckId);
+function buildStartedRoom(room, deck) {
+  const playableDeck = getPlayableDeck(deck);
   const updatedRoom = clone(room);
   const playersInSeatOrder = updatedRoom.players.slice().sort((left, right) => left.seatOrder - right.seatOrder);
   const fallbackStartPlayerId = updatedRoom.hostPlayerId;
@@ -303,9 +391,9 @@ function buildStartedRoom(room, deckId) {
   updatedRoom.game.phase = "round_submit";
   updatedRoom.game.roundIndex = 0;
   updatedRoom.game.currentTurnPlayerId = startPlayerId;
-  updatedRoom.game.deckId = deck.deckId;
-  updatedRoom.game.deckVersion = deck.version;
-  updatedRoom.game.initialHands = dealInitialHands(playersInSeatOrder, deck);
+  updatedRoom.game.deckId = playableDeck.deckId;
+  updatedRoom.game.deckVersion = playableDeck.version;
+  updatedRoom.game.initialHands = dealInitialHands(playersInSeatOrder, playableDeck);
   updatedRoom.game.rounds = createEmptyRounds();
   updatedRoom.game.rounds[0].phaseStatus = "submit";
   updatedRoom.game.finalVote = null;
@@ -1136,7 +1224,75 @@ async function createDynamoRoomRepository(options = {}) {
     return response.Items || [];
   }
 
+  async function getDeckItem(deckId) {
+    const response = await documentClient.send(
+      new modules.GetCommand({
+        TableName: tableName,
+        Key: {
+          PK: `DECK#${deckId}`,
+          SK: "META"
+        }
+      })
+    );
+    if (response.Item) {
+      return response.Item;
+    }
+    if (deckId === defaultDeck.deckId) {
+      return {
+        PK: `DECK#${deckId}`,
+        SK: "META",
+        entityType: "Deck",
+        ...buildDeckState(deckId, defaultDeck, defaultDeck.version || 1)
+      };
+    }
+    return null;
+  }
+
+  async function putDeckItem(deck, expectedVersion) {
+    await documentClient.send(
+      new modules.PutCommand({
+        TableName: tableName,
+        Item: {
+          PK: `DECK#${deck.deckId}`,
+          SK: "META",
+          entityType: "Deck",
+          ...deck
+        },
+        ConditionExpression:
+          expectedVersion === null ? "attribute_not_exists(PK)" : "#version = :expectedVersion",
+        ExpressionAttributeNames: expectedVersion === null ? undefined : { "#version": "version" },
+        ExpressionAttributeValues: expectedVersion === null ? undefined : { ":expectedVersion": expectedVersion }
+      })
+    );
+  }
+
   return {
+    async getDeck(deckId) {
+      const item = await getDeckItem(deckId);
+      if (!item) {
+        throw domainError(404, "DECK_NOT_FOUND", "指定されたデッキは存在しません。");
+      }
+      return buildDeckState(deckId, item, item.version || 1);
+    },
+
+    async replaceDeck(deckId, payload) {
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        const existingDeck = await getDeckItem(deckId);
+        const normalizedDeck = normalizeDeckForStorage(deckId, payload, existingDeck);
+        try {
+          await putDeckItem(normalizedDeck, existingDeck?.PK ? existingDeck.version : null);
+          return buildDeckState(deckId, normalizedDeck, normalizedDeck.version);
+        } catch (error) {
+          if (toConditionalFailure(error)) {
+            continue;
+          }
+          throw error;
+        }
+      }
+
+      throw domainError(409, "CONFLICT_RETRY", "デッキ更新が競合しました。もう一度お試しください。", true);
+    },
+
     async getRecentChampions(limit) {
       const items = await queryChampionHistory(limit);
       return buildRecentChampionItems(items, limit);
@@ -1355,7 +1511,8 @@ async function createDynamoRoomRepository(options = {}) {
           throw domainError(409, "INVALID_PHASE", "lobby ではないため実行できません。");
         }
 
-        const updatedRoom = buildStartedRoom(room, deckId);
+        const deck = await this.getDeck(deckId);
+        const updatedRoom = buildStartedRoom(room, deck);
 
         try {
           await putRoomItem(updatedRoom, room.revision);
@@ -1625,6 +1782,7 @@ async function createDynamoRoomRepository(options = {}) {
 function createMemoryRoomRepository() {
   const rooms = new Map();
   const invites = new Map();
+  const decks = new Map([[defaultDeck.deckId, buildDeckState(defaultDeck.deckId, defaultDeck, defaultDeck.version || 1)]]);
   const championHistory = recentChampions.map((item) => ({
     PK: "CHAMPIONS",
     SK: `TS#${item.wonAt}#SEED#${item.championId}`,
@@ -1645,6 +1803,10 @@ function createMemoryRoomRepository() {
     rooms.set(room.roomId, clone(room));
   }
 
+  function saveDeck(deck) {
+    decks.set(deck.deckId, clone(deck));
+  }
+
   function saveChampionEntry(room, previousPhase = null) {
     if (room.game?.phase !== "final_result" || previousPhase === "final_result") {
       return;
@@ -1657,6 +1819,21 @@ function createMemoryRoomRepository() {
   }
 
   return {
+    async getDeck(deckId) {
+      const deck = decks.get(deckId);
+      if (deck) {
+        return clone(deck);
+      }
+      throw domainError(404, "DECK_NOT_FOUND", "指定されたデッキは存在しません。");
+    },
+
+    async replaceDeck(deckId, payload) {
+      const existingDeck = decks.get(deckId) || null;
+      const nextDeck = normalizeDeckForStorage(deckId, payload, existingDeck);
+      saveDeck(nextDeck);
+      return clone(nextDeck);
+    },
+
     async getRecentChampions(limit) {
       return buildRecentChampionItems(championHistory, limit);
     },
@@ -1803,7 +1980,8 @@ function createMemoryRoomRepository() {
         throw domainError(409, "INVALID_PHASE", "lobby ではないため実行できません。");
       }
 
-      const updatedRoom = buildStartedRoom(room, deckId);
+      const deck = await this.getDeck(deckId);
+      const updatedRoom = buildStartedRoom(room, deck);
       saveRoom(updatedRoom);
       const updatedMePlayer = updatedRoom.players.find((player) => player.playerId === mePlayer.playerId);
       return { room: clone(updatedRoom), mePlayer: clone(updatedMePlayer) };
@@ -1938,6 +2116,7 @@ function toErrorResponse(error) {
 }
 
 function createHandler(options = {}) {
+  const adminSharedPasscode = String(options.adminSharedPasscode ?? process.env.ADMIN_SHARED_PASSCODE ?? "").trim();
   const roomRepositoryPromise = options.roomRepository
     ? Promise.resolve(options.roomRepository)
     : createDynamoRoomRepository(options.dynamo || {});
@@ -1976,7 +2155,22 @@ function createHandler(options = {}) {
             return handleGetChampionsRecent(event);
           }
         case "getDeck":
-          return handleGetDeck(matched.params[0]);
+          {
+            requireAdminPasscode(event, adminSharedPasscode);
+            const repository = await roomRepositoryPromise;
+            const deck = await repository.getDeck(matched.params[0]);
+            return ok(deck);
+          }
+        case "putDeck": {
+          const body = parseBody(event);
+          if (!body) {
+            return fail(400, "INVALID_JSON", "JSON の形式が不正です。");
+          }
+          requireAdminPasscode(event, adminSharedPasscode);
+          const repository = await roomRepositoryPromise;
+          const deck = await repository.replaceDeck(matched.params[0], body);
+          return ok(deck);
+        }
         case "createRoom": {
           const body = parseBody(event);
           if (!body) {

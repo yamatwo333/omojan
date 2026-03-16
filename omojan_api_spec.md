@@ -655,9 +655,17 @@ X-Omojan-Player-Token: pt_...
 
 `GET /v1/admin/decks/{deckId}`
 
+Header:
+
+`X-Omojan-Admin-Passcode: <shared-passcode>`
+
 ### 9-2. デッキ更新
 
 `PUT /v1/admin/decks/{deckId}`
+
+Header:
+
+`X-Omojan-Admin-Passcode: <shared-passcode>`
 
 #### Request
 

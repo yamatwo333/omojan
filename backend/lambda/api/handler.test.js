@@ -20,10 +20,17 @@ async function parseResponse(response) {
   return JSON.parse(response.body || "{}");
 }
 
-function createTestHandler() {
+function createTestHandler(options = {}) {
   return createHandler({
-    roomRepository: createMemoryRoomRepository()
+    roomRepository: createMemoryRoomRepository(),
+    adminSharedPasscode: options.adminSharedPasscode || ""
   });
+}
+
+function createAdminHeaders(passcode) {
+  return {
+    "X-Omojan-Admin-Passcode": passcode
+  };
 }
 
 async function getRoom(handler, roomId, playerToken) {
@@ -345,6 +352,8 @@ test("GET /v1/health returns lambda scaffold metadata", async () => {
   assert.equal(body.data.mode, "lambda-scaffold");
   assert.equal(body.data.tableName, "OmojanApp");
   assert.deepEqual(body.data.implementedRoutes, [
+    "admin:decks:get",
+    "admin:decks:put",
     "rooms:create",
     "rooms:join",
     "rooms:get",
@@ -388,6 +397,63 @@ test("GET /v1/champions/recent returns recent items", async () => {
   assert.equal(response.statusCode, 200);
   assert.equal(body.ok, true);
   assert.equal(body.data.items.length, 2);
+});
+
+test("admin deck API requires passcode and updated deck is used on next game start", async () => {
+  const adminPasscode = "test-admin-passcode";
+  const handler = createTestHandler({ adminSharedPasscode: adminPasscode });
+
+  let response = await handler(createEvent("GET", "/v1/admin/decks/default"));
+  let body = await parseResponse(response);
+  assert.equal(response.statusCode, 401);
+  assert.equal(body.ok, false);
+  assert.equal(body.error.code, "ADMIN_PASSCODE_REQUIRED");
+
+  response = await handler(
+    createEvent("GET", "/v1/admin/decks/default", {
+      headers: createAdminHeaders("wrong-passcode")
+    })
+  );
+  body = await parseResponse(response);
+  assert.equal(response.statusCode, 403);
+  assert.equal(body.ok, false);
+  assert.equal(body.error.code, "ADMIN_PASSCODE_INVALID");
+
+  response = await handler(
+    createEvent("GET", "/v1/admin/decks/default", {
+      headers: createAdminHeaders(adminPasscode)
+    })
+  );
+  body = await parseResponse(response);
+  assert.equal(response.statusCode, 200);
+  assert.equal(body.ok, true);
+  const previousVersion = body.data.version;
+
+  response = await handler(
+    createEvent("PUT", "/v1/admin/decks/default", {
+      headers: createAdminHeaders(adminPasscode),
+      body: {
+        deckName: "default",
+        tiles: [
+          { tileId: "tile_admin_001", text: "超会議", enabled: true },
+          { text: "大渋滞", enabled: true }
+        ]
+      }
+    })
+  );
+  body = await parseResponse(response);
+  assert.equal(response.statusCode, 200);
+  assert.equal(body.ok, true);
+  assert.equal(body.data.version, previousVersion + 1);
+  assert.equal(body.data.tiles.length, 2);
+  assert.equal(body.data.tiles[0].text, "超会議");
+  assert.equal(body.data.tiles[1].text, "大渋滞");
+  assert.match(body.data.tiles[1].tileId, /^tile_/);
+
+  const session = await createSession(handler, ["ホスト", "ゲストA"]);
+  const room = await startGame(handler, session, "ホスト");
+  const handWords = new Set(room.myHand.map((tile) => tile.text));
+  assert.deepEqual([...handWords].sort(), ["大渋滞", "超会議"]);
 });
 
 test("room create/join/get/reconnect work in lobby", async () => {

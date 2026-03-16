@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>おもじゃん 管理画面</title>
+    <style>
+      :root {
+        --paper: #f6efdb;
+        --paper-deep: #ecdfb7;
+        --ink: #1f1812;
+        --green: #24452f;
+        --gold: #b28a32;
+        --red: #b84431;
+        --line: rgba(118, 89, 63, 0.24);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        font-family: "Hiragino Sans", "Yu Gothic", sans-serif;
+        background:
+          radial-gradient(circle at top, rgba(255, 255, 255, 0.7), transparent 34%),
+          repeating-linear-gradient(
+            -35deg,
+            rgba(102, 86, 58, 0.04) 0,
+            rgba(102, 86, 58, 0.04) 2px,
+            transparent 2px,
+            transparent 15px
+          ),
+          linear-gradient(180deg, #f7f1df, #ecdfb7);
+      }
+
+      main {
+        max-width: 920px;
+        margin: 0 auto;
+        padding: 24px 16px 56px;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      .hero {
+        display: grid;
+        gap: 8px;
+      }
+
+      .hero h1 {
+        color: var(--green);
+        font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+        font-size: clamp(30px, 5vw, 42px);
+      }
+
+      .hero p {
+        line-height: 1.7;
+      }
+
+      .meta {
+        display: inline-flex;
+        width: fit-content;
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: rgba(36, 69, 47, 0.08);
+        color: var(--green);
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .stack {
+        display: grid;
+        gap: 16px;
+        margin-top: 22px;
+      }
+
+      .card {
+        padding: 18px;
+        border-radius: 22px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.72);
+        box-shadow: 0 14px 32px rgba(29, 22, 15, 0.08);
+      }
+
+      .card h2 {
+        color: var(--green);
+        font-size: 20px;
+      }
+
+      .field-grid {
+        display: grid;
+        gap: 12px;
+        margin-top: 14px;
+      }
+
+      .field {
+        display: grid;
+        gap: 6px;
+      }
+
+      .field label {
+        color: var(--green);
+        font-weight: 700;
+        font-size: 14px;
+      }
+
+      .input {
+        width: 100%;
+        padding: 12px 14px;
+        border: 1px solid rgba(100, 73, 47, 0.18);
+        border-radius: 14px;
+        background: rgba(255, 250, 242, 0.95);
+        color: var(--ink);
+        font: inherit;
+      }
+
+      .input[readonly] {
+        color: rgba(31, 24, 18, 0.72);
+      }
+
+      .button-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 14px;
+      }
+
+      button {
+        border: 0;
+        cursor: pointer;
+        font: inherit;
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 140px;
+        padding: 13px 16px;
+        border-radius: 16px;
+        font-weight: 800;
+      }
+
+      .btn.primary {
+        background: linear-gradient(180deg, #c7523d, #b0402d);
+        color: #fff6ef;
+      }
+
+      .btn.secondary {
+        background: rgba(255, 250, 238, 0.96);
+        color: var(--green);
+        border: 1px solid rgba(184, 138, 50, 0.38);
+      }
+
+      .btn:disabled {
+        cursor: default;
+        opacity: 0.5;
+      }
+
+      .summary-pills {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 14px;
+      }
+
+      .summary-pill {
+        display: inline-flex;
+        gap: 8px;
+        align-items: center;
+        padding: 10px 12px;
+        border-radius: 999px;
+        background: rgba(36, 69, 47, 0.08);
+        color: var(--green);
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .summary-pill strong {
+        color: var(--ink);
+      }
+
+      .message,
+      .error {
+        margin-top: 14px;
+        padding: 12px 14px;
+        border-radius: 14px;
+        line-height: 1.6;
+      }
+
+      .message {
+        background: rgba(36, 69, 47, 0.08);
+        color: var(--green);
+      }
+
+      .error {
+        background: rgba(184, 68, 49, 0.1);
+        color: #8b2319;
+      }
+
+      .tile-list {
+        display: grid;
+        gap: 12px;
+        margin-top: 16px;
+      }
+
+      .tile-row {
+        display: grid;
+        gap: 10px;
+        padding: 14px;
+        border-radius: 18px;
+        border: 1px solid rgba(100, 73, 47, 0.14);
+        background: rgba(255, 252, 246, 0.92);
+      }
+
+      .tile-row header {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .tile-id {
+        color: rgba(31, 24, 18, 0.62);
+        font-size: 12px;
+      }
+
+      .tile-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .toggle {
+        display: inline-flex;
+        gap: 8px;
+        align-items: center;
+        color: var(--green);
+        font-weight: 700;
+        font-size: 14px;
+      }
+
+      .tile-remove {
+        padding: 10px 12px;
+        border-radius: 12px;
+        background: rgba(184, 68, 49, 0.1);
+        color: var(--red);
+        font-weight: 800;
+      }
+
+      .hint {
+        margin-top: 10px;
+        color: rgba(31, 24, 18, 0.68);
+        font-size: 13px;
+      }
+
+      @media (max-width: 640px) {
+        main {
+          padding-inline: 12px;
+        }
+
+        .card {
+          padding: 16px;
+        }
+
+        .tile-row header {
+          display: grid;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="hero">
+        <h1>おもじゃん 管理画面</h1>
+        <p>次の新規ゲームから使うデッキを編集します。</p>
+        <div class="meta" id="apiMeta">API 接続先を確認中</div>
+      </section>
+
+      <section class="stack">
+        <section class="card">
+          <h2>接続</h2>
+          <div class="field-grid">
+            <div class="field">
+              <label for="apiBaseUrl">API</label>
+              <input id="apiBaseUrl" class="input" type="text" readonly />
+            </div>
+            <div class="field">
+              <label for="adminPasscode">共通パスコード</label>
+              <input id="adminPasscode" class="input" type="password" placeholder="管理用パスコード" />
+            </div>
+          </div>
+          <div class="button-row">
+            <button class="btn primary" id="loadDeckBtn" type="button">デッキを読む</button>
+            <button class="btn secondary" id="clearPasscodeBtn" type="button">パスコードを消す</button>
+          </div>
+          <div id="feedback"></div>
+        </section>
+
+        <section class="card" id="deckCard" hidden>
+          <h2>default デッキ</h2>
+          <div class="field-grid">
+            <div class="field">
+              <label for="deckName">デッキ名</label>
+              <input id="deckName" class="input" type="text" maxlength="40" />
+            </div>
+          </div>
+
+          <div class="summary-pills" id="summaryPills"></div>
+
+          <div class="button-row">
+            <button class="btn primary" id="saveDeckBtn" type="button">保存する</button>
+            <button class="btn secondary" id="reloadDeckBtn" type="button">読み直す</button>
+            <button class="btn secondary" id="addTileBtn" type="button">牌を追加</button>
+          </div>
+
+          <div class="hint">空のワードは保存できません。削除したい牌は行ごと消します。</div>
+          <div class="tile-list" id="tileList"></div>
+        </section>
+      </section>
+    </main>
+
+    <script>
+      const LOCAL_API_BASE_URL = "http://127.0.0.1:8788/v1";
+      const PUBLIC_DEV_API_BASE_URL = "https://nglzfg3co5.execute-api.ap-northeast-1.amazonaws.com/dev/v1";
+      const PASSCODE_KEY = "omojan-admin-passcode";
+
+      const state = {
+        apiBaseUrl: "",
+        passcode: "",
+        deck: null,
+        pending: false,
+        feedback: "",
+        error: ""
+      };
+
+      const els = {
+        apiMeta: document.getElementById("apiMeta"),
+        apiBaseUrl: document.getElementById("apiBaseUrl"),
+        adminPasscode: document.getElementById("adminPasscode"),
+        loadDeckBtn: document.getElementById("loadDeckBtn"),
+        clearPasscodeBtn: document.getElementById("clearPasscodeBtn"),
+        feedback: document.getElementById("feedback"),
+        deckCard: document.getElementById("deckCard"),
+        deckName: document.getElementById("deckName"),
+        summaryPills: document.getElementById("summaryPills"),
+        saveDeckBtn: document.getElementById("saveDeckBtn"),
+        reloadDeckBtn: document.getElementById("reloadDeckBtn"),
+        addTileBtn: document.getElementById("addTileBtn"),
+        tileList: document.getElementById("tileList")
+      };
+
+      function escapeHtml(value) {
+        return String(value)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#39;");
+      }
+
+      function resolveDefaultApiBaseUrl() {
+        const { hostname, protocol } = window.location;
+        if (protocol === "file:") {
+          return LOCAL_API_BASE_URL;
+        }
+        if (hostname === "localhost" || hostname === "127.0.0.1") {
+          return LOCAL_API_BASE_URL;
+        }
+        return PUBLIC_DEV_API_BASE_URL;
+      }
+
+      function createLocalTile() {
+        return {
+          tileId: `tile_local_${Date.now()}_${Math.random().toString(16).slice(2, 6)}`,
+          text: "",
+          enabled: true
+        };
+      }
+
+      function setFeedback(message = "", isError = false) {
+        state.feedback = isError ? "" : message;
+        state.error = isError ? message : "";
+      }
+
+      function buildSummaryPills() {
+        if (!state.deck) {
+          return "";
+        }
+        const enabledCount = state.deck.tiles.filter((tile) => tile.enabled !== false).length;
+        return `
+          <span class="summary-pill">version<strong>${escapeHtml(state.deck.version)}</strong></span>
+          <span class="summary-pill">総数<strong>${escapeHtml(state.deck.tiles.length)}</strong></span>
+          <span class="summary-pill">有効<strong>${escapeHtml(enabledCount)}</strong></span>
+        `;
+      }
+
+      function renderFeedback() {
+        if (state.error) {
+          els.feedback.innerHTML = `<div class="error">${escapeHtml(state.error)}</div>`;
+          return;
+        }
+        if (state.feedback) {
+          els.feedback.innerHTML = `<div class="message">${escapeHtml(state.feedback)}</div>`;
+          return;
+        }
+        els.feedback.innerHTML = "";
+      }
+
+      function renderTiles() {
+        if (!state.deck) {
+          els.tileList.innerHTML = "";
+          return;
+        }
+        els.tileList.innerHTML = state.deck.tiles
+          .map(
+            (tile, index) => `
+              <article class="tile-row">
+                <header>
+                  <div>
+                    <strong>牌 ${index + 1}</strong>
+                    <div class="tile-id">${escapeHtml(tile.tileId || "新規牌")}</div>
+                  </div>
+                  <button class="tile-remove" type="button" data-remove-index="${index}">削除</button>
+                </header>
+                <div class="field">
+                  <label for="tile-text-${index}">ワード</label>
+                  <input
+                    id="tile-text-${index}"
+                    class="input"
+                    type="text"
+                    maxlength="40"
+                    value="${escapeHtml(tile.text || "")}"
+                    data-tile-text-index="${index}"
+                  />
+                </div>
+                <div class="tile-meta">
+                  <label class="toggle">
+                    <input type="checkbox" data-tile-enabled-index="${index}" ${tile.enabled !== false ? "checked" : ""} />
+                    有効
+                  </label>
+                </div>
+              </article>
+            `
+          )
+          .join("");
+      }
+
+      function render() {
+        els.apiBaseUrl.value = state.apiBaseUrl;
+        els.apiMeta.textContent = `API: ${state.apiBaseUrl}`;
+        els.adminPasscode.value = state.passcode;
+        els.loadDeckBtn.disabled = state.pending;
+        els.clearPasscodeBtn.disabled = state.pending;
+        els.saveDeckBtn.disabled = state.pending || !state.deck;
+        els.reloadDeckBtn.disabled = state.pending || !state.deck;
+        els.addTileBtn.disabled = state.pending || !state.deck;
+        renderFeedback();
+
+        if (!state.deck) {
+          els.deckCard.hidden = true;
+          return;
+        }
+
+        els.deckCard.hidden = false;
+        els.deckName.value = state.deck.deckName || "";
+        els.summaryPills.innerHTML = buildSummaryPills();
+        renderTiles();
+      }
+
+      async function fetchJson(pathname, options = {}) {
+        const response = await fetch(`${state.apiBaseUrl}${pathname}`, {
+          method: options.method || "GET",
+          headers: {
+            "content-type": "application/json",
+            "X-Omojan-Admin-Passcode": state.passcode,
+            ...(options.headers || {})
+          },
+          body: options.body ? JSON.stringify(options.body) : undefined
+        });
+        const payload = await response.json();
+        if (!response.ok || payload.ok === false) {
+          throw new Error(payload?.error?.message || "通信に失敗しました。");
+        }
+        return payload.data;
+      }
+
+      function validateDeckBeforeSave() {
+        if (!state.passcode.trim()) {
+          throw new Error("共通パスコードを入力してください。");
+        }
+        if (!state.deck) {
+          throw new Error("先にデッキを読んでください。");
+        }
+        if (!state.deck.tiles.length) {
+          throw new Error("牌を1枚以上入れてください。");
+        }
+        for (const [index, tile] of state.deck.tiles.entries()) {
+          if (!String(tile.text || "").trim()) {
+            throw new Error(`牌 ${index + 1} のワードを入力してください。`);
+          }
+        }
+      }
+
+      async function loadDeck() {
+        state.pending = true;
+        setFeedback("");
+        render();
+        try {
+          const data = await fetchJson("/admin/decks/default");
+          state.deck = {
+            deckId: data.deckId,
+            deckName: data.deckName,
+            version: data.version,
+            tiles: (data.tiles || []).map((tile) => ({
+              tileId: tile.tileId,
+              text: tile.text,
+              enabled: tile.enabled !== false
+            }))
+          };
+          window.localStorage.setItem(PASSCODE_KEY, state.passcode);
+          setFeedback("デッキを読み込みました。");
+        } catch (error) {
+          setFeedback(error instanceof Error ? error.message : "デッキの取得に失敗しました。", true);
+        } finally {
+          state.pending = false;
+          render();
+        }
+      }
+
+      async function saveDeck() {
+        try {
+          validateDeckBeforeSave();
+        } catch (error) {
+          setFeedback(error instanceof Error ? error.message : "保存前チェックに失敗しました。", true);
+          render();
+          return;
+        }
+
+        state.pending = true;
+        setFeedback("");
+        render();
+        try {
+          const data = await fetchJson("/admin/decks/default", {
+            method: "PUT",
+            body: {
+              deckName: state.deck.deckName,
+              tiles: state.deck.tiles.map((tile) => ({
+                tileId: tile.tileId,
+                text: String(tile.text || "").trim(),
+                enabled: tile.enabled !== false
+              }))
+            }
+          });
+          state.deck = {
+            deckId: data.deckId,
+            deckName: data.deckName,
+            version: data.version,
+            tiles: (data.tiles || []).map((tile) => ({
+              tileId: tile.tileId,
+              text: tile.text,
+              enabled: tile.enabled !== false
+            }))
+          };
+          window.localStorage.setItem(PASSCODE_KEY, state.passcode);
+          setFeedback("保存しました。次の新規ゲームから反映されます。");
+        } catch (error) {
+          setFeedback(error instanceof Error ? error.message : "保存に失敗しました。", true);
+        } finally {
+          state.pending = false;
+          render();
+        }
+      }
+
+      document.addEventListener("input", (event) => {
+        const target = event.target;
+        if (target.id === "adminPasscode") {
+          state.passcode = target.value;
+          return;
+        }
+        if (target.id === "deckName" && state.deck) {
+          state.deck.deckName = target.value;
+          return;
+        }
+        if (target.matches("[data-tile-text-index]") && state.deck) {
+          const index = Number(target.dataset.tileTextIndex);
+          state.deck.tiles[index].text = target.value;
+          return;
+        }
+        if (target.matches("[data-tile-enabled-index]") && state.deck) {
+          const index = Number(target.dataset.tileEnabledIndex);
+          state.deck.tiles[index].enabled = target.checked;
+        }
+      });
+
+      document.addEventListener("click", async (event) => {
+        const removeButton = event.target.closest("[data-remove-index]");
+        if (removeButton && state.deck) {
+          const index = Number(removeButton.dataset.removeIndex);
+          state.deck.tiles.splice(index, 1);
+          render();
+          return;
+        }
+
+        if (event.target.id === "loadDeckBtn") {
+          await loadDeck();
+          return;
+        }
+
+        if (event.target.id === "saveDeckBtn") {
+          await saveDeck();
+          return;
+        }
+
+        if (event.target.id === "reloadDeckBtn") {
+          await loadDeck();
+          return;
+        }
+
+        if (event.target.id === "addTileBtn" && state.deck) {
+          state.deck.tiles.push(createLocalTile());
+          render();
+          return;
+        }
+
+        if (event.target.id === "clearPasscodeBtn") {
+          state.passcode = "";
+          window.localStorage.removeItem(PASSCODE_KEY);
+          setFeedback("保存したパスコードを消しました。");
+          render();
+        }
+      });
+
+      function initialize() {
+        const params = new URLSearchParams(window.location.search);
+        state.apiBaseUrl = (params.get("apiBaseUrl") || resolveDefaultApiBaseUrl()).replace(/\/$/, "");
+        state.passcode = window.localStorage.getItem(PASSCODE_KEY) || "";
+        render();
+        if (state.passcode) {
+          loadDeck();
+        }
+      }
+
+      initialize();
+    </script>
+  </body>
+</html>

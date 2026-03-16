@@ -9,6 +9,12 @@ STACK_NAME="${STACK_NAME:-omojan-dev}"
 STAGE_NAME="${STAGE_NAME:-dev}"
 APP_TABLE_NAME="${APP_TABLE_NAME:-OmojanApp-dev}"
 ALLOWED_ORIGIN="${ALLOWED_ORIGIN:-*}"
+ADMIN_SHARED_PASSCODE="${ADMIN_SHARED_PASSCODE:-}"
+
+if [ -z "$ADMIN_SHARED_PASSCODE" ]; then
+  echo "ADMIN_SHARED_PASSCODE is required"
+  exit 1
+fi
 
 ACCOUNT_ID="$(aws sts get-caller-identity --profile "$PROFILE" --region "$REGION" --query Account --output text)"
 ARTIFACT_BUCKET_NAME="${ARTIFACT_BUCKET_NAME:-omojan-artifacts-${ACCOUNT_ID}-${REGION}}"
@@ -59,6 +65,7 @@ aws cloudformation deploy \
     "StageName=${STAGE_NAME}" \
     "AllowedOrigin=${ALLOWED_ORIGIN}" \
     "AppTableName=${APP_TABLE_NAME}" \
+    "AdminSharedPasscode=${ADMIN_SHARED_PASSCODE}" \
   --profile "$PROFILE" \
   --region "$REGION"
 

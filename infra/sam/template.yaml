@@ -12,6 +12,9 @@ Parameters:
   AppTableName:
     Type: String
     Default: OmojanApp
+  AdminSharedPasscode:
+    Type: String
+    NoEcho: true
 
 Globals:
   Function:
@@ -30,9 +33,11 @@ Resources:
         AllowHeaders:
           - content-type
           - x-omojan-player-token
+          - x-omojan-admin-passcode
         AllowMethods:
           - GET
           - POST
+          - PUT
           - OPTIONS
 
   OmojanApiFunction:
@@ -45,6 +50,7 @@ Resources:
         Variables:
           APP_STAGE: !Ref StageName
           APP_TABLE_NAME: !Ref AppTableName
+          ADMIN_SHARED_PASSCODE: !Ref AdminSharedPasscode
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref OmojanAppTable

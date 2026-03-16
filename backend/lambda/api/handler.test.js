@@ -47,6 +47,21 @@ async function getRoom(handler, roomId, playerToken) {
   return body.data.room;
 }
 
+async function getRoomSnapshot(handler, roomId, playerToken, query = {}) {
+  const response = await handler(
+    createEvent("GET", `/v1/rooms/${roomId}`, {
+      headers: {
+        "X-Omojan-Player-Token": playerToken
+      },
+      query
+    })
+  );
+  return {
+    response,
+    body: await parseResponse(response)
+  };
+}
+
 async function createSession(handler, displayNames = ["ホスト", "ゲストA", "ゲストB"]) {
   const createResponse = await handler(
     createEvent("POST", "/v1/rooms", {
@@ -632,6 +647,47 @@ test("room create/join/get/reconnect work in lobby", async () => {
   assert.equal(reconnectResponse.statusCode, 200);
   assert.equal(reconnectBody.ok, true);
   assert.equal(reconnectBody.data.room.me.displayName, "たなか");
+});
+
+test("get room returns notModified when client revision is current", async () => {
+  const handler = createTestHandler();
+  const session = await createSession(handler, ["ホスト", "ゲスト"]);
+  const host = findPlayer(session, "ホスト");
+
+  const initial = await getRoomSnapshot(handler, session.roomId, host.playerToken);
+  assert.equal(initial.response.statusCode, 200);
+  assert.equal(initial.body.ok, true);
+  assert.equal(typeof initial.body.data.room.revision, "number");
+
+  const unchanged = await getRoomSnapshot(handler, session.roomId, host.playerToken, {
+    sinceRevision: String(initial.body.data.room.revision)
+  });
+  assert.equal(unchanged.response.statusCode, 200);
+  assert.equal(unchanged.body.ok, true);
+  assert.equal(unchanged.body.data.notModified, true);
+  assert.equal(unchanged.body.data.revision, initial.body.data.room.revision);
+  assert.equal("room" in unchanged.body.data, false);
+
+  const updateResponse = await handler(
+    createEvent("POST", `/v1/rooms/${session.roomId}/start-player`, {
+      headers: {
+        "X-Omojan-Player-Token": host.playerToken
+      },
+      body: {
+        startPlayerId: host.playerId
+      }
+    })
+  );
+  assert.equal(updateResponse.statusCode, 200);
+
+  const changed = await getRoomSnapshot(handler, session.roomId, host.playerToken, {
+    sinceRevision: String(initial.body.data.room.revision)
+  });
+  assert.equal(changed.response.statusCode, 200);
+  assert.equal(changed.body.ok, true);
+  assert.equal(changed.body.data.notModified, undefined);
+  assert.equal(changed.body.data.room.startPlayerId, host.playerId);
+  assert.ok(changed.body.data.room.revision > initial.body.data.room.revision);
 });
 
 test("start-player and start enter round_submit with dealt hands", async () => {

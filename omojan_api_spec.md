@@ -369,9 +369,32 @@ X-Omojan-Player-Token: pt_...
 - 用途
   - 最新状態の取得
 
+#### Query
+
+```txt
+sinceRevision=12
+```
+
+- 任意
+- クライアントが最後に持っている `room.revision`
+- サーバー側 revision が同じなら `notModified: true` を返す
+- 変化がある場合だけ通常の `RoomResponse` を返す
+
 #### Response
 
 - `RoomResponse`
+- 変更がない場合
+
+```json
+{
+  "ok": true,
+  "data": {
+    "roomId": "room_xxx",
+    "revision": 12,
+    "notModified": true
+  }
+}
+```
 
 ### 5-5. 開始順設定
 
@@ -710,7 +733,8 @@ Header:
 初版では次の取得方針で十分です。
 
 - 操作成功後は即時 `GET /rooms/{roomId}`
-- 待機画面では 3〜5 秒おきに `GET /rooms/{roomId}`
+- 待機画面では可変間隔で `GET /rooms/{roomId}?sinceRevision=...`
+- revision が変わらない間は `notModified: true` を返し、room 全体は再送しない
 
 ## 11. 実装上の注意
 

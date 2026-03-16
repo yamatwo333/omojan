@@ -204,6 +204,11 @@ function normalizePlayerCount(value) {
   return [2, 3, 4].includes(count) ? count : 4;
 }
 
+function normalizeKnownRevision(value) {
+  const revision = Number(value);
+  return Number.isInteger(revision) && revision >= 1 ? revision : null;
+}
+
 function hashPlayerToken(playerToken) {
   return `sha256:${crypto.createHash("sha256").update(playerToken).digest("hex")}`;
 }
@@ -1554,7 +1559,7 @@ async function createDynamoRoomRepository(options = {}) {
       throw domainError(409, "CONFLICT_RETRY", "参加処理が競合しました。もう一度お試しください。", true);
     },
 
-    async getRoom(roomId, playerToken) {
+    async getRoom(roomId, playerToken, options = {}) {
       const room = await getRoomItem(roomId);
       if (!room) {
         throw domainError(404, "ROOM_NOT_FOUND", "指定された room は存在しません。");
@@ -1563,7 +1568,10 @@ async function createDynamoRoomRepository(options = {}) {
       if (!mePlayer) {
         throw domainError(401, "PLAYER_TOKEN_INVALID", "playerToken が必要です。");
       }
-      return { room, mePlayer };
+      if (options.sinceRevision !== null && options.sinceRevision === room.revision) {
+        return { room, mePlayer, notModified: true, revision: room.revision };
+      }
+      return { room, mePlayer, notModified: false, revision: room.revision };
     },
 
     async reconnectRoom(roomId, playerToken) {
@@ -2090,7 +2098,7 @@ function createMemoryRoomRepository() {
       return { room: clone(updatedRoom), mePlayer: clone(mePlayer), playerToken };
     },
 
-    async getRoom(roomId, playerToken) {
+    async getRoom(roomId, playerToken, options = {}) {
       const room = rooms.get(roomId);
       if (!room) {
         throw domainError(404, "ROOM_NOT_FOUND", "指定された room は存在しません。");
@@ -2099,7 +2107,10 @@ function createMemoryRoomRepository() {
       if (!mePlayer) {
         throw domainError(401, "PLAYER_TOKEN_INVALID", "playerToken が必要です。");
       }
-      return { room: clone(room), mePlayer: clone(mePlayer) };
+      if (options.sinceRevision !== null && options.sinceRevision === room.revision) {
+        return { room: clone(room), mePlayer: clone(mePlayer), notModified: true, revision: room.revision };
+      }
+      return { room: clone(room), mePlayer: clone(mePlayer), notModified: false, revision: room.revision };
     },
 
     async reconnectRoom(roomId, playerToken) {
@@ -2417,7 +2428,15 @@ function createHandler(options = {}) {
           if (!playerToken) {
             return fail(401, "PLAYER_TOKEN_INVALID", "playerToken が必要です。");
           }
-          const result = await repository.getRoom(matched.params[0], playerToken);
+          const sinceRevision = normalizeKnownRevision(event.queryStringParameters?.sinceRevision);
+          const result = await repository.getRoom(matched.params[0], playerToken, { sinceRevision });
+          if (result.notModified) {
+            return ok({
+              roomId: matched.params[0],
+              revision: result.revision,
+              notModified: true
+            });
+          }
           return ok(toRoomPayload(result.room, result.mePlayer));
         }
         case "reconnectRoom": {

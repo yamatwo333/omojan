@@ -1920,12 +1920,20 @@
           return;
         }
         try {
-          const payload = await apiRequest(`/rooms/${encodeURIComponent(state.roomId)}`);
+          const knownRevision = Number(state.room?.revision);
+          const query = Number.isInteger(knownRevision) && knownRevision >= 1 ? `?sinceRevision=${knownRevision}` : "";
+          const payload = await apiRequest(`/rooms/${encodeURIComponent(state.roomId)}${query}`);
+          if (payload.data?.notModified) {
+            state.lastSyncAt = new Date().toISOString();
+            state.pollFailureCount = 0;
+            return false;
+          }
           setRoom(payload.data.room);
           state.pollFailureCount = 0;
+          return true;
         } catch (error) {
           if (recoverLostSession(error, "refresh")) {
-            return;
+            return false;
           }
           throw error;
         }

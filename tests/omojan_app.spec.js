@@ -176,6 +176,18 @@ async function reconnect(page) {
   await expect(page.locator("#statusLabel")).toContainText("接続中");
 }
 
+async function reopenWithStoredSession(browser, context, expectHeading) {
+  const storageState = await context.storageState();
+  await context.close();
+  const reopenedContext = await browser.newContext({ storageState });
+  const page = await reopenedContext.newPage();
+  await page.goto(STATIC_URL);
+  if (expectHeading) {
+    await expect(page.getByRole("heading", { name: expectHeading })).toBeVisible({ timeout: 10000 });
+  }
+  return { context: reopenedContext, page };
+}
+
 async function submitCurrentVote(page, action = "submit-vote") {
   const candidate = page.locator(
     action === "submit-final-vote" ? "[data-final-vote-id]:not([disabled])" : "[data-vote-id]:not([disabled])"
@@ -318,6 +330,49 @@ test("app can complete a full game through final champion and restart", async ({
   await reconnect(guest);
   await expect(host.getByRole("heading", { name: "ルーム待機中" })).toBeVisible({ timeout: 10000 });
   await expect(guest.getByRole("heading", { name: "ルーム待機中" })).toBeVisible({ timeout: 10000 });
+
+  await hostContext.close();
+  await guestContext.close();
+});
+
+test("app restores session after reopening the browser context", async ({ browser }) => {
+  test.setTimeout(60000);
+
+  let { hostContext, guestContext, host, guest } = await createTwoPlayerRoom(browser);
+
+  await host.getByRole("button", { name: "この順で開始" }).click();
+  await expect(host.locator("body")).toContainText("HostFlowTest の手番");
+  await expect(guest.locator("body")).toContainText("HostFlowTest の手番");
+
+  ({ context: guestContext, page: guest } = await reopenWithStoredSession(browser, guestContext, "待機"));
+  await expect(guest.locator("body")).toContainText("HostFlowTest の手番");
+
+  await submitCurrentDraft(host);
+
+  ({ context: guestContext, page: guest } = await reopenWithStoredSession(browser, guestContext));
+  await expect(guest.locator("body")).toContainText("GuestFlowTest の手番");
+  await submitCurrentDraft(guest);
+
+  ({ context: hostContext, page: host } = await reopenWithStoredSession(browser, hostContext, "このラウンドで一番おもしろいワードに投票"));
+  ({ context: guestContext, page: guest } = await reopenWithStoredSession(browser, guestContext, "このラウンドで一番おもしろいワードに投票"));
+
+  await submitCurrentVote(host, "submit-vote");
+  await submitCurrentVote(guest, "submit-vote");
+
+  ({ context: hostContext, page: host } = await reopenWithStoredSession(browser, hostContext, "再投票"));
+  ({ context: guestContext, page: guest } = await reopenWithStoredSession(browser, guestContext, "再投票"));
+
+  await host.locator("[data-revote-id]:not([disabled])").first().click();
+  await guest.locator("[data-revote-id]:not([disabled])").first().click();
+  await host.locator('button[data-action="submit-revote"]').click();
+  await guest.locator('button[data-action="submit-revote"]').click();
+
+  ({ context: hostContext, page: host } = await reopenWithStoredSession(browser, hostContext, "ホスト裁定"));
+  await host.locator("[data-host-pick-id]", { hasText: "GuestFlowTest" }).click();
+  await host.locator('button[data-action="submit-host-pick"]').click();
+
+  ({ context: guestContext, page: guest } = await reopenWithStoredSession(browser, guestContext, "ラウンド1"));
+  await expect(guest.locator("body")).toContainText("票数内訳");
 
   await hostContext.close();
   await guestContext.close();

@@ -2413,117 +2413,119 @@
         }
       }
 
-      document.addEventListener("input", (event) => {
-        const field = event.target.closest("[data-field]");
-        if (!field) {
+      function clearDecisionState() {
+        state.selectedVoteTarget = "";
+        state.selectedHostTarget = "";
+        state.selectedFinalTarget = "";
+      }
+
+      function toggleDraftTile(tileId) {
+        const room = state.room;
+        const tile = room?.myHand.find((item) => item.tileId === tileId);
+        if (!tile || tile.isUsed) {
           return;
         }
-        updateFieldState(field.dataset.field, field.value);
-      });
-
-      document.addEventListener("click", async (event) => {
-        const playerCountButton = event.target.closest("[data-player-count]");
-        if (playerCountButton) {
-          state.playerCount = Number(playerCountButton.dataset.playerCount);
-          render();
-          return;
+        if (state.draftSelectedTileIds.includes(tileId)) {
+          state.draftSelectedTileIds = state.draftSelectedTileIds.filter((id) => id !== tileId);
+        } else if (state.draftSelectedTileIds.length >= 2) {
+          state.draftSelectedTileIds = [state.draftSelectedTileIds[1], tileId];
+        } else {
+          state.draftSelectedTileIds = [...state.draftSelectedTileIds, tileId];
         }
+        sanitizeManualBreaks(room);
+        render();
+      }
 
-        const startPlayerButton = event.target.closest("[data-start-player-id]");
-        if (startPlayerButton) {
-          state.selectedStartPlayerId = startPlayerButton.dataset.startPlayerId;
-          render();
-          return;
+      function toggleManualBreak(point) {
+        if (state.draftManualBreaks.includes(point)) {
+          state.draftManualBreaks = state.draftManualBreaks.filter((value) => value !== point);
+        } else {
+          state.draftManualBreaks = [...state.draftManualBreaks, point];
         }
+        render();
+      }
 
-        const tileButton = event.target.closest("[data-tile-id]");
-        if (tileButton) {
-          const tileId = tileButton.dataset.tileId;
-          const room = state.room;
-          const tile = room?.myHand.find((item) => item.tileId === tileId);
-          if (!tile || tile.isUsed) {
-            return;
+      const selectionClickHandlers = [
+        {
+          selector: "[data-player-count]",
+          handle: (button) => {
+            state.playerCount = Number(button.dataset.playerCount);
+            render();
           }
-          if (state.draftSelectedTileIds.includes(tileId)) {
-            state.draftSelectedTileIds = state.draftSelectedTileIds.filter((id) => id !== tileId);
-          } else if (state.draftSelectedTileIds.length >= 2) {
-            state.draftSelectedTileIds = [state.draftSelectedTileIds[1], tileId];
-          } else {
-            state.draftSelectedTileIds = [...state.draftSelectedTileIds, tileId];
+        },
+        {
+          selector: "[data-start-player-id]",
+          handle: (button) => {
+            state.selectedStartPlayerId = button.dataset.startPlayerId;
+            render();
           }
-          sanitizeManualBreaks(room);
-          render();
-          return;
-        }
-
-        const lineModeButton = event.target.closest("[data-line-mode]");
-        if (lineModeButton) {
-          state.draftLineMode = lineModeButton.dataset.lineMode;
-          sanitizeManualBreaks();
-          render();
-          return;
-        }
-
-        const fontButton = event.target.closest("[data-font-id]");
-        if (fontButton) {
-          state.draftFontId = fontButton.dataset.fontId;
-          render();
-          return;
-        }
-
-        const breakButton = event.target.closest("[data-break]");
-        if (breakButton) {
-          const point = Number(breakButton.dataset.break);
-          if (state.draftManualBreaks.includes(point)) {
-            state.draftManualBreaks = state.draftManualBreaks.filter((value) => value !== point);
-          } else {
-            state.draftManualBreaks = [...state.draftManualBreaks, point];
+        },
+        {
+          selector: "[data-tile-id]",
+          handle: (button) => {
+            toggleDraftTile(button.dataset.tileId);
           }
-          render();
-          return;
+        },
+        {
+          selector: "[data-line-mode]",
+          handle: (button) => {
+            state.draftLineMode = button.dataset.lineMode;
+            sanitizeManualBreaks();
+            render();
+          }
+        },
+        {
+          selector: "[data-font-id]",
+          handle: (button) => {
+            state.draftFontId = button.dataset.fontId;
+            render();
+          }
+        },
+        {
+          selector: "[data-break]",
+          handle: (button) => {
+            toggleManualBreak(Number(button.dataset.break));
+          }
+        },
+        {
+          selector: "[data-vote-id]",
+          handle: (button) => {
+            state.selectedVoteTarget = button.dataset.voteId;
+            render();
+          }
+        },
+        {
+          selector: "[data-revote-id]",
+          handle: (button) => {
+            state.selectedHostTarget = button.dataset.revoteId;
+            render();
+          }
+        },
+        {
+          selector: "[data-host-pick-id]",
+          handle: (button) => {
+            state.selectedHostTarget = button.dataset.hostPickId;
+            render();
+          }
+        },
+        {
+          selector: "[data-final-vote-id]",
+          handle: (button) => {
+            state.selectedFinalTarget = button.dataset.finalVoteId;
+            render();
+          }
+        },
+        {
+          selector: "[data-final-pick-id]",
+          handle: (button) => {
+            state.selectedFinalTarget = button.dataset.finalPickId;
+            render();
+          }
         }
+      ];
 
-        const voteButton = event.target.closest("[data-vote-id]");
-        if (voteButton) {
-          state.selectedVoteTarget = voteButton.dataset.voteId;
-          render();
-          return;
-        }
-
-        const revoteButton = event.target.closest("[data-revote-id]");
-        if (revoteButton) {
-          state.selectedHostTarget = revoteButton.dataset.revoteId;
-          render();
-          return;
-        }
-
-        const hostPickButton = event.target.closest("[data-host-pick-id]");
-        if (hostPickButton) {
-          state.selectedHostTarget = hostPickButton.dataset.hostPickId;
-          render();
-          return;
-        }
-
-        const finalVoteButton = event.target.closest("[data-final-vote-id]");
-        if (finalVoteButton) {
-          state.selectedFinalTarget = finalVoteButton.dataset.finalVoteId;
-          render();
-          return;
-        }
-
-        const finalPickButton = event.target.closest("[data-final-pick-id]");
-        if (finalPickButton) {
-          state.selectedFinalTarget = finalPickButton.dataset.finalPickId;
-          render();
-          return;
-        }
-
-        const actionButton = event.target.closest("[data-action]");
-        if (!actionButton) {
-          return;
-        }
-
-        if (actionButton.dataset.action === "create-room") {
+      const actionHandlers = {
+        "create-room": async () => {
           await runAction(async () => {
             const payload = await fetchJson(`${state.apiBaseUrl}/rooms`, {
               method: "POST",
@@ -2535,10 +2537,8 @@
             });
             setRoom(payload.data.room, { playerToken: payload.data.playerToken, skipReveal: true });
           });
-          return;
-        }
-
-        if (actionButton.dataset.action === "join-room") {
+        },
+        "join-room": async () => {
           await runAction(async () => {
             const payload = await fetchJson(`${state.apiBaseUrl}/rooms/join`, {
               method: "POST",
@@ -2550,48 +2550,36 @@
             });
             setRoom(payload.data.room, { playerToken: payload.data.playerToken, skipReveal: true });
           });
-          return;
-        }
-
-        if (actionButton.dataset.action === "copy-invite-url") {
+        },
+        "copy-invite-url": async () => {
           if (state.room?.inviteCode) {
             await copyText(getInviteUrl(state.room.inviteCode), "招待URLをコピーしました。");
           }
-          return;
-        }
-
-        if (actionButton.dataset.action === "start-game") {
+        },
+        "start-game": async () => {
           await runAction(async () => {
             let payload = await postApi(`/rooms/${encodeURIComponent(state.roomId)}/start-player`, {
               startPlayerId: state.selectedStartPlayerId
             });
             setRoom(payload.data.room);
             payload = await postApi(`/rooms/${encodeURIComponent(state.roomId)}/start`, { deckId: "default" });
-            state.selectedVoteTarget = "";
-            state.selectedHostTarget = "";
-            state.selectedFinalTarget = "";
+            clearDecisionState();
             setRoom(payload.data.room);
           });
-          return;
-        }
-
-        if (actionButton.dataset.action === "swap-selection") {
+        },
+        "swap-selection": async () => {
           if (state.draftSelectedTileIds.length === 2) {
             state.draftSelectedTileIds = [state.draftSelectedTileIds[1], state.draftSelectedTileIds[0]];
             sanitizeManualBreaks();
             render();
           }
-          return;
-        }
-
-        if (actionButton.dataset.action === "clear-selection") {
+        },
+        "clear-selection": async () => {
           state.draftSelectedTileIds = [];
           state.draftManualBreaks = [];
           render();
-          return;
-        }
-
-        if (actionButton.dataset.action === "submit-word") {
+        },
+        "submit-word": async () => {
           await runAction(async () => {
             const room = state.room;
             const payload = await postApi(`/rooms/${encodeURIComponent(state.roomId)}/rounds/${room.game.roundIndex}/submit`, buildSubmitPayload(room));
@@ -2599,10 +2587,8 @@
             state.selectedHostTarget = "";
             setRoom(payload.data.room);
           });
-          return;
-        }
-
-        if (actionButton.dataset.action === "submit-vote") {
+        },
+        "submit-vote": async () => {
           await runAction(async () => {
             const room = state.room;
             const payload = await postApi(`/rooms/${encodeURIComponent(state.roomId)}/rounds/${room.game.roundIndex}/vote`, {
@@ -2611,10 +2597,8 @@
             state.selectedVoteTarget = "";
             setRoom(payload.data.room);
           });
-          return;
-        }
-
-        if (actionButton.dataset.action === "submit-revote") {
+        },
+        "submit-revote": async () => {
           await runAction(async () => {
             const room = state.room;
             const payload = await postApi(`/rooms/${encodeURIComponent(state.roomId)}/rounds/${room.game.roundIndex}/revote`, {
@@ -2623,10 +2607,8 @@
             state.selectedHostTarget = "";
             setRoom(payload.data.room);
           });
-          return;
-        }
-
-        if (actionButton.dataset.action === "submit-host-pick") {
+        },
+        "submit-host-pick": async () => {
           await runAction(async () => {
             const room = state.room;
             const payload = await postApi(`/rooms/${encodeURIComponent(state.roomId)}/rounds/${room.game.roundIndex}/host-decision`, {
@@ -2635,19 +2617,15 @@
             state.selectedHostTarget = "";
             setRoom(payload.data.room);
           });
-          return;
-        }
-
-        if (actionButton.dataset.action === "proceed-round") {
+        },
+        "proceed-round": async () => {
           await runAction(async () => {
             const room = state.room;
             const payload = await postApi(`/rooms/${encodeURIComponent(state.roomId)}/rounds/${room.game.roundIndex}/proceed`, {});
             setRoom(payload.data.room);
           });
-          return;
-        }
-
-        if (actionButton.dataset.action === "submit-final-vote") {
+        },
+        "submit-final-vote": async () => {
           await runAction(async () => {
             const endpoint = state.room.game.phase === "final_revote" ? "final-revote" : "final-vote";
             const payload = await postApi(`/rooms/${encodeURIComponent(state.roomId)}/${endpoint}`, {
@@ -2656,10 +2634,8 @@
             state.selectedFinalTarget = "";
             setRoom(payload.data.room);
           });
-          return;
-        }
-
-        if (actionButton.dataset.action === "submit-final-host-pick") {
+        },
+        "submit-final-host-pick": async () => {
           await runAction(async () => {
             const payload = await postApi(`/rooms/${encodeURIComponent(state.roomId)}/final-host-decision`, {
               candidateId: state.selectedFinalTarget
@@ -2667,18 +2643,40 @@
             state.selectedFinalTarget = "";
             setRoom(payload.data.room);
           });
-          return;
-        }
-
-        if (actionButton.dataset.action === "restart-game") {
+        },
+        "restart-game": async () => {
           await runAction(async () => {
             const payload = await postApi(`/rooms/${encodeURIComponent(state.roomId)}/restart`, {});
-            state.selectedVoteTarget = "";
-            state.selectedHostTarget = "";
-            state.selectedFinalTarget = "";
+            clearDecisionState();
             setRoom(payload.data.room, { skipReveal: true });
           });
+        }
+      };
+
+      document.addEventListener("input", (event) => {
+        const field = event.target.closest("[data-field]");
+        if (!field) {
           return;
+        }
+        updateFieldState(field.dataset.field, field.value);
+      });
+
+      document.addEventListener("click", async (event) => {
+        for (const { selector, handle } of selectionClickHandlers) {
+          const matched = event.target.closest(selector);
+          if (matched) {
+            handle(matched);
+            return;
+          }
+        }
+
+        const actionButton = event.target.closest("[data-action]");
+        if (!actionButton) {
+          return;
+        }
+        const actionHandler = actionHandlers[actionButton.dataset.action];
+        if (actionHandler) {
+          await actionHandler();
         }
       });
 

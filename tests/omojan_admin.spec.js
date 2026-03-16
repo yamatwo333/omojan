@@ -178,7 +178,7 @@ test("admin page adds a new tile at the top", async ({ page }) => {
   await page.fill("#adminPasscode", ADMIN_PASSCODE);
   await page.getByRole("button", { name: "デッキを読む" }).click();
 
-  await page.getByRole("button", { name: "牌を追加" }).click();
+  await page.getByRole("button", { name: "新しい牌を先頭に追加" }).click();
   await expect(page.locator('[data-tile-text-index]')).toHaveCount(4);
   await expect(page.locator('[data-tile-text-index="0"]')).toHaveValue("");
 

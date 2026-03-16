@@ -158,6 +158,12 @@
         border: 1px solid rgba(184, 138, 50, 0.38);
       }
 
+      .btn.accent {
+        background: rgba(36, 69, 47, 0.12);
+        color: var(--green);
+        border: 1px solid rgba(36, 69, 47, 0.24);
+      }
+
       .btn:disabled {
         cursor: default;
         opacity: 0.5;
@@ -190,6 +196,18 @@
         display: grid;
         gap: 12px;
         margin-top: 16px;
+      }
+
+      .action-block {
+        display: grid;
+        gap: 10px;
+        margin-top: 18px;
+      }
+
+      .action-title {
+        color: var(--green);
+        font-size: 14px;
+        font-weight: 800;
       }
 
       .chip-row {
@@ -406,12 +424,6 @@
 
           <div class="summary-pills" id="summaryPills"></div>
 
-          <div class="button-row">
-            <button class="btn primary" id="saveDeckBtn" type="button">保存する</button>
-            <button class="btn secondary" id="reloadDeckBtn" type="button">読み直す</button>
-            <button class="btn secondary" id="addTileBtn" type="button">牌を追加</button>
-          </div>
-
           <section class="toolbar">
             <div class="chip-row" id="filterChipRow">
               <button class="chip active" type="button" data-filter-mode="all">すべて</button>
@@ -428,6 +440,14 @@
 
           <input id="csvFileInput" class="sr-only" type="file" accept=".csv,text/csv" />
           <div class="hint">空のワードは保存できません。削除したい牌は行ごと消します。</div>
+          <section class="action-block">
+            <div class="action-title">牌一覧の操作</div>
+            <div class="button-row">
+              <button class="btn accent" id="addTileBtn" type="button">新しい牌を先頭に追加</button>
+              <button class="btn primary" id="saveDeckBtn" type="button">保存する</button>
+              <button class="btn secondary" id="reloadDeckBtn" type="button">読み直す</button>
+            </div>
+          </section>
           <div class="tile-list" id="tileList"></div>
         </section>
       </section>

@@ -1609,7 +1609,9 @@
 
       function renderVoteDecisionScreen(options) {
         const {
+          label,
           title,
+          description = "",
           summaryHtml = "",
           candidates,
           selectedId,
@@ -1618,11 +1620,23 @@
           action,
           buttonLabel
         } = options;
+        const selectedCandidate = candidates.find((candidate) => (candidate.candidateId ?? candidate.playerId) === selectedId) || null;
 
         return `
           ${renderScreenAlerts()}
           <section class="card">
             <h2>${escapeHtml(title)}</h2>
+            ${renderFocusCallout({
+              label,
+              title: selectedCandidate ? selectedCandidate.phrase : "まだワードを選んでいません",
+              description: selectedCandidate
+                ? "このワードに投票されます。問題なければそのまま確定できます。"
+                : description,
+              pills: [
+                { label: "候補", value: `${candidates.length}語` },
+                { label: "選択", value: selectedCandidate ? selectedCandidate.displayName : "未選択" }
+              ]
+            })}
             ${summaryHtml}
             ${renderVoteCards(candidates, selectedId, dataAttr, selfId)}
             <div class="button-row">
@@ -1636,7 +1650,9 @@
 
       function renderHostDecisionScreen(options) {
         const {
+          label,
           title,
+          description = "",
           counts,
           tiedIds,
           idField,
@@ -1645,12 +1661,28 @@
           dataAttr,
           action
         } = options;
+        const selectedCandidate = candidates.find((candidate) => (candidate.candidateId ?? candidate.playerId) === selectedId) || null;
 
         return `
           ${renderScreenAlerts()}
           <section class="card">
             <h2>${escapeHtml(title)}</h2>
-            ${renderTiedCountSummary(counts, tiedIds, idField)}
+            ${renderFocusCallout({
+              label,
+              title: selectedCandidate ? selectedCandidate.phrase : "ホストが勝ちワードを決めます",
+              description: selectedCandidate
+                ? "このワードで確定すると、そのまま次の結果画面へ進みます。"
+                : description,
+              pills: [
+                { label: "同票", value: `${candidates.length}語` },
+                { label: "選択", value: selectedCandidate ? selectedCandidate.displayName : "未選択" }
+              ]
+            })}
+            ${renderSection(
+              "同票になったワード",
+              renderTiedCountSummary(counts, tiedIds, idField),
+              { className: "panel" }
+            )}
             ${renderVoteCards(candidates, selectedId, dataAttr, "__none__", { disableSelf: false })}
             <div class="button-row">
               <button class="btn primary" type="button" data-action="${action}" ${selectedId && !state.pendingAction ? "" : "disabled"}>
@@ -2025,10 +2057,19 @@
         const candidates = getVoteCandidates(room, mode);
         const selectedId = mode === "revote" ? state.selectedHostTarget : state.selectedVoteTarget;
         return renderVoteDecisionScreen({
+          label: mode === "revote" ? "同票の再投票" : getCurrentRound(room)?.label || "投票",
           title: mode === "revote" ? "再投票" : "このラウンドで一番おもしろいワードに投票",
+          description:
+            mode === "revote"
+              ? "同票になったワードだけでもう一度選びます。"
+              : "自分のワード以外から、このラウンドでいちばんおもしろいワードを1つ選びます。",
           summaryHtml:
             mode === "revote" && round?.voteSummary
-              ? renderTiedCountSummary(round.voteSummary.counts, round.voteSummary.tiedPlayerIds, "playerId")
+              ? renderSection(
+                  "同票になったワード",
+                  renderTiedCountSummary(round.voteSummary.counts, round.voteSummary.tiedPlayerIds, "playerId"),
+                  { className: "panel" }
+                )
               : "",
           candidates,
           selectedId,
@@ -2050,7 +2091,11 @@
         const dataAttr = isFinal ? "final-pick-id" : "host-pick-id";
 
         return renderHostDecisionScreen({
+          label: isFinal ? "最終裁定" : getCurrentRound(room)?.label || "ホスト裁定",
           title: isFinal ? "最終ホスト裁定" : "ホスト裁定",
+          description: isFinal
+            ? "最終投票でも同票だったため、ホストが総合優勝ワードを決めます。"
+            : "再投票でも同票だったため、ホストがこの局の勝ちワードを決めます。",
           counts,
           tiedIds,
           idField: isFinal ? "candidateId" : "playerId",
@@ -2107,10 +2152,18 @@
         const finalVote = room.game.finalVote;
         const candidates = getFinalCandidates(room, isRevote ? "revote" : "vote");
         return renderVoteDecisionScreen({
+          label: isRevote ? "最終再投票" : "総合優勝を決める投票",
           title: isRevote ? "最終再投票" : "最終投票",
+          description: isRevote
+            ? "同票になった最終候補だけでもう一度選びます。"
+            : "各ラウンドの勝ちワードから、総合優勝を1つ選びます。",
           summaryHtml:
             isRevote && finalVote?.voteSummary
-              ? renderTiedCountSummary(finalVote.voteSummary.counts, finalVote.voteSummary.tiedCandidateIds, "candidateId")
+              ? renderSection(
+                  "同票になったワード",
+                  renderTiedCountSummary(finalVote.voteSummary.counts, finalVote.voteSummary.tiedCandidateIds, "candidateId"),
+                  { className: "panel" }
+                )
               : "",
           candidates,
           selectedId: state.selectedFinalTarget,

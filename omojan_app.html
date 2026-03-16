@@ -4,12 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>おもじゃん</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Rampart+One&family=Yusei+Magic&display=swap"
-      rel="stylesheet"
-    />
     <style>
       :root {
         --paper: #f6efdb;
@@ -950,6 +944,8 @@
       const APP_SESSION_MAP_KEY = "omojan-app-sessions";
       const APP_ROOM_ID_KEY = "omojan-app-room-id";
       const APP_PLAYER_TOKEN_KEY = "omojan-app-player-token";
+      const GOOGLE_FONTS_HREF = "https://fonts.googleapis.com/css2?family=DotGothic16&family=Rampart+One&family=Yusei+Magic&display=swap";
+      const REMOTE_FONT_IDS = new Set(["magic", "rampart", "dot"]);
       const POLL_INTERVALS_MS = {
         activeTurn: 2300,
         waiting: 1700,
@@ -1006,7 +1002,15 @@
           loadingKey: "",
           feedbackKey: "",
           bannerKey: "",
-          revealKey: ""
+          revealKey: "",
+          waitShellKey: "",
+          waitFocusKey: "",
+          waitSyncKey: "",
+          waitSubmissionsKey: ""
+        },
+        googleFonts: {
+          requested: false,
+          loaded: false
         }
       };
 
@@ -1058,6 +1062,92 @@
           return LOCAL_API_BASE_URL;
         }
         return PUBLIC_DEV_API_BASE_URL;
+      }
+
+      function scheduleIdleTask(task) {
+        if (typeof window.requestIdleCallback === "function") {
+          window.requestIdleCallback(task, { timeout: 1200 });
+          return;
+        }
+        window.setTimeout(task, 180);
+      }
+
+      function ensureGoogleFontsLoaded(fontIds = []) {
+        if (state.googleFonts.requested) {
+          return;
+        }
+        if (!fontIds.some((fontId) => REMOTE_FONT_IDS.has(fontId))) {
+          return;
+        }
+        state.googleFonts.requested = true;
+
+        scheduleIdleTask(() => {
+          if (!document.head.querySelector('link[data-omojan-fonts="preconnect-google"]')) {
+            const preconnectGoogle = document.createElement("link");
+            preconnectGoogle.rel = "preconnect";
+            preconnectGoogle.href = "https://fonts.googleapis.com";
+            preconnectGoogle.dataset.omojanFonts = "preconnect-google";
+            document.head.appendChild(preconnectGoogle);
+          }
+
+          if (!document.head.querySelector('link[data-omojan-fonts="preconnect-gstatic"]')) {
+            const preconnectGstatic = document.createElement("link");
+            preconnectGstatic.rel = "preconnect";
+            preconnectGstatic.href = "https://fonts.gstatic.com";
+            preconnectGstatic.crossOrigin = "anonymous";
+            preconnectGstatic.dataset.omojanFonts = "preconnect-gstatic";
+            document.head.appendChild(preconnectGstatic);
+          }
+
+          if (document.head.querySelector('link[data-omojan-fonts="stylesheet"]')) {
+            return;
+          }
+
+          const link = document.createElement("link");
+          link.rel = "stylesheet";
+          link.href = GOOGLE_FONTS_HREF;
+          link.media = "print";
+          link.dataset.omojanFonts = "stylesheet";
+          link.onload = () => {
+            link.media = "all";
+            state.googleFonts.loaded = true;
+            state.renderCache.appKey = "";
+            state.renderCache.waitShellKey = "";
+            state.renderCache.waitFocusKey = "";
+            state.renderCache.waitSyncKey = "";
+            state.renderCache.waitSubmissionsKey = "";
+            state.renderCache.revealKey = "";
+            render();
+          };
+          document.head.appendChild(link);
+        });
+      }
+
+      function collectVisibleFontIds(room = state.room, view = deriveView(room)) {
+        const fontIds = new Set();
+        if (view === "submit") {
+          fontIds.add(state.draftFontId);
+        }
+
+        const reveal = getActiveReveal();
+        if (reveal?.fontId) {
+          fontIds.add(reveal.fontId);
+        }
+
+        const round = getCurrentRound(room);
+        if (round?.submissions?.length) {
+          round.submissions.forEach((submission) => fontIds.add(submission.fontId || "classic"));
+        }
+        if (round?.winner?.fontId) {
+          fontIds.add(round.winner.fontId);
+        }
+
+        room?.game?.finalVote?.candidates?.forEach((candidate) => fontIds.add(candidate.fontId || "classic"));
+        if (room?.game?.champion?.fontId) {
+          fontIds.add(room.game.champion.fontId);
+        }
+
+        return [...fontIds];
       }
 
       function getCurrentRound(room = state.room) {
@@ -1558,6 +1648,11 @@
               state.draftLineMode,
               state.draftManualBreaks.join(",")
             ]).join("|");
+          case "wait":
+            return base.concat([
+              room.roomId || "",
+              room.me?.playerId || ""
+            ]).join("|");
           case "vote":
             return base.concat([state.selectedVoteTarget]).join("|");
           case "revote":
@@ -1982,6 +2077,19 @@
             </div>
           </section>
         `;
+      }
+
+      function patchSlot(root, selector, cacheKeyName, cacheKey, html) {
+        const node = root.querySelector(selector);
+        if (!node) {
+          return;
+        }
+        if (state.renderCache[cacheKeyName] === cacheKey) {
+          return;
+        }
+        state.renderCache[cacheKeyName] = cacheKey;
+        node.innerHTML = html;
+        hydrateWordBoards(node);
       }
 
       function getWaitingMessage(room) {
@@ -2559,25 +2667,75 @@
           ${renderScreenAlerts()}
           <section class="card">
             <h2>待機</h2>
-            ${renderFocusCallout({
-              label: getCurrentRound(room)?.label || "進行中",
-              title: getWaitingMessage(room),
-              description: "",
-              pills: [
-                { label: "最終同期", value: formatLastSyncValue() },
-                { label: "公開", value: submissions.length ? `${submissions.length}語` : "まだなし" }
-              ]
-            })}
-            ${renderSyncUtility({
-              title: "同期",
-              description: "この画面は自動で更新します。止まったら手動で更新できます。",
-              showReconnect: true,
-              showLeave: true
-            })}
+            <div id="waitFocusSlot"></div>
+            <div id="waitSyncSlot"></div>
           </section>
 
-          ${renderSection(`公開済みワード${submissions.length ? ` (${submissions.length})` : ""}`, renderSubmissionList(submissions), { className: "panel" })}
+          <div id="waitSubmissionsSlot"></div>
         `;
+      }
+
+      function renderWaitFocus(room) {
+        const submissions = getCurrentRound(room)?.submissions || [];
+        return renderFocusCallout({
+          label: getCurrentRound(room)?.label || "進行中",
+          title: getWaitingMessage(room),
+          description: "",
+          pills: [
+            { label: "公開", value: submissions.length ? `${submissions.length}語` : "まだなし" }
+          ]
+        });
+      }
+
+      function renderWaitSync(room) {
+        return renderSyncUtility({
+          title: "同期",
+          description: "この画面は自動で更新します。止まったら手動で更新できます。",
+          showReconnect: true,
+          showLeave: true
+        });
+      }
+
+      function renderWaitSubmissions(room) {
+        const submissions = getCurrentRound(room)?.submissions || [];
+        return renderSection(
+          `公開済みワード${submissions.length ? ` (${submissions.length})` : ""}`,
+          renderSubmissionList(submissions),
+          { className: "panel" }
+        );
+      }
+
+      function updateWaitView(room) {
+        const shellKey = `${room.roomId}|${room.me.playerId}`;
+        if (state.renderCache.waitShellKey !== shellKey) {
+          state.renderCache.waitShellKey = shellKey;
+          state.renderCache.waitFocusKey = "";
+          state.renderCache.waitSyncKey = "";
+          state.renderCache.waitSubmissionsKey = "";
+          els.app.innerHTML = renderWait(room);
+        }
+
+        const round = getCurrentRound(room);
+        const submissions = round?.submissions || [];
+        const focusKey = [
+          room.game.phase,
+          room.game.currentTurnPlayerId || "",
+          round?.roundIndex ?? "",
+          submissions.length
+        ].join("|");
+        const syncKey = [
+          getStatusText(),
+          formatLastSyncValue(),
+          shouldPoll() ? "auto" : "manual",
+          state.pendingAction ? "pending" : "idle"
+        ].join("|");
+        const submissionsKey = submissions
+          .map((submission) => `${submission.playerId}:${submission.phrase}:${submission.fontId}:${(submission.renderedLines || []).join("/")}`)
+          .join("|");
+
+        patchSlot(els.app, "#waitFocusSlot", "waitFocusKey", focusKey, renderWaitFocus(room));
+        patchSlot(els.app, "#waitSyncSlot", "waitSyncKey", syncKey, renderWaitSync(room));
+        patchSlot(els.app, "#waitSubmissionsSlot", "waitSubmissionsKey", submissionsKey, renderWaitSubmissions(room));
       }
 
       function renderVoteCards(candidates, selectedId, dataAttr, selfId, options = {}) {
@@ -2794,6 +2952,7 @@
       function renderApp() {
         const room = state.room;
         const view = deriveView(room);
+        ensureGoogleFontsLoaded(collectVisibleFontIds(room, view));
         const renderMap = {
           welcome: renderLanding,
           lobby: () => renderLobby(room),
@@ -2809,8 +2968,15 @@
         };
         const appKey = getAppRenderKey(room, view);
         const shouldUpdateApp = state.renderCache.appKey !== appKey;
-        if (shouldUpdateApp) {
+        if (view === "wait") {
           state.renderCache.appKey = appKey;
+          updateWaitView(room);
+        } else if (shouldUpdateApp) {
+          state.renderCache.appKey = appKey;
+          state.renderCache.waitShellKey = "";
+          state.renderCache.waitFocusKey = "";
+          state.renderCache.waitSyncKey = "";
+          state.renderCache.waitSubmissionsKey = "";
           els.app.innerHTML = (renderMap[view] || renderLanding)();
           hydrateWordBoards(els.app);
         }
@@ -2877,6 +3043,7 @@
           return;
         }
         const presentation = buildRevealPresentation(reveal);
+        ensureGoogleFontsLoaded([presentation.fontId || "classic"]);
         const revealKey = [
           reveal.revealId,
           reveal.kind,

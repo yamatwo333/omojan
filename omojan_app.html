@@ -1392,21 +1392,170 @@
       }
 
       function renderRecentChampions() {
-        if (!state.recentChampions.length) {
-          return `<div class="empty-state">最近の総合優勝ワードはまだありません。</div>`;
+        return renderHistoryList(
+          state.recentChampions,
+          (item) => `
+            <div class="history-card">
+              <div>
+                <strong>${escapeHtml(item.phrase)}</strong>
+                <span>${escapeHtml(item.displayName)}</span>
+              </div>
+              <span>${new Date(item.wonAt).toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" })}</span>
+            </div>
+          `,
+          "最近の総合優勝ワードはまだありません。"
+        );
+      }
+
+      function renderScreenAlerts(options = {}) {
+        const { includeCopy = false } = options;
+        return `
+          ${state.errorMessage ? `<div class="error-box">${escapeHtml(state.errorMessage)}</div>` : ""}
+          ${includeCopy && state.copyMessage ? `<div class="info-box">${escapeHtml(state.copyMessage)}</div>` : ""}
+        `;
+      }
+
+      function renderHistoryList(items, renderItem, emptyText = "") {
+        if (!items.length) {
+          return emptyText ? `<div class="empty-state">${escapeHtml(emptyText)}</div>` : "";
         }
         return `
           <div class="history-list">
-            ${state.recentChampions
+            ${items.map(renderItem).join("")}
+          </div>
+        `;
+      }
+
+      function renderSection(title, content, options = {}) {
+        const { className = "panel", headingTag = "h3" } = options;
+        return `
+          <section class="${className}">
+            <${headingTag}>${escapeHtml(title)}</${headingTag}>
+            ${content}
+          </section>
+        `;
+      }
+
+      function renderWordStage(options) {
+        const {
+          stageClass,
+          label,
+          entry,
+          wordClass,
+          maxFont,
+          minFont,
+          emptyText,
+          footerHtml = ""
+        } = options;
+
+        return `
+          <section class="${stageClass}">
+            <small>${escapeHtml(label)}</small>
+            ${
+              entry
+                ? renderWordBoard(entry.renderedLines, entry.fontId, wordClass, { maxFont, minFont })
+                : `<div class="empty-state">${escapeHtml(emptyText)}</div>`
+            }
+            ${footerHtml}
+          </section>
+        `;
+      }
+
+      function renderTiedCountSummary(counts, tiedIds, idField) {
+        if (!counts?.length || !tiedIds?.length) {
+          return "";
+        }
+        return renderHistoryList(
+          counts.filter((item) => tiedIds.includes(item[idField])),
+          (item) => `
+            <div class="history-card">
+              <strong>${escapeHtml(item.phrase)}</strong>
+              <span>${item.count}票</span>
+            </div>
+          `
+        );
+      }
+
+      function renderVoteDecisionScreen(options) {
+        const {
+          title,
+          summaryHtml = "",
+          candidates,
+          selectedId,
+          dataAttr,
+          selfId,
+          action,
+          buttonLabel
+        } = options;
+
+        return `
+          ${renderScreenAlerts()}
+          <section class="card">
+            <h2>${escapeHtml(title)}</h2>
+            ${summaryHtml}
+            ${renderVoteCards(candidates, selectedId, dataAttr, selfId)}
+            <div class="button-row">
+              <button class="btn primary" type="button" data-action="${action}" ${selectedId && !state.pendingAction ? "" : "disabled"}>
+                ${escapeHtml(buttonLabel)}
+              </button>
+            </div>
+          </section>
+        `;
+      }
+
+      function renderHostDecisionScreen(options) {
+        const {
+          title,
+          counts,
+          tiedIds,
+          idField,
+          candidates,
+          selectedId,
+          dataAttr,
+          action
+        } = options;
+
+        return `
+          ${renderScreenAlerts()}
+          <section class="card">
+            <h2>${escapeHtml(title)}</h2>
+            ${renderTiedCountSummary(counts, tiedIds, idField)}
+            ${renderVoteCards(candidates, selectedId, dataAttr, "__none__", { disableSelf: false })}
+            <div class="button-row">
+              <button class="btn primary" type="button" data-action="${action}" ${selectedId && !state.pendingAction ? "" : "disabled"}>
+                このワードで確定
+              </button>
+            </div>
+          </section>
+        `;
+      }
+
+      function renderCountBreakdown(title, counts, formatDetail) {
+        return renderSection(
+          title,
+          renderHistoryList(counts, (item) => `
+            <div class="history-card">
+              <strong>${escapeHtml(item.phrase)}</strong>
+              <span>${escapeHtml(formatDetail(item))}</span>
+            </div>
+          `),
+          { className: "panel" }
+        );
+      }
+
+      function renderSubmissionList(submissions, emptyText = "まだ公開されたワードはありません。") {
+        if (!submissions.length) {
+          return `<div class="empty-state">${escapeHtml(emptyText)}</div>`;
+        }
+        return `
+          <div class="action-grid">
+            ${submissions
               .map(
-                (item) => `
-                  <div class="history-card">
-                    <div>
-                      <strong>${escapeHtml(item.phrase)}</strong>
-                      <span>${escapeHtml(item.displayName)}</span>
-                    </div>
-                    <span>${new Date(item.wonAt).toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" })}</span>
-                  </div>
+                (submission) => `
+                  <article class="action-card disabled">
+                    <span class="badge">${escapeHtml(submission.displayName)}</span>
+                    ${renderWordBoard(submission.renderedLines, submission.fontId, "vote-word", { maxFont: 34, minFont: 18 })}
+                  </article>
                 `
               )
               .join("")}
@@ -1416,8 +1565,7 @@
 
       function renderLanding() {
         return `
-          ${state.errorMessage ? `<div class="error-box">${escapeHtml(state.errorMessage)}</div>` : ""}
-          ${state.copyMessage ? `<div class="info-box">${escapeHtml(state.copyMessage)}</div>` : ""}
+          ${renderScreenAlerts({ includeCopy: true })}
 
           <section class="card">
             <h2>ルームを作る</h2>
@@ -1472,8 +1620,7 @@
 
       function renderLobby(room) {
         return `
-          ${state.errorMessage ? `<div class="error-box">${escapeHtml(state.errorMessage)}</div>` : ""}
-          ${state.copyMessage ? `<div class="info-box">${escapeHtml(state.copyMessage)}</div>` : ""}
+          ${renderScreenAlerts({ includeCopy: true })}
 
           <section class="card">
             <h2>ルーム待機中</h2>
@@ -1537,7 +1684,7 @@
         const chars = Array.from(getDraftText(room));
 
         return `
-          ${state.errorMessage ? `<div class="error-box">${escapeHtml(state.errorMessage)}</div>` : ""}
+          ${renderScreenAlerts()}
 
           <section class="card">
             <h2>${escapeHtml(getCurrentRound(room)?.wind || "提出")}</h2>
@@ -1632,34 +1779,14 @@
       function renderWait(room) {
         const submissions = getCurrentRound(room)?.submissions || [];
         return `
-          ${state.errorMessage ? `<div class="error-box">${escapeHtml(state.errorMessage)}</div>` : ""}
+          ${renderScreenAlerts()}
           <section class="card">
             <h2>待機</h2>
             <p>${escapeHtml(getWaitingMessage(room))}</p>
             <div class="info-box">${escapeHtml(formatLastSync())} / 自動更新中</div>
           </section>
 
-          <section class="panel">
-            <h3>公開済みワード</h3>
-            ${
-              submissions.length
-                ? `
-                  <div class="action-grid">
-                    ${submissions
-                      .map(
-                        (submission) => `
-                          <article class="action-card disabled">
-                            <span class="badge">${escapeHtml(submission.displayName)}</span>
-                            ${renderWordBoard(submission.renderedLines, submission.fontId, "vote-word", { maxFont: 34, minFont: 18 })}
-                          </article>
-                        `
-                      )
-                      .join("")}
-                  </div>
-                `
-                : `<div class="empty-state">まだ公開されたワードはありません。</div>`
-            }
-          </section>
+          ${renderSection("公開済みワード", renderSubmissionList(submissions), { className: "panel" })}
         `;
       }
 
@@ -1693,37 +1820,19 @@
         const round = getCurrentRound(room);
         const candidates = getVoteCandidates(room, mode);
         const selectedId = mode === "revote" ? state.selectedHostTarget : state.selectedVoteTarget;
-        return `
-          ${state.errorMessage ? `<div class="error-box">${escapeHtml(state.errorMessage)}</div>` : ""}
-          <section class="card">
-            <h2>${mode === "revote" ? "再投票" : "このラウンドで一番おもしろいワードに投票"}</h2>
-            ${
-              mode === "revote" && round?.voteSummary
-                ? `
-                  <div class="history-list">
-                    ${round.voteSummary.counts
-                      .filter((item) => round.voteSummary.tiedPlayerIds.includes(item.playerId))
-                      .map(
-                        (item) => `
-                          <div class="history-card">
-                            <strong>${escapeHtml(item.phrase)}</strong>
-                            <span>${item.count}票</span>
-                          </div>
-                        `
-                      )
-                      .join("")}
-                  </div>
-                `
-                : ""
-            }
-            ${renderVoteCards(candidates, selectedId, mode === "revote" ? "revote-id" : "vote-id", room.me.playerId)}
-            <div class="button-row">
-              <button class="btn primary" type="button" data-action="${mode === "revote" ? "submit-revote" : "submit-vote"}" ${selectedId && !state.pendingAction ? "" : "disabled"}>
-                ${mode === "revote" ? "このワードに再投票" : "このワードに投票"}
-              </button>
-            </div>
-          </section>
-        `;
+        return renderVoteDecisionScreen({
+          title: mode === "revote" ? "再投票" : "このラウンドで一番おもしろいワードに投票",
+          summaryHtml:
+            mode === "revote" && round?.voteSummary
+              ? renderTiedCountSummary(round.voteSummary.counts, round.voteSummary.tiedPlayerIds, "playerId")
+              : "",
+          candidates,
+          selectedId,
+          dataAttr: mode === "revote" ? "revote-id" : "vote-id",
+          selfId: room.me.playerId,
+          action: mode === "revote" ? "submit-revote" : "submit-vote",
+          buttonLabel: mode === "revote" ? "このワードに再投票" : "このワードに投票"
+        });
       }
 
       function renderHostDecide(room, isFinal = false) {
@@ -1736,60 +1845,36 @@
         const selectedId = isFinal ? state.selectedFinalTarget : state.selectedHostTarget;
         const dataAttr = isFinal ? "final-pick-id" : "host-pick-id";
 
-        return `
-          ${state.errorMessage ? `<div class="error-box">${escapeHtml(state.errorMessage)}</div>` : ""}
-          <section class="card">
-            <h2>${isFinal ? "最終ホスト裁定" : "ホスト裁定"}</h2>
-            <div class="history-list">
-              ${counts
-                .filter((item) => tiedIds.includes(item.playerId || item.candidateId))
-                .map(
-                  (item) => `
-                    <div class="history-card">
-                      <strong>${escapeHtml(item.phrase)}</strong>
-                      <span>${item.count}票</span>
-                    </div>
-                  `
-                )
-                .join("")}
-            </div>
-            ${renderVoteCards(candidates, selectedId, dataAttr, "__none__", { disableSelf: false })}
-            <div class="button-row">
-              <button class="btn primary" type="button" data-action="${isFinal ? "submit-final-host-pick" : "submit-host-pick"}" ${selectedId && !state.pendingAction ? "" : "disabled"}>
-                このワードで確定
-              </button>
-            </div>
-          </section>
-        `;
+        return renderHostDecisionScreen({
+          title: isFinal ? "最終ホスト裁定" : "ホスト裁定",
+          counts,
+          tiedIds,
+          idField: isFinal ? "candidateId" : "playerId",
+          candidates,
+          selectedId,
+          dataAttr,
+          action: isFinal ? "submit-final-host-pick" : "submit-host-pick"
+        });
       }
 
       function renderRoundResult(room) {
         const round = getCurrentRound(room);
         const winner = round?.winner;
         return `
-          ${state.errorMessage ? `<div class="error-box">${escapeHtml(state.errorMessage)}</div>` : ""}
+          ${renderScreenAlerts()}
           <section class="card">
             <h2>${escapeHtml(round?.label || "ラウンド結果")}</h2>
-            <section class="result-stage">
-              <small>勝利ワード</small>
-              ${winner ? renderWordBoard(winner.renderedLines, winner.fontId, "result-word", { maxFont: 40, minFont: 20 }) : `<div class="empty-state">結果待ちです。</div>`}
-              ${winner ? `<p><strong>${escapeHtml(winner.displayName)}</strong> / ${winner.voteCount}票</p>` : ""}
-            </section>
-            <section class="panel">
-              <h3>票数内訳</h3>
-              <div class="history-list">
-                ${(round?.voteSummary?.counts || [])
-                  .map(
-                    (item) => `
-                      <div class="history-card">
-                        <strong>${escapeHtml(item.phrase)}</strong>
-                        <span>${item.count}票 / ${escapeHtml(item.displayName)}</span>
-                      </div>
-                    `
-                  )
-                  .join("")}
-              </div>
-            </section>
+            ${renderWordStage({
+              stageClass: "result-stage",
+              label: "勝利ワード",
+              entry: winner,
+              wordClass: "result-word",
+              maxFont: 40,
+              minFont: 20,
+              emptyText: "結果待ちです。",
+              footerHtml: winner ? `<p><strong>${escapeHtml(winner.displayName)}</strong> / ${winner.voteCount}票</p>` : ""
+            })}
+            ${renderCountBreakdown("票数内訳", round?.voteSummary?.counts || [], (item) => `${item.count}票 / ${item.displayName}`)}
             ${
               room.me.isHost
                 ? `
@@ -1809,87 +1894,55 @@
         const isRevote = room.game.phase === "final_revote";
         const finalVote = room.game.finalVote;
         const candidates = getFinalCandidates(room, isRevote ? "revote" : "vote");
-        return `
-          ${state.errorMessage ? `<div class="error-box">${escapeHtml(state.errorMessage)}</div>` : ""}
-          <section class="card">
-            <h2>${isRevote ? "最終再投票" : "最終投票"}</h2>
-            ${
-              isRevote && finalVote?.voteSummary
-                ? `
-                  <div class="history-list">
-                    ${finalVote.voteSummary.counts
-                      .filter((item) => finalVote.voteSummary.tiedCandidateIds.includes(item.candidateId))
-                      .map(
-                        (item) => `
-                          <div class="history-card">
-                            <strong>${escapeHtml(item.phrase)}</strong>
-                            <span>${item.count}票</span>
-                          </div>
-                        `
-                      )
-                      .join("")}
-                  </div>
-                `
-                : ""
-            }
-            ${renderVoteCards(candidates, state.selectedFinalTarget, "final-vote-id", room.me.playerId)}
-            <div class="button-row">
-              <button class="btn primary" type="button" data-action="submit-final-vote" ${state.selectedFinalTarget && !state.pendingAction ? "" : "disabled"}>
-                ${isRevote ? "このワードに再投票" : "このワードに投票"}
-              </button>
-            </div>
-          </section>
-        `;
+        return renderVoteDecisionScreen({
+          title: isRevote ? "最終再投票" : "最終投票",
+          summaryHtml:
+            isRevote && finalVote?.voteSummary
+              ? renderTiedCountSummary(finalVote.voteSummary.counts, finalVote.voteSummary.tiedCandidateIds, "candidateId")
+              : "",
+          candidates,
+          selectedId: state.selectedFinalTarget,
+          dataAttr: "final-vote-id",
+          selfId: room.me.playerId,
+          action: "submit-final-vote",
+          buttonLabel: isRevote ? "このワードに再投票" : "このワードに投票"
+        });
       }
 
       function renderFinalResult(room) {
         const champion = room.game.champion;
         return `
-          ${state.errorMessage ? `<div class="error-box">${escapeHtml(state.errorMessage)}</div>` : ""}
+          ${renderScreenAlerts()}
           <section class="card">
             <h2>総合優勝</h2>
-            <section class="champion-stage">
-              <small>総合優勝</small>
-              ${champion ? renderWordBoard(champion.renderedLines, champion.fontId, "champion-word", { maxFont: 48, minFont: 22 }) : `<div class="empty-state">未確定です。</div>`}
-              ${champion ? `<p><strong>${escapeHtml(champion.displayName)}</strong></p>` : ""}
-            </section>
+            ${renderWordStage({
+              stageClass: "champion-stage",
+              label: "総合優勝",
+              entry: champion,
+              wordClass: "champion-word",
+              maxFont: 48,
+              minFont: 22,
+              emptyText: "未確定です。",
+              footerHtml: champion ? `<p><strong>${escapeHtml(champion.displayName)}</strong></p>` : ""
+            })}
 
-            <section class="panel">
-              <h3>各ラウンドの勝ちワード</h3>
-              <div class="history-list">
-                ${room.game.rounds
-                  .filter((round) => round.winner)
-                  .map(
-                    (round) => `
-                      <div class="history-card">
-                        <strong>${escapeHtml(round.label)}</strong>
-                        <span>${escapeHtml(round.winner.phrase)} / ${escapeHtml(round.winner.displayName)}</span>
-                      </div>
-                    `
-                  )
-                  .join("")}
-              </div>
-            </section>
+            ${renderSection(
+              "各ラウンドの勝ちワード",
+              renderHistoryList(
+                room.game.rounds.filter((round) => round.winner),
+                (round) => `
+                  <div class="history-card">
+                    <strong>${escapeHtml(round.label)}</strong>
+                    <span>${escapeHtml(round.winner.phrase)} / ${escapeHtml(round.winner.displayName)}</span>
+                  </div>
+                `
+              ),
+              { className: "panel" }
+            )}
 
             ${
               room.game.finalVote?.voteSummary
-                ? `
-                  <section class="panel">
-                    <h3>最終投票の票数内訳</h3>
-                    <div class="history-list">
-                      ${room.game.finalVote.voteSummary.counts
-                        .map(
-                          (item) => `
-                            <div class="history-card">
-                              <strong>${escapeHtml(item.phrase)}</strong>
-                              <span>${item.count}票 / ${escapeHtml(item.displayName)}</span>
-                            </div>
-                          `
-                        )
-                        .join("")}
-                    </div>
-                  </section>
-                `
+                ? renderCountBreakdown("最終投票の票数内訳", room.game.finalVote.voteSummary.counts, (item) => `${item.count}票 / ${item.displayName}`)
                 : ""
             }
 

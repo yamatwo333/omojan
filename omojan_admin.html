@@ -159,9 +159,9 @@
       }
 
       .btn.accent {
-        background: rgba(36, 69, 47, 0.12);
-        color: var(--green);
-        border: 1px solid rgba(36, 69, 47, 0.24);
+        background: linear-gradient(180deg, #2f6a42, #244f31);
+        color: #f7f1df;
+        border: 1px solid rgba(24, 53, 33, 0.24);
       }
 
       .btn:disabled {
@@ -417,7 +417,7 @@
               <input id="deckName" class="input" type="text" maxlength="40" />
             </div>
             <div class="field">
-              <label for="searchInput">牌を検索</label>
+              <label for="searchInput">ワードを検索</label>
               <input id="searchInput" class="input" type="text" maxlength="40" placeholder="ワードや tileId で検索" />
             </div>
           </div>
@@ -439,11 +439,11 @@
           </section>
 
           <input id="csvFileInput" class="sr-only" type="file" accept=".csv,text/csv" />
-          <div class="hint">空のワードは保存できません。削除したい牌は行ごと消します。</div>
+          <div class="hint">空のワードは保存できません。削除したいワードは行ごと消します。</div>
           <section class="action-block">
-            <div class="action-title">牌一覧の操作</div>
+            <div class="action-title">ワード一覧の操作</div>
             <div class="button-row">
-              <button class="btn accent" id="addTileBtn" type="button">新しい牌を先頭に追加</button>
+              <button class="btn accent" id="addTileBtn" type="button">新しいワードを追加</button>
               <button class="btn primary" id="saveDeckBtn" type="button">保存する</button>
               <button class="btn secondary" id="reloadDeckBtn" type="button">読み直す</button>
             </div>
@@ -577,7 +577,7 @@
         }
         const filteredTiles = getFilteredTiles();
         if (!filteredTiles.length) {
-          els.tileList.innerHTML = `<div class="empty-state">一致する牌はありません。</div>`;
+          els.tileList.innerHTML = `<div class="empty-state">一致するワードはありません。</div>`;
           return;
         }
         els.tileList.innerHTML = filteredTiles
@@ -595,7 +595,7 @@
                     data-tile-text-index="${index}"
                     placeholder="ワード"
                   />
-                  <div class="tile-id">${escapeHtml(tile.tileId || "新規牌")}</div>
+                  <div class="tile-id">${escapeHtml(tile.tileId || "新規ワード")}</div>
                 </div>
                 <div class="tile-meta">
                   <label class="toggle">
@@ -663,11 +663,11 @@
           throw new Error("先にデッキを読んでください。");
         }
         if (!state.deck.tiles.length) {
-          throw new Error("牌を1枚以上入れてください。");
+          throw new Error("ワードを1つ以上入れてください。");
         }
         for (const [index, tile] of state.deck.tiles.entries()) {
           if (!String(tile.text || "").trim()) {
-            throw new Error(`牌 ${index + 1} のワードを入力してください。`);
+            throw new Error(`ワード ${index + 1} を入力してください。`);
           }
         }
       }

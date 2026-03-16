@@ -4,6 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>おもじゃん</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Rampart+One&family=Yusei+Magic&display=swap"
+      rel="stylesheet"
+    />
     <style>
       :root {
         --paper: #f6efdb;
@@ -49,7 +55,7 @@
 
       .page-header {
         text-align: center;
-        margin-bottom: 14px;
+        margin-bottom: 12px;
       }
 
       .page-header h1 {
@@ -57,14 +63,6 @@
         color: var(--green);
         font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
         font-size: clamp(34px, 8vw, 52px);
-      }
-
-      .page-header p {
-        margin: 8px auto 0;
-        max-width: 720px;
-        color: var(--muted);
-        line-height: 1.7;
-        font-size: 13px;
       }
 
       .phone-shell {
@@ -89,13 +87,16 @@
         justify-content: space-between;
         align-items: center;
         gap: 12px;
-        color: var(--muted);
+        color: var(--green);
         font-size: 12px;
       }
 
-      .status-row strong {
-        color: var(--green);
+      .status-context {
+        min-width: 0;
+        color: var(--muted);
         font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
       }
 
       .status-actions {
@@ -116,33 +117,6 @@
         color: var(--green);
         font-size: 12px;
         font-weight: 800;
-      }
-
-      .hero-banner {
-        margin-top: 12px;
-        padding: 14px;
-        border-radius: 22px;
-        background: linear-gradient(180deg, rgba(36, 69, 47, 0.98), rgba(22, 45, 31, 0.98));
-        color: #f6eddc;
-      }
-
-      .hero-banner small {
-        display: block;
-        color: rgba(246, 237, 220, 0.76);
-        font-size: 12px;
-      }
-
-      .hero-banner strong {
-        display: block;
-        margin-top: 4px;
-        font-size: 20px;
-      }
-
-      .hero-banner .subline {
-        margin-top: 8px;
-        color: rgba(246, 237, 220, 0.88);
-        font-size: 12px;
-        line-height: 1.5;
       }
 
       .card,
@@ -380,6 +354,21 @@
       .font-round {
         font-family: "Hiragino Maru Gothic ProN", "Yu Gothic", sans-serif;
         font-weight: 700;
+      }
+
+      .font-magic {
+        font-family: "Yusei Magic", "Hiragino Maru Gothic ProN", "Yu Gothic", sans-serif;
+        font-weight: 700;
+      }
+
+      .font-rampart {
+        font-family: "Rampart One", "Hiragino Sans", "Yu Gothic", sans-serif;
+        font-weight: 400;
+      }
+
+      .font-dot {
+        font-family: "DotGothic16", "Hiragino Sans", "Yu Gothic", sans-serif;
+        font-weight: 400;
       }
 
       .preview-word {
@@ -692,6 +681,7 @@
         position: relative;
         overflow: hidden;
         width: min(100%, 430px);
+        max-height: min(88vh, 720px);
         padding: 18px 16px 18px;
         border-radius: 28px;
         border: 3px solid rgba(35, 68, 47, 0.9);
@@ -704,7 +694,7 @@
       }
 
       .reveal-card.is-champion {
-        width: min(100%, 450px);
+        width: min(100%, 420px);
         padding: 22px 18px 22px;
         border-width: 4px;
         border-color: rgba(178, 138, 50, 0.92);
@@ -715,8 +705,8 @@
         box-shadow:
           0 22px 38px rgba(29, 22, 15, 0.24),
           0 0 0 6px rgba(178, 138, 50, 0.26),
-          0 0 42px rgba(178, 138, 50, 0.22),
-          0 0 90px rgba(255, 214, 110, 0.28);
+          0 0 56px rgba(178, 138, 50, 0.24),
+          0 0 130px rgba(255, 214, 110, 0.34);
         animation: championEntrance 420ms ease-out, championPulse 2.2s ease-in-out infinite;
       }
 
@@ -782,13 +772,44 @@
       }
 
       .reveal-card.is-champion .champion-word {
-        min-height: 186px;
+        min-height: min(34vh, 196px);
         padding: 10px 8px;
         border-radius: 24px;
         background: linear-gradient(180deg, rgba(255, 252, 244, 0.92), rgba(248, 236, 199, 0.86));
         box-shadow:
           inset 0 1px 0 rgba(255, 255, 255, 0.9),
           0 16px 24px rgba(113, 79, 10, 0.12);
+      }
+
+      .feedback-dock {
+        position: sticky;
+        top: 10px;
+        z-index: 14;
+        margin-top: 10px;
+      }
+
+      .feedback-dock:empty {
+        display: none;
+      }
+
+      .message,
+      .error {
+        padding: 12px 14px;
+        border-radius: 14px;
+        line-height: 1.6;
+        box-shadow: 0 10px 24px rgba(29, 22, 15, 0.08);
+      }
+
+      .message {
+        background: rgba(255, 250, 242, 0.98);
+        border: 1px solid rgba(36, 69, 47, 0.18);
+        color: var(--green);
+      }
+
+      .error {
+        background: rgba(255, 244, 240, 0.98);
+        border: 1px solid rgba(184, 68, 49, 0.18);
+        color: #8b2319;
       }
 
       .round-winner-grid {
@@ -837,12 +858,14 @@
 
       .measure-word {
         position: fixed;
-        left: -9999px;
-        top: -9999px;
+        left: 0;
+        top: 0;
+        transform: translate(-200vw, -200vh);
         visibility: hidden;
         overflow: hidden;
         pointer-events: none;
         opacity: 0;
+        clip-path: inset(100%);
       }
 
       @keyframes championEntrance {
@@ -889,23 +912,18 @@
     <main>
       <header class="page-header">
         <h1>おもじゃん</h1>
-        <p>URL共有ですぐ遊べる、おもじゃんの最小アプリです。</p>
       </header>
 
       <section class="phone-shell">
         <div class="phone">
           <div class="status-row">
-            <span>online board game</span>
+            <span id="statusContext" class="status-context">読み込み中</span>
             <div class="status-actions">
               <strong id="statusLabel">接続を確認中</strong>
               <button id="refreshTopBtn" class="mini-btn" type="button" data-action="refresh-latest">更新</button>
             </div>
           </div>
-          <section id="heroBanner" class="hero-banner">
-            <small id="bannerLabel">準備中</small>
-            <strong id="bannerTitle">読み込み中</strong>
-            <div id="bannerSubline" class="subline">API へ接続しています。</div>
-          </section>
+          <div id="feedbackDock" class="feedback-dock"></div>
           <section id="app"></section>
         </div>
       </section>
@@ -928,6 +946,8 @@
       const LOCAL_API_BASE_URL = "http://127.0.0.1:8788/v1";
       const PUBLIC_DEV_API_BASE_URL = "https://nglzfg3co5.execute-api.ap-northeast-1.amazonaws.com/dev/v1";
       const FIXTURE_CHAMPIONS_URL = "./mock_api/champions_recent.json";
+      const APP_ACTIVE_ROOM_ID_KEY = "omojan-app-active-room-id";
+      const APP_SESSION_MAP_KEY = "omojan-app-sessions";
       const APP_ROOM_ID_KEY = "omojan-app-room-id";
       const APP_PLAYER_TOKEN_KEY = "omojan-app-player-token";
       const POLL_INTERVAL_MS = 3000;
@@ -941,9 +961,10 @@
       const fonts = [
         { id: "classic", label: "勝負明朝", className: "font-classic" },
         { id: "broadcast", label: "実況ゴシック", className: "font-broadcast" },
-        { id: "playful", label: "ゆるポップ", className: "font-playful" },
-        { id: "heavy", label: "極太ゴシック", className: "font-heavy" },
-        { id: "round", label: "丸ゴシック", className: "font-round" }
+        { id: "round", label: "丸ゴシック", className: "font-round" },
+        { id: "magic", label: "手書きマジック", className: "font-magic" },
+        { id: "rampart", label: "激太ポップ", className: "font-rampart" },
+        { id: "dot", label: "レトロドット", className: "font-dot" }
       ];
 
       const state = {
@@ -968,9 +989,8 @@
         selectedVoteTarget: "",
         selectedHostTarget: "",
         selectedFinalTarget: "",
-        reveal: null,
-        revealTimer: 0,
         pollTimer: 0,
+        feedbackTimer: 0,
         lastSyncAt: ""
       };
 
@@ -986,11 +1006,10 @@
       }
 
       const els = {
+        statusContext: document.getElementById("statusContext"),
         statusLabel: document.getElementById("statusLabel"),
         refreshTopBtn: document.getElementById("refreshTopBtn"),
-        bannerLabel: document.getElementById("bannerLabel"),
-        bannerTitle: document.getElementById("bannerTitle"),
-        bannerSubline: document.getElementById("bannerSubline"),
+        feedbackDock: document.getElementById("feedbackDock"),
         app: document.getElementById("app"),
         revealOverlay: document.getElementById("revealOverlay"),
         revealCard: document.getElementById("revealCard"),
@@ -1070,6 +1089,58 @@
 
       function allowsSelfVote(room = state.room) {
         return Number(room?.playerCount || room?.game?.players?.length || 0) === 2;
+      }
+
+      function getStoredSessions() {
+        try {
+          const raw = window.localStorage.getItem(APP_SESSION_MAP_KEY);
+          const parsed = raw ? JSON.parse(raw) : {};
+          return parsed && typeof parsed === "object" ? parsed : {};
+        } catch {
+          return {};
+        }
+      }
+
+      function saveStoredSessions(sessions) {
+        window.localStorage.setItem(APP_SESSION_MAP_KEY, JSON.stringify(sessions));
+      }
+
+      function migrateLegacySessionIfNeeded() {
+        const legacyRoomId = window.localStorage.getItem(APP_ROOM_ID_KEY);
+        const legacyToken = window.localStorage.getItem(APP_PLAYER_TOKEN_KEY);
+        if (!legacyRoomId || !legacyToken) {
+          return;
+        }
+        const sessions = getStoredSessions();
+        if (!sessions[legacyRoomId]) {
+          sessions[legacyRoomId] = {
+            roomId: legacyRoomId,
+            playerToken: legacyToken,
+            inviteCode: "",
+            updatedAt: new Date().toISOString()
+          };
+          saveStoredSessions(sessions);
+        }
+        window.sessionStorage.setItem(APP_ACTIVE_ROOM_ID_KEY, legacyRoomId);
+        window.localStorage.removeItem(APP_ROOM_ID_KEY);
+        window.localStorage.removeItem(APP_PLAYER_TOKEN_KEY);
+      }
+
+      function setFeedback(message = "", isError = false, autoHideMs = 0) {
+        if (state.feedbackTimer) {
+          window.clearTimeout(state.feedbackTimer);
+          state.feedbackTimer = 0;
+        }
+        state.copyMessage = isError ? "" : message;
+        state.errorMessage = isError ? message : "";
+        if (message && autoHideMs > 0) {
+          state.feedbackTimer = window.setTimeout(() => {
+            state.copyMessage = "";
+            state.errorMessage = "";
+            state.feedbackTimer = 0;
+            render();
+          }, autoHideMs);
+        }
       }
 
       function applyWordMarkup(container, lines, fontClass, lineMode, fontSize) {
@@ -1415,92 +1486,71 @@
         return `最終同期 ${new Date(state.lastSyncAt).toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}`;
       }
 
-      function setBanner() {
-        els.statusLabel.textContent = getStatusText();
-
+      function getStatusContext() {
         const view = deriveView();
         const room = state.room;
-        const bannerMap = {
-          welcome: {
-            label: "URL共有で友達と遊ぶ",
-            title: "ルームを作るか、招待コードで参加",
-            subline: `接続先: ${state.apiBaseUrl} / ${formatLastSync()}`
-          },
-          lobby: {
-            label: `ROOM / ${room?.inviteCode || "----"}`,
-            title: room?.me.isHost ? "メンバーが集まったら開始" : "ホストの開始を待っています",
-            subline: room?.me.isHost
-              ? "開始順を決めてからゲームを始めます。"
-              : "プレイヤーがそろうとホストが開始できます。"
-          },
-          submit: {
-            label: getCurrentRound(room)?.wind || "提出",
-            title: `${room?.me.displayName || "あなた"} の手番`,
-            subline: "2枚選んで見た目を整え、そのまま提出します。"
-          },
-          wait: {
-            label: getCurrentRound(room)?.wind || "待機",
-            title: "ほかのプレイヤーの進行を待っています",
-            subline: `${formatLastSync()} / 3秒ごとに自動で更新します。`
-          },
-          vote: {
-            label: getCurrentRound(room)?.label || "投票",
-            title: "このラウンドで一番おもしろいワードに投票",
-            subline: allowsSelfVote(room) ? "2人戦なので自分のワードにも投票できます。" : "自分のワードには投票できません。"
-          },
-          revote: {
-            label: getCurrentRound(room)?.label || "再投票",
-            title: "同率ワードの再投票",
-            subline: "同率だった候補だけに絞って投票します。"
-          },
-          hostDecide: {
-            label: getCurrentRound(room)?.label || "ホスト裁定",
-            title: "ホストが勝ちワードを選ぶ",
-            subline: "同率のまま決まらなかったため、ホスト裁定に入っています。"
-          },
-          roundResult: {
-            label: getCurrentRound(room)?.label || "ラウンド結果",
-            title: "ラウンド勝者発表",
-            subline: room?.me.isHost ? "確認したら次へ進めます。" : "ホストが次へ進めるまで待ちます。"
-          },
-          finalVote: {
-            label: "最終投票",
-            title: room?.game.phase === "final_revote" ? "最終再投票" : "総合優勝を決める最終投票",
-            subline: allowsSelfVote(room)
-              ? "2人戦なので自分のワードにも投票できます。"
-              : "各ラウンドの勝ちワードから、いちばんおもしろいワードを選びます。"
-          },
-          finalHostDecide: {
-            label: "最終ホスト裁定",
-            title: "ホストが総合優勝ワードを選ぶ",
-            subline: "最終投票も同率だったため、ホスト裁定に入っています。"
-          },
-          finalResult: {
-            label: "総合優勝",
-            title: "本日の総合優勝",
-            subline: room?.me.isHost ? "このルームで続けてもう1試合できます。" : "ホストが再開するまで待機できます。"
-          }
+        const round = getCurrentRound(room);
+        const contextMap = {
+          welcome: "ルーム作成 / 参加",
+          lobby: room?.inviteCode ? `ROOM / ${room.inviteCode}` : "ルーム待機",
+          submit: round?.wind || "提出",
+          wait: round?.wind || "待機",
+          vote: round?.label || "投票",
+          revote: round?.label || "再投票",
+          hostDecide: round?.label || "ホスト裁定",
+          roundResult: round?.label || "ラウンド結果",
+          finalVote: room?.game?.phase === "final_revote" ? "最終再投票" : "最終投票",
+          finalHostDecide: "最終ホスト裁定",
+          finalResult: "総合優勝"
         };
+        return contextMap[view] || "おもじゃん";
+      }
 
-        const banner = bannerMap[view] || bannerMap.welcome;
-        els.bannerLabel.textContent = banner.label;
-        els.bannerTitle.textContent = banner.title;
-        els.bannerSubline.textContent = banner.subline;
+      function renderFeedbackDock() {
+        if (state.errorMessage) {
+          els.feedbackDock.innerHTML = `<div class="error">${escapeHtml(state.errorMessage)}</div>`;
+          return;
+        }
+        if (state.copyMessage) {
+          els.feedbackDock.innerHTML = `<div class="message">${escapeHtml(state.copyMessage)}</div>`;
+          return;
+        }
+        els.feedbackDock.innerHTML = "";
+      }
+
+      function setBanner() {
+        els.statusLabel.textContent = getStatusText();
+        els.statusContext.textContent = getStatusContext();
         els.refreshTopBtn.disabled = state.pendingAction || state.isLoading;
         els.refreshTopBtn.textContent = state.roomId ? "更新" : "再読込";
+        renderFeedbackDock();
       }
 
       function persistSession() {
         if (!state.roomId || !state.playerToken) {
           return;
         }
-        window.localStorage.setItem(APP_ROOM_ID_KEY, state.roomId);
-        window.localStorage.setItem(APP_PLAYER_TOKEN_KEY, state.playerToken);
+        const sessions = getStoredSessions();
+        sessions[state.roomId] = {
+          roomId: state.roomId,
+          playerToken: state.playerToken,
+          inviteCode: state.room?.inviteCode || state.inviteCode || "",
+          updatedAt: new Date().toISOString()
+        };
+        saveStoredSessions(sessions);
+        window.sessionStorage.setItem(APP_ACTIVE_ROOM_ID_KEY, state.roomId);
       }
 
-      function clearSession() {
-        window.localStorage.removeItem(APP_ROOM_ID_KEY);
-        window.localStorage.removeItem(APP_PLAYER_TOKEN_KEY);
+      function clearSession(roomId = state.roomId) {
+        const sessions = getStoredSessions();
+        if (roomId && sessions[roomId]) {
+          delete sessions[roomId];
+          saveStoredSessions(sessions);
+        }
+        const activeRoomId = window.sessionStorage.getItem(APP_ACTIVE_ROOM_ID_KEY);
+        if (!roomId || activeRoomId === roomId) {
+          window.sessionStorage.removeItem(APP_ACTIVE_ROOM_ID_KEY);
+        }
       }
 
       function resetDraftAndDecisionState() {
@@ -1517,14 +1567,12 @@
 
         clearPollTimer();
         clearSession();
-        closeReveal();
 
         state.room = null;
         state.roomId = "";
         state.playerToken = "";
         state.inviteCode = inviteCode;
-        state.errorMessage = options.errorMessage || "";
-        state.copyMessage = options.copyMessage || "";
+        setFeedback(options.errorMessage || options.copyMessage || "", Boolean(options.errorMessage), options.copyMessage ? 2800 : 0);
 
         if (myName) {
           if (room?.me?.isHost) {
@@ -1655,65 +1703,7 @@
         sanitizeManualBreaks(room);
       }
 
-      function detectReveal(previousRoom, nextRoom) {
-        if (!previousRoom || previousRoom.roomId !== nextRoom.roomId) {
-          return null;
-        }
-
-        const previousChampion = previousRoom.game?.champion?.phrase || "";
-        const nextChampion = nextRoom.game?.champion?.phrase || "";
-        if (!previousChampion && nextChampion) {
-          return {
-            kind: "champion",
-            badge: "総合優勝",
-            lines: clone(nextRoom.game.champion.renderedLines || [nextChampion]),
-            fontId: nextRoom.game.champion.fontId || "classic",
-            meta: `${nextRoom.game.champion.displayName} のワード`
-          };
-        }
-
-        for (let roundIndex = 0; roundIndex < 3; roundIndex += 1) {
-          const previousSubmissions = previousRoom.game?.rounds?.[roundIndex]?.submissions || [];
-          const nextSubmissions = nextRoom.game?.rounds?.[roundIndex]?.submissions || [];
-          if (nextSubmissions.length <= previousSubmissions.length) {
-            continue;
-          }
-          const previousKeys = new Set(previousSubmissions.map((item) => `${item.playerId}:${item.submittedAt}`));
-          const fresh = nextSubmissions.find((item) => !previousKeys.has(`${item.playerId}:${item.submittedAt}`));
-          if (fresh) {
-            return {
-              kind: "submission",
-              badge: fresh.displayName,
-              lines: clone(fresh.renderedLines || [fresh.phrase]),
-              fontId: fresh.fontId || "broadcast",
-              meta: `東${roundIndex + 1}局で公開`
-            };
-          }
-        }
-
-        return null;
-      }
-
-      function openReveal(reveal) {
-        if (state.revealTimer) {
-          window.clearTimeout(state.revealTimer);
-          state.revealTimer = 0;
-        }
-        state.reveal = reveal;
-        renderReveal();
-      }
-
-      function closeReveal() {
-        if (state.revealTimer) {
-          window.clearTimeout(state.revealTimer);
-          state.revealTimer = 0;
-        }
-        state.reveal = null;
-        renderReveal();
-      }
-
       function setRoom(room, options = {}) {
-        const previousRoom = options.skipReveal ? null : state.room ? clone(state.room) : null;
         state.room = clone(room);
         state.roomId = room.roomId;
         state.selectedStartPlayerId = room.startPlayerId || room.me.playerId;
@@ -1722,11 +1712,6 @@
           state.playerToken = options.playerToken;
         }
         syncDraftWithRoom(state.room);
-
-        const reveal = options.skipReveal ? null : detectReveal(previousRoom, state.room);
-        if (reveal) {
-          openReveal(reveal);
-        }
         persistSession();
       }
 
@@ -1772,8 +1757,7 @@
       }
 
       function shouldPoll() {
-        const view = deriveView();
-        return ["lobby", "wait", "roundResult", "finalResult"].includes(view);
+        return Boolean(state.roomId && state.playerToken && deriveView() !== "welcome");
       }
 
       function schedulePoll() {
@@ -1786,23 +1770,46 @@
             await refreshRoom();
             render();
           } catch (error) {
-            state.errorMessage = error instanceof Error ? error.message : "最新状態の取得に失敗しました。";
+            setFeedback(error instanceof Error ? error.message : "最新状態の取得に失敗しました。", true);
             render();
           }
         }, POLL_INTERVAL_MS);
       }
 
       async function restoreSession() {
-        const storedRoomId = window.localStorage.getItem(APP_ROOM_ID_KEY);
-        const storedToken = window.localStorage.getItem(APP_PLAYER_TOKEN_KEY);
-        if (!storedRoomId || !storedToken) {
+        migrateLegacySessionIfNeeded();
+
+        const sessions = getStoredSessions();
+        const activeRoomId = window.sessionStorage.getItem(APP_ACTIVE_ROOM_ID_KEY);
+        const prioritized = [];
+        const allSessions = Object.values(sessions).sort((left, right) =>
+          String(right.updatedAt || "").localeCompare(String(left.updatedAt || ""))
+        );
+
+        if (state.inviteCode) {
+          if (activeRoomId && sessions[activeRoomId]?.inviteCode === state.inviteCode) {
+            prioritized.push(sessions[activeRoomId]);
+          }
+          allSessions
+            .filter((session) => session.roomId !== activeRoomId && session.inviteCode === state.inviteCode)
+            .forEach((session) => prioritized.push(session));
+        } else {
+          if (activeRoomId && sessions[activeRoomId]) {
+            prioritized.push(sessions[activeRoomId]);
+          }
+          allSessions
+            .filter((session) => session.roomId !== activeRoomId)
+            .forEach((session) => prioritized.push(session));
+        }
+        const targetSession = prioritized.find((session) => session.roomId && session.playerToken);
+        if (!targetSession) {
           return false;
         }
 
-        state.roomId = storedRoomId;
-        state.playerToken = storedToken;
+        state.roomId = targetSession.roomId;
+        state.playerToken = targetSession.playerToken;
         try {
-          await reconnectRoom(storedRoomId, storedToken);
+          await reconnectRoom(targetSession.roomId, targetSession.playerToken);
         } catch (error) {
           if (recoverLostSession(error, "restore")) {
             return false;
@@ -1883,37 +1890,7 @@
       }
 
       function renderScreenAlerts(options = {}) {
-        const { includeCopy = false } = options;
-        const canReconnect = Boolean(state.roomId && state.playerToken);
-        return `
-          ${
-            state.errorMessage
-              ? `
-                <div class="error-box">
-                  ${escapeHtml(state.errorMessage)}
-                  <div class="alert-actions">
-                    <button class="btn subtle" type="button" data-action="${canReconnect ? "retry-room-connection" : "refresh-latest"}" ${state.pendingAction ? "disabled" : ""}>
-                      ${canReconnect ? "再接続する" : "もう一度更新"}
-                    </button>
-                    <button class="btn subtle" type="button" data-action="clear-messages">閉じる</button>
-                  </div>
-                </div>
-              `
-              : ""
-          }
-          ${
-            includeCopy && state.copyMessage
-              ? `
-                <div class="info-box">
-                  ${escapeHtml(state.copyMessage)}
-                  <div class="alert-actions">
-                    <button class="btn subtle" type="button" data-action="clear-messages">閉じる</button>
-                  </div>
-                </div>
-              `
-              : ""
-          }
-        `;
+        return "";
       }
 
       function renderHistoryList(items, renderItem, emptyText = "") {
@@ -2181,22 +2158,6 @@
         `;
       }
 
-      function renderLobbyHero(room) {
-        const players = room.game.players || [];
-        const maxPlayers = room.game.playerCount || players.length;
-        return renderFocusCallout({
-          label: `ROOM / ${room.inviteCode}`,
-          title: room.me.isHost ? "メンバーがそろったら開始" : "ホストの開始を待っています",
-          description: room.me.isHost
-            ? "招待URLを共有して開始します。"
-            : "ホストの開始待ちです。",
-          pills: [
-            { label: "参加", value: `${players.length}/${maxPlayers}人` },
-            { label: "あなた", value: room.me.isHost ? "ホスト" : room.me.displayName }
-          ]
-        });
-      }
-
       function renderSubmitHero(room, layout) {
         const draftText = getDraftText(room);
         const modeLabel = lineModes.find((mode) => mode.id === state.draftLineMode)?.label || "";
@@ -2205,9 +2166,7 @@
         return renderFocusCallout({
           label: getCurrentRound(room)?.label || "提出中",
           title: draftText || "まずは2牌を選ぶ",
-          description: draftText
-            ? "この見た目で中央に公開されます。"
-            : "2牌を選んでワードを作ります。",
+          description: draftText ? "この見た目で公開されます。" : "",
           pills: [
             { label: "選択", value: `${selectedTiles.length}/2牌` },
             { label: "改行", value: modeLabel || "-" },
@@ -2223,7 +2182,6 @@
 
           <section class="card">
             <h2>ルームを作る</h2>
-            <p>ルームを作って招待URLを共有します。</p>
             <div class="field-stack">
               <div class="field">
                 <label for="createDisplayName">表示名</label>
@@ -2249,13 +2207,12 @@
 
           <section class="card">
             <h2>招待 URL から参加</h2>
-            <p>招待コードを入れて参加します。</p>
             ${
               state.inviteCode
                 ? renderFocusCallout({
                     label: "招待コード入力済み",
                     title: state.inviteCode,
-                    description: "表示名を入れるだけで参加できます。"
+                    description: ""
                   })
                 : ""
             }
@@ -2282,12 +2239,17 @@
       }
 
       function renderLobby(room) {
+        const players = room.game.players || [];
         return `
           ${renderScreenAlerts({ includeCopy: true })}
 
           <section class="card">
             <h2>ルーム待機中</h2>
-            ${renderLobbyHero(room)}
+            ${renderSummaryPills([
+              { label: "ROOM", value: room.inviteCode },
+              { label: "参加", value: `${players.length}/${room.playerCount}人` },
+              { label: "あなた", value: room.me.isHost ? "ホスト" : room.me.displayName }
+            ])}
             <div class="button-row">
               <span class="room-code">${escapeHtml(room.inviteCode)}</span>
               <button class="btn subtle" type="button" data-action="copy-invite-url">招待URLをコピー</button>
@@ -2359,7 +2321,7 @@
           ${renderScreenAlerts()}
 
           <section class="card">
-            <h2>${escapeHtml(getCurrentRound(room)?.wind || "提出")}</h2>
+            <h2>${escapeHtml(getCurrentRound(room)?.wind || "提出")} / ${escapeHtml(room.me.displayName)} の手番</h2>
             ${renderSubmitHero(room, layout)}
             <section class="preview-card">
               <small>提出前プレビュー</small>
@@ -2371,12 +2333,18 @@
                   getDraftText(room)
                     ? layout.safetyAdjusted
                       ? "提出時に自動で整えます。"
-                      : "提出時と同じ見え方です。"
-                    : "2牌を選ぶとここに出ます。"
+                      : ""
+                    : ""
                 }
               </p>
             </section>
           </section>
+
+          ${renderSection(
+            `すでに公開されたワード${getCurrentRound(room)?.submissions?.length ? ` (${getCurrentRound(room).submissions.length})` : ""}`,
+            renderSubmissionList(getCurrentRound(room)?.submissions || [], "まだ公開されたワードはありません。"),
+            { className: "panel" }
+          )}
 
           <section class="panel">
             <h3>改行モード</h3>
@@ -2457,7 +2425,7 @@
             ${renderFocusCallout({
               label: getCurrentRound(room)?.label || "進行中",
               title: getWaitingMessage(room),
-              description: "自動で更新します。",
+              description: "",
               pills: [
                 { label: "最終同期", value: formatLastSyncValue() },
                 { label: "公開", value: submissions.length ? `${submissions.length}語` : "まだなし" }
@@ -2587,7 +2555,7 @@
                 ? `
                   <div class="button-row">
                     <button class="btn primary" type="button" data-action="proceed-round" ${state.pendingAction ? "disabled" : ""}>
-                      ${room.game.roundIndex === 2 ? "最終投票へ進む" : "次のラウンドへ"}
+                      ${room.game.roundIndex === room.game.rounds.length - 1 ? "最終投票へ進む" : "次のラウンドへ"}
                     </button>
                     <button class="btn subtle" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>この端末の参加情報を消す</button>
                   </div>
@@ -2718,49 +2686,93 @@
         schedulePoll();
       }
 
+      function getActiveReveal() {
+        return state.room?.game?.reveal || null;
+      }
+
+      function buildRevealPresentation(reveal, room = state.room) {
+        if (!reveal) {
+          return null;
+        }
+        const round = reveal.roundIndex !== null && reveal.roundIndex !== undefined ? room?.game?.rounds?.[reveal.roundIndex] : null;
+        const meAcknowledged = reveal.acknowledgedPlayerIds?.includes(room?.me?.playerId);
+        if (reveal.kind === "champion") {
+          return {
+            badge: "総合優勝",
+            lines: clone(reveal.renderedLines || [reveal.phrase]),
+            fontId: reveal.fontId || "classic",
+            meta: `${reveal.displayName} のワード`,
+            buttonLabel: meAcknowledged ? "ほかの人を待っています" : "結果一覧を見る",
+            acknowledged: meAcknowledged,
+            kind: "champion"
+          };
+        }
+        if (reveal.kind === "round_winner") {
+          return {
+            badge: round?.label || "ラウンド勝利",
+            lines: clone(reveal.renderedLines || [reveal.phrase]),
+            fontId: reveal.fontId || "classic",
+            meta: `${reveal.displayName} のワード`,
+            buttonLabel: meAcknowledged ? "ほかの人を待っています" : "閉じる",
+            acknowledged: meAcknowledged,
+            kind: "round_winner"
+          };
+        }
+        return {
+          badge: reveal.displayName,
+          lines: clone(reveal.renderedLines || [reveal.phrase]),
+          fontId: reveal.fontId || "broadcast",
+          meta: round?.wind ? `${round.wind} で公開` : "場に公開",
+          buttonLabel: meAcknowledged ? "ほかの人を待っています" : "閉じる",
+          acknowledged: meAcknowledged,
+          kind: "submission"
+        };
+      }
+
       function renderReveal() {
-        if (!state.reveal) {
+        const reveal = getActiveReveal();
+        if (!reveal) {
           els.revealOverlay.hidden = true;
           return;
         }
+        const presentation = buildRevealPresentation(reveal);
 
         els.revealOverlay.hidden = false;
-        els.revealCard.classList.toggle("is-champion", state.reveal.kind === "champion");
-        els.revealBadge.textContent = state.reveal.badge;
-        els.revealMeta.textContent = state.reveal.meta;
-        els.revealWord.dataset.variant = state.reveal.kind === "champion" ? "champion-word" : "result-word";
+        els.revealCard.classList.toggle("is-champion", presentation.kind === "champion");
+        els.revealBadge.textContent = presentation.badge;
+        els.revealMeta.textContent = presentation.meta;
+        els.revealWord.dataset.variant = presentation.kind === "champion" ? "champion-word" : "result-word";
         applyWordMarkup(
           els.revealWord,
-          state.reveal.lines,
-          getFontClass(state.reveal.fontId || "classic"),
-          state.reveal.lines.length <= 1 ? "single" : "manual",
-          44
+          presentation.lines,
+          getFontClass(presentation.fontId || "classic"),
+          presentation.lines.length <= 1 ? "single" : "manual",
+          presentation.kind === "champion" ? 46 : 42
         );
-        els.closeRevealBtn.textContent = state.reveal.kind === "champion" ? "結果一覧を見る" : "場を見る";
+        els.closeRevealBtn.textContent = presentation.buttonLabel;
+        els.closeRevealBtn.disabled = Boolean(presentation.acknowledged || state.pendingAction);
         hydrateWordBoards();
       }
 
       async function copyText(text, successMessage) {
         try {
           await navigator.clipboard.writeText(text);
-          state.copyMessage = successMessage;
         } catch {
           window.prompt("コピーしてください", text);
-          state.copyMessage = successMessage;
         }
+        setFeedback(successMessage, false, 2400);
         render();
       }
 
       async function runAction(action) {
         state.pendingAction = true;
-        state.errorMessage = "";
-        state.copyMessage = "";
+        setFeedback("");
         render();
         try {
           await action();
         } catch (error) {
           if (!recoverLostSession(error, "action")) {
-            state.errorMessage = describeAppError(error, "action");
+            setFeedback(describeAppError(error, "action"), true);
           }
         } finally {
           state.pendingAction = false;
@@ -2923,9 +2935,20 @@
           });
         },
         "clear-messages": async () => {
-          state.errorMessage = "";
-          state.copyMessage = "";
+          setFeedback("");
           render();
+        },
+        "close-reveal": async () => {
+          const reveal = getActiveReveal();
+          if (!reveal || state.pendingAction || reveal.acknowledgedPlayerIds?.includes(state.room?.me?.playerId)) {
+            return;
+          }
+          await runAction(async () => {
+            const payload = await postApi(`/rooms/${encodeURIComponent(state.roomId)}/reveal-close`, {
+              revealId: reveal.revealId
+            });
+            setRoom(payload.data.room, { skipReveal: true });
+          });
         },
         "leave-room": async () => {
           const isHost = Boolean(state.room?.me?.isHost);
@@ -3097,7 +3120,9 @@
         }
       });
 
-      els.closeRevealBtn.addEventListener("click", closeReveal);
+      els.closeRevealBtn.addEventListener("click", () => {
+        actionHandlers["close-reveal"]();
+      });
 
       async function initializeApp() {
         const params = new URLSearchParams(window.location.search);

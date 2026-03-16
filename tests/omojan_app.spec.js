@@ -119,6 +119,8 @@ async function setupRoundVoteRoom() {
     },
     hostToken
   );
+  await api(`/rooms/${encodeURIComponent(roomId)}/reveal-close`, { method: "POST", body: JSON.stringify({}) }, hostToken);
+  await api(`/rooms/${encodeURIComponent(roomId)}/reveal-close`, { method: "POST", body: JSON.stringify({}) }, guestToken);
 
   const guestRoom = await api(`/rooms/${encodeURIComponent(roomId)}/reconnect`, { method: "POST" }, guestToken);
   const guestTiles = guestRoom.room.myHand.slice(0, 2);
@@ -138,6 +140,8 @@ async function setupRoundVoteRoom() {
     },
     guestToken
   );
+  await api(`/rooms/${encodeURIComponent(roomId)}/reveal-close`, { method: "POST", body: JSON.stringify({}) }, hostToken);
+  await api(`/rooms/${encodeURIComponent(roomId)}/reveal-close`, { method: "POST", body: JSON.stringify({}) }, guestToken);
 
   return { roomId, hostToken };
 }
@@ -169,13 +173,31 @@ async function submitCurrentDraft(page) {
   await expect(submitButton).toBeEnabled();
   await submitButton.click();
   await expect(page.locator("#revealOverlay")).toBeVisible({ timeout: 5000 });
-  await page.locator("#closeRevealBtn").click();
-  await expect(page.locator("#revealOverlay")).toBeHidden({ timeout: 5000 });
 }
 
 async function reconnect(page) {
   await page.reload();
   await expect(page.locator("#statusLabel")).toContainText("接続中");
+}
+
+async function acknowledgeRevealOn(page) {
+  if (!(await page.locator("#revealOverlay").isVisible())) {
+    await reconnect(page);
+  }
+  await expect(page.locator("#revealOverlay")).toBeVisible({ timeout: 10000 });
+  const closeButton = page.locator("#closeRevealBtn");
+  await expect(closeButton).toBeEnabled();
+  await closeButton.click();
+}
+
+async function acknowledgeRevealForAll(pages) {
+  for (const page of pages) {
+    await acknowledgeRevealOn(page);
+  }
+  for (const page of pages) {
+    await reconnect(page);
+    await expect(page.locator("#revealOverlay")).toBeHidden({ timeout: 10000 });
+  }
 }
 
 async function reopenWithStoredSession(browser, context, expectHeading) {
@@ -216,18 +238,29 @@ async function submitCurrentVote(page, action = "submit-vote", targetDisplayName
   ]);
 }
 
-async function completeRoundByHostDecision(host, guest, roundLabel, hostDecisionWinnerName) {
-  await expect(host.locator("body")).toContainText("HostFlowTest の手番");
-  await expect(guest.locator("body")).toContainText("HostFlowTest の手番");
+async function completeRoundByHostDecision(host, guest, roundLabel, hostDecisionWinnerName, firstTurnDisplayName = "HostFlowTest") {
+  const turnOrder =
+    firstTurnDisplayName === "GuestFlowTest"
+      ? [
+          { page: guest, name: "GuestFlowTest" },
+          { page: host, name: "HostFlowTest" }
+        ]
+      : [
+          { page: host, name: "HostFlowTest" },
+          { page: guest, name: "GuestFlowTest" }
+        ];
 
-  await submitCurrentDraft(host);
+  await expect(host.locator("body")).toContainText(`${firstTurnDisplayName} の手番`);
+  await expect(guest.locator("body")).toContainText(`${firstTurnDisplayName} の手番`);
 
-  await reconnect(guest);
-  await expect(guest.locator("body")).toContainText("GuestFlowTest の手番", { timeout: 10000 });
-  await submitCurrentDraft(guest);
+  await submitCurrentDraft(turnOrder[0].page);
+  await acknowledgeRevealForAll([host, guest]);
 
-  await reconnect(host);
-  await reconnect(guest);
+  await expect(host.locator("body")).toContainText(`${turnOrder[1].name} の手番`, { timeout: 10000 });
+  await expect(guest.locator("body")).toContainText(`${turnOrder[1].name} の手番`, { timeout: 10000 });
+  await submitCurrentDraft(turnOrder[1].page);
+  await acknowledgeRevealForAll([host, guest]);
+
   await expect(host.getByRole("heading", { name: "このラウンドで一番おもしろいワードに投票" })).toBeVisible({ timeout: 10000 });
   await expect(guest.getByRole("heading", { name: "このラウンドで一番おもしろいワードに投票" })).toBeVisible({ timeout: 10000 });
 
@@ -248,9 +281,8 @@ async function completeRoundByHostDecision(host, guest, roundLabel, hostDecision
   await expect(host.getByRole("heading", { name: "ホスト裁定" })).toBeVisible({ timeout: 10000 });
   await host.locator("[data-host-pick-id]", { hasText: hostDecisionWinnerName }).click();
   await host.locator('button[data-action="submit-host-pick"]').click();
+  await acknowledgeRevealForAll([host, guest]);
 
-  await reconnect(host);
-  await reconnect(guest);
   await expect(host.getByRole("heading", { name: roundLabel })).toBeVisible({ timeout: 10000 });
   await expect(guest.getByRole("heading", { name: roundLabel })).toBeVisible({ timeout: 10000 });
   await expect(host.locator("body")).toContainText("票数内訳");
@@ -288,7 +320,7 @@ test("app can complete create, join, start, submit, vote, host decision, and sho
 
   await host.getByRole("button", { name: "この順で開始" }).click();
 
-  await completeRoundByHostDecision(host, guest, "ラウンド1", "GuestFlowTest");
+  await completeRoundByHostDecision(host, guest, "ラウンド1", "GuestFlowTest", "HostFlowTest");
 
   await hostContext.close();
   await guestContext.close();
@@ -301,15 +333,11 @@ test("app can complete a full game through final champion and restart", async ({
 
   await host.getByRole("button", { name: "この順で開始" }).click();
 
-  await completeRoundByHostDecision(host, guest, "ラウンド1", "GuestFlowTest");
+  await completeRoundByHostDecision(host, guest, "ラウンド1", "GuestFlowTest", "HostFlowTest");
   await host.getByRole("button", { name: "次のラウンドへ" }).click();
   await reconnect(guest);
 
-  await completeRoundByHostDecision(host, guest, "ラウンド2", "HostFlowTest");
-  await host.getByRole("button", { name: "次のラウンドへ" }).click();
-  await reconnect(guest);
-
-  await completeRoundByHostDecision(host, guest, "ラウンド3", "GuestFlowTest");
+  await completeRoundByHostDecision(host, guest, "ラウンド2", "HostFlowTest", "GuestFlowTest");
   await host.getByRole("button", { name: "最終投票へ進む" }).click();
   await reconnect(guest);
 
@@ -334,12 +362,7 @@ test("app can complete a full game through final champion and restart", async ({
   await finalPick.click();
   await host.locator('button[data-action="submit-final-host-pick"]').click();
 
-  await expect(host.locator("#revealOverlay")).toBeVisible({ timeout: 10000 });
-  await expect(host.locator("#revealOverlay")).toContainText("総合優勝");
-  await host.locator("#closeRevealBtn").click();
-
-  await reconnect(host);
-  await reconnect(guest);
+  await acknowledgeRevealForAll([host, guest]);
   await expect(host.getByRole("heading", { name: "総合優勝" })).toBeVisible({ timeout: 10000 });
   await expect(guest.getByRole("heading", { name: "総合優勝" })).toBeVisible({ timeout: 10000 });
   await expect(host.locator("body")).toContainText(championPhrase);
@@ -367,10 +390,12 @@ test("app restores session after reopening the browser context", async ({ browse
   await expect(guest.locator("body")).toContainText("HostFlowTest の手番");
 
   await submitCurrentDraft(host);
+  await acknowledgeRevealForAll([host, guest]);
 
   ({ context: guestContext, page: guest } = await reopenWithStoredSession(browser, guestContext));
   await expect(guest.locator("body")).toContainText("GuestFlowTest の手番");
   await submitCurrentDraft(guest);
+  await acknowledgeRevealForAll([host, guest]);
 
   ({ context: hostContext, page: host } = await reopenWithStoredSession(browser, hostContext, "このラウンドで一番おもしろいワードに投票"));
   ({ context: guestContext, page: guest } = await reopenWithStoredSession(browser, guestContext, "このラウンドで一番おもしろいワードに投票"));
@@ -389,6 +414,7 @@ test("app restores session after reopening the browser context", async ({ browse
   ({ context: hostContext, page: host } = await reopenWithStoredSession(browser, hostContext, "ホスト裁定"));
   await host.locator("[data-host-pick-id]", { hasText: "GuestFlowTest" }).click();
   await host.locator('button[data-action="submit-host-pick"]').click();
+  await acknowledgeRevealForAll([host, guest]);
 
   ({ context: guestContext, page: guest } = await reopenWithStoredSession(browser, guestContext, "ラウンド1"));
   await expect(guest.locator("body")).toContainText("票数内訳");
@@ -402,7 +428,7 @@ test("app shows a friendly message for an invalid invite code", async ({ page })
   await page.fill("#joinDisplayName", "InviteMiss");
   await page.getByRole("button", { name: "参加する" }).click();
 
-  await expect(page.locator(".error-box")).toContainText("招待コードが見つかりません。招待URLかコードをもう一度確認してください。");
+  await expect(page.locator("#feedbackDock")).toContainText("招待コードが見つかりません。招待URLかコードをもう一度確認してください。");
 });
 
 test("app shows a friendly message when the room is full", async ({ page }) => {
@@ -419,7 +445,7 @@ test("app shows a friendly message when the room is full", async ({ page }) => {
   await page.fill("#joinDisplayName", "LateGuest");
   await page.getByRole("button", { name: "参加する" }).click();
 
-  await expect(page.locator(".error-box")).toContainText("このルームは満員です。別のルームを使ってください。");
+  await expect(page.locator("#feedbackDock")).toContainText("このルームは満員です。別のルームを使ってください。");
 });
 
 test("app can clear the local room session and return to the welcome screen", async ({ browser }) => {
@@ -436,7 +462,7 @@ test("app can clear the local room session and return to the welcome screen", as
   await page.getByRole("button", { name: "この端末の参加情報を消す" }).click();
 
   await expect(page.getByRole("heading", { name: "ルームを作る" })).toBeVisible();
-  await expect(page.locator(".info-box")).toContainText("この端末の参加情報を消しました。");
+  await expect(page.locator("#feedbackDock")).toContainText("この端末の参加情報を消しました。");
   await expect(page.locator("#inviteCode")).toHaveValue(inviteCode);
 
   await context.close();

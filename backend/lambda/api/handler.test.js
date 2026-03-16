@@ -166,6 +166,7 @@ async function submitAllForCurrentRound(handler, session, roundIndex) {
     const currentPlayer = session.players.find((player) => player.playerId === room.game.currentTurnPlayerId);
     assert.ok(currentPlayer, "current turn player not found");
     room = await submitFor(handler, session, currentPlayer, roundIndex);
+    room = await closeRevealForAll(handler, session);
   }
   return room;
 }
@@ -223,6 +224,32 @@ async function proceedRound(handler, session, roundIndex) {
   assert.equal(response.statusCode, 200);
   assert.equal(body.ok, true);
   return body.data.room;
+}
+
+async function closeRevealFor(handler, session, player) {
+  const response = await handler(
+    createEvent("POST", `/v1/rooms/${session.roomId}/reveal-close`, {
+      headers: {
+        "X-Omojan-Player-Token": player.playerToken
+      },
+      body: {}
+    })
+  );
+  const body = await parseResponse(response);
+  assert.equal(response.statusCode, 200);
+  assert.equal(body.ok, true);
+  return body.data.room;
+}
+
+async function closeRevealForAll(handler, session) {
+  let room = await getRoom(handler, session.roomId, session.players[0].playerToken);
+  if (!room.game.reveal) {
+    return room;
+  }
+  for (const player of session.players) {
+    room = await closeRevealFor(handler, session, player);
+  }
+  return room;
 }
 
 async function playRound(handler, session, roundIndex, votePlan, options = {}) {
@@ -318,6 +345,7 @@ async function reachFinalVote(handler, session) {
     ["ゲストA", "ゲストB"],
     ["ゲストB", "ゲストA"]
   ]);
+  await closeRevealForAll(handler, session);
   await proceedRound(handler, session, 0);
 
   await playRound(handler, session, 1, [
@@ -325,6 +353,7 @@ async function reachFinalVote(handler, session) {
     ["ゲストA", "ゲストB"],
     ["ゲストB", "ホスト"]
   ]);
+  await closeRevealForAll(handler, session);
   await proceedRound(handler, session, 1);
 
   await playRound(handler, session, 2, [
@@ -332,6 +361,7 @@ async function reachFinalVote(handler, session) {
     ["ゲストA", "ホスト"],
     ["ゲストB", "ホスト"]
   ]);
+  await closeRevealForAll(handler, session);
 
   const finalVoteRoom = await proceedRound(handler, session, 2);
   assert.equal(finalVoteRoom.game.phase, "final_vote");
@@ -358,6 +388,7 @@ test("GET /v1/health returns lambda scaffold metadata", async () => {
     "rooms:join",
     "rooms:get",
     "rooms:reconnect",
+    "rooms:reveal-close",
     "rooms:start-player",
     "rooms:start",
     "rounds:submit",
@@ -614,6 +645,7 @@ test("start-player and start enter round_submit with dealt hands", async () => {
   assert.equal(room.game.currentTurnPlayerId, findPlayer(session, "ゲストB").playerId);
   assert.equal(room.myHand.length, 10);
   assert.equal(room.game.players.every((player) => player.handCount === 10), true);
+  assert.equal(room.game.rounds.length, 3);
   assert.equal(room.game.rounds[0].phaseStatus, "submit");
 });
 
@@ -688,8 +720,12 @@ test("submit advances turn and last submission moves to round_vote", async () =>
 
   const firstSubmitRoom = await submitFor(handler, session, findPlayer(session, "ホスト"), 0);
   assert.equal(firstSubmitRoom.game.phase, "round_submit");
+  assert.equal(firstSubmitRoom.game.reveal.kind, "submission");
   assert.equal(firstSubmitRoom.game.currentTurnPlayerId, findPlayer(session, "ゲストA").playerId);
   assert.equal(firstSubmitRoom.myHand.filter((tile) => tile.isUsed).length, 2);
+
+  const acknowledgedRoom = await closeRevealForAll(handler, session);
+  assert.equal(acknowledgedRoom.game.reveal, null);
 
   const finalRoom = await submitAllForCurrentRound(handler, session, 0);
   assert.equal(finalRoom.game.phase, "round_vote");
@@ -765,12 +801,13 @@ test("host can proceed from round_result into next round", async () => {
     ["ゲストA", "ゲストB"],
     ["ゲストB", "ゲストA"]
   ]);
+  await closeRevealForAll(handler, session);
 
   const nextRoundRoom = await proceedRound(handler, session, 0);
   assert.equal(nextRoundRoom.game.phase, "round_submit");
   assert.equal(nextRoundRoom.game.roundIndex, 1);
   assert.equal(nextRoundRoom.game.rounds[1].phaseStatus, "submit");
-  assert.equal(nextRoundRoom.game.currentTurnPlayerId, findPlayer(session, "ホスト").playerId);
+  assert.equal(nextRoundRoom.game.currentTurnPlayerId, findPlayer(session, "ゲストA").playerId);
   assert.equal(nextRoundRoom.game.players.every((player) => player.handCount === 8), true);
 });
 
@@ -789,6 +826,9 @@ test("final vote can resolve directly into final_result and restart to lobby", a
   assert.equal(room.game.champion.source, "initial");
   assert.equal(room.game.finalVote.phaseStatus, "finished");
   assert.deepEqual(room.game.finalVote.votedPlayerIds.sort(), session.players.map((player) => player.playerId).sort());
+  assert.equal(room.game.reveal.kind, "champion");
+
+  await closeRevealForAll(handler, session);
 
   const restartedRoom = await restartGame(handler, session);
   assert.equal(restartedRoom.status, "lobby");
@@ -813,6 +853,7 @@ test("two-player final vote allows voting for your own winning word", async () =
     ],
     hostDecisionDisplayName: "ホスト"
   });
+  await closeRevealForAll(handler, session);
   await proceedRound(handler, session, 0);
 
   await playRound(handler, session, 1, [
@@ -825,20 +866,10 @@ test("two-player final vote allows voting for your own winning word", async () =
     ],
     hostDecisionDisplayName: "ゲストA"
   });
+  await closeRevealForAll(handler, session);
   await proceedRound(handler, session, 1);
 
-  await playRound(handler, session, 2, [
-    ["ホスト", "ホスト"],
-    ["ゲストA", "ゲストA"]
-  ], {
-    revotePlan: [
-      ["ホスト", "ホスト"],
-      ["ゲストA", "ゲストA"]
-    ],
-    hostDecisionDisplayName: "ホスト"
-  });
-
-  let room = await proceedRound(handler, session, 2);
+  let room = await getRoom(handler, session.roomId, findPlayer(session, "ホスト").playerToken);
   assert.equal(room.game.phase, "final_vote");
 
   room = await voteFinalFor(handler, session, room, "ホスト", "ホスト", "vote");
@@ -901,6 +932,7 @@ test("final vote excludes players who only have their own words as candidates", 
     ["ゲストB", "ゲストA"],
     ["ゲストC", "ゲストA"]
   ]);
+  await closeRevealForAll(handler, session);
   await proceedRound(handler, session, 0);
 
   await playRound(handler, session, 1, [
@@ -909,6 +941,7 @@ test("final vote excludes players who only have their own words as candidates", 
     ["ゲストB", "ゲストA"],
     ["ゲストC", "ゲストA"]
   ]);
+  await closeRevealForAll(handler, session);
   await proceedRound(handler, session, 1);
 
   await playRound(handler, session, 2, [
@@ -917,8 +950,18 @@ test("final vote excludes players who only have their own words as candidates", 
     ["ゲストB", "ゲストA"],
     ["ゲストC", "ゲストA"]
   ]);
+  await closeRevealForAll(handler, session);
+  await proceedRound(handler, session, 2);
 
-  let room = await proceedRound(handler, session, 2);
+  await playRound(handler, session, 3, [
+    ["ホスト", "ゲストA"],
+    ["ゲストA", "ホスト"],
+    ["ゲストB", "ゲストA"],
+    ["ゲストC", "ゲストA"]
+  ]);
+  await closeRevealForAll(handler, session);
+
+  let room = await proceedRound(handler, session, 3);
   assert.equal(room.game.phase, "final_vote");
   assert.equal(room.game.finalVote.candidates.every((candidate) => candidate.playerId === findPlayer(session, "ゲストA").playerId), true);
 
@@ -932,4 +975,55 @@ test("final vote excludes players who only have their own words as candidates", 
     room.game.finalVote.votedPlayerIds.sort(),
     [findPlayer(session, "ホスト").playerId, findPlayer(session, "ゲストB").playerId, findPlayer(session, "ゲストC").playerId].sort()
   );
+});
+
+test("reveal close is required before the next action can continue", async () => {
+  const handler = createTestHandler();
+  const session = await createSession(handler, ["ホスト", "ゲストA", "ゲストB"]);
+  await startGame(handler, session, "ホスト");
+
+  const submittedRoom = await submitFor(handler, session, findPlayer(session, "ホスト"), 0);
+  assert.equal(submittedRoom.game.reveal.kind, "submission");
+
+  const blockedResponse = await handler(
+    createEvent("POST", `/v1/rooms/${session.roomId}/rounds/0/submit`, {
+      headers: {
+        "X-Omojan-Player-Token": findPlayer(session, "ゲストA").playerToken
+      },
+      body: buildSubmitPayload(await getRoom(handler, session.roomId, findPlayer(session, "ゲストA").playerToken))
+    })
+  );
+  const blockedBody = await parseResponse(blockedResponse);
+  assert.equal(blockedResponse.statusCode, 409);
+  assert.equal(blockedBody.error.code, "REVEAL_PENDING");
+
+  const halfClosedRoom = await closeRevealFor(handler, session, findPlayer(session, "ホスト"));
+  assert.deepEqual(halfClosedRoom.game.reveal.acknowledgedPlayerIds, [findPlayer(session, "ホスト").playerId]);
+
+  const clearedRoom = await closeRevealForAll(handler, session);
+  assert.equal(clearedRoom.game.reveal, null);
+  assert.equal(clearedRoom.game.currentTurnPlayerId, findPlayer(session, "ゲストA").playerId);
+});
+
+test("round count matches player count and start player rotates every round", async () => {
+  const handler = createTestHandler();
+  const session = await createSession(handler, ["ホスト", "ゲストA", "ゲストB", "ゲストC"]);
+  let room = await startGame(handler, session, "ホスト");
+
+  assert.equal(room.game.rounds.length, 4);
+  assert.equal(room.game.currentTurnPlayerId, findPlayer(session, "ホスト").playerId);
+
+  for (let roundIndex = 0; roundIndex < 3; roundIndex += 1) {
+    room = await playRound(handler, session, roundIndex, [
+      ["ホスト", "ゲストA"],
+      ["ゲストA", "ゲストB"],
+      ["ゲストB", "ゲストA"],
+      ["ゲストC", "ゲストA"]
+    ]);
+    room = await closeRevealForAll(handler, session);
+    room = await proceedRound(handler, session, roundIndex);
+  }
+
+  assert.equal(room.game.roundIndex, 3);
+  assert.equal(room.game.currentTurnPlayerId, findPlayer(session, "ゲストC").playerId);
 });

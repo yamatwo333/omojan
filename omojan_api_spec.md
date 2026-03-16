@@ -128,12 +128,13 @@ type GameStateResponse = {
     | "final_revote"
     | "final_host_decide"
     | "final_result";
-  roundIndex: 0 | 1 | 2 | null;
+  roundIndex: number | null;
   currentTurnPlayerId: string | null;
   players: PlayerView[];
   rounds: RoundView[];
   finalVote: FinalVoteView | null;
   champion: ChampionView | null;
+  reveal: RevealView | null;
 };
 ```
 
@@ -178,9 +179,9 @@ type SubmissionView = {
 
 ```ts
 type RoundView = {
-  roundIndex: 0 | 1 | 2;
-  label: "ラウンド1" | "ラウンド2" | "ラウンド3";
-  wind: "東一局" | "東二局" | "東三局";
+  roundIndex: number;
+  label: string;
+  wind: string;
   phaseStatus: "pending" | "submit" | "vote" | "revote" | "host_decide" | "finished";
   submissions: SubmissionView[];
   votedPlayerIds: string[];
@@ -198,6 +199,22 @@ type RoundView = {
 };
 ```
 
+### 4-6a. RevealView
+
+```ts
+type RevealView = {
+  revealId: string;
+  kind: "submission" | "round_winner" | "champion";
+  roundIndex: number | null;
+  displayName: string;
+  playerId: string;
+  phrase: string;
+  fontId: string;
+  renderedLines: string[];
+  acknowledgedPlayerIds: string[];
+};
+```
+
 ### 4-7. FinalVoteView
 
 ```ts
@@ -207,7 +224,7 @@ type FinalVoteView = {
   revotedPlayerIds: string[];
   candidates: Array<{
     candidateId: string;
-    roundIndex: 0 | 1 | 2;
+    roundIndex: number;
     playerId: string;
     displayName: string;
     phrase: string;

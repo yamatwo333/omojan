@@ -89,6 +89,7 @@ function parseRoute(method, pathname) {
     { method: "POST", pattern: /^\/v1\/rooms\/join$/, route: "joinRoom" },
     { method: "GET", pattern: /^\/v1\/rooms\/([^/]+)$/, route: "getRoom" },
     { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/reconnect$/, route: "reconnectRoom" },
+    { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/reveal-close$/, route: "closeReveal" },
     { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/start-player$/, route: "startPlayer" },
     { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/start$/, route: "startGame" },
     { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/rounds\/(\d+)\/submit$/, route: "submitWord" },
@@ -145,6 +146,7 @@ function handleHealth() {
       "rooms:join",
       "rooms:get",
       "rooms:reconnect",
+      "rooms:reveal-close",
       "rooms:start-player",
       "rooms:start",
       "rounds:submit",
@@ -300,45 +302,20 @@ function normalizeDeckForStorage(deckId, payload = {}, existingDeck = null) {
   };
 }
 
-function createEmptyRounds() {
-  return [
-    {
-      roundIndex: 0,
-      label: "ラウンド1",
-      wind: "東一局",
-      phaseStatus: "pending",
-      submissions: [],
-      votes: {},
-      revotes: {},
-      hostDecision: null,
-      voteSummary: null,
-      winner: null
-    },
-    {
-      roundIndex: 1,
-      label: "ラウンド2",
-      wind: "東二局",
-      phaseStatus: "pending",
-      submissions: [],
-      votes: {},
-      revotes: {},
-      hostDecision: null,
-      voteSummary: null,
-      winner: null
-    },
-    {
-      roundIndex: 2,
-      label: "ラウンド3",
-      wind: "東三局",
-      phaseStatus: "pending",
-      submissions: [],
-      votes: {},
-      revotes: {},
-      hostDecision: null,
-      voteSummary: null,
-      winner: null
-    }
-  ];
+function createEmptyRounds(playerCount = 4) {
+  const winds = ["一", "二", "三", "四"];
+  return Array.from({ length: normalizePlayerCount(playerCount) }, (_, roundIndex) => ({
+    roundIndex,
+    label: `ラウンド${roundIndex + 1}`,
+    wind: `東${winds[roundIndex] || roundIndex + 1}局`,
+    phaseStatus: "pending",
+    submissions: [],
+    votes: {},
+    revotes: {},
+    hostDecision: null,
+    voteSummary: null,
+    winner: null
+  }));
 }
 
 function getPlayableDeck(deck) {
@@ -427,16 +404,13 @@ function buildStartedRoom(room, deck) {
   updatedRoom.status = "playing";
   updatedRoom.startPlayerId = startPlayerId;
   updatedRoom.playerOrder = playerOrder;
-  updatedRoom.game.phase = "round_submit";
-  updatedRoom.game.roundIndex = 0;
-  updatedRoom.game.currentTurnPlayerId = startPlayerId;
   updatedRoom.game.deckId = playableDeck.deckId;
   updatedRoom.game.deckVersion = playableDeck.version;
   updatedRoom.game.initialHands = dealInitialHands(playersInSeatOrder, playableDeck);
-  updatedRoom.game.rounds = createEmptyRounds();
-  updatedRoom.game.rounds[0].phaseStatus = "submit";
+  updatedRoom.game.rounds = createEmptyRounds(updatedRoom.playerCount);
   updatedRoom.game.finalVote = null;
   updatedRoom.game.champion = null;
+  updatedRoom.game.reveal = null;
 
   updatedRoom.players = playersInSeatOrder.map((player) => ({
     ...player,
@@ -446,6 +420,7 @@ function buildStartedRoom(room, deck) {
   updatedRoom.updatedAt = nowIso();
   updatedRoom.expiresAt = Math.floor(Date.now() / 1000) + ROOM_TTL_SECONDS;
   updatedRoom.revision += 1;
+  startRound(updatedRoom, 0);
 
   return updatedRoom;
 }
@@ -457,16 +432,49 @@ function getCurrentRound(room) {
   return room.game.rounds?.[room.game.roundIndex] || null;
 }
 
+function getRoundPlayerOrder(room, roundIndex) {
+  const baseOrder =
+    Array.isArray(room.playerOrder) && room.playerOrder.length
+      ? room.playerOrder
+      : derivePlayerOrder(room);
+  if (!baseOrder.length) {
+    return [];
+  }
+  const offset = ((roundIndex % baseOrder.length) + baseOrder.length) % baseOrder.length;
+  return [...baseOrder.slice(offset), ...baseOrder.slice(0, offset)];
+}
+
+function setReveal(updatedRoom, reveal) {
+  updatedRoom.game.reveal = {
+    revealId: makeId("reveal"),
+    acknowledgedPlayerIds: [],
+    createdAt: nowIso(),
+    ...clone(reveal)
+  };
+}
+
+function clearReveal(updatedRoom) {
+  updatedRoom.game.reveal = null;
+}
+
+function requireNoActiveReveal(room) {
+  if (room.game?.reveal) {
+    throw domainError(409, "REVEAL_PENDING", "全員が公開ポップアップを閉じるまで待ってください。");
+  }
+}
+
 function startRound(updatedRoom, roundIndex) {
+  const roundOrder = getRoundPlayerOrder(updatedRoom, roundIndex);
   updatedRoom.game.roundIndex = roundIndex;
   updatedRoom.game.phase = "round_submit";
-  updatedRoom.game.currentTurnPlayerId = updatedRoom.playerOrder[0] || updatedRoom.startPlayerId || updatedRoom.hostPlayerId;
+  updatedRoom.game.currentTurnPlayerId = roundOrder[0] || updatedRoom.startPlayerId || updatedRoom.hostPlayerId;
   updatedRoom.game.rounds[roundIndex].phaseStatus = "submit";
   updatedRoom.game.rounds[roundIndex].votes = {};
   updatedRoom.game.rounds[roundIndex].revotes = {};
   updatedRoom.game.rounds[roundIndex].hostDecision = null;
   updatedRoom.game.rounds[roundIndex].voteSummary = null;
   updatedRoom.game.rounds[roundIndex].winner = null;
+  clearReveal(updatedRoom);
 }
 
 function buildPhraseFromTiles(payload, selectedTiles) {
@@ -491,6 +499,7 @@ function buildRenderedLines(payload, selectedTiles) {
 }
 
 function buildSubmittedRoom(room, mePlayer, roundIndex, payload) {
+  requireNoActiveReveal(room);
   if (room.game?.phase !== "round_submit") {
     throw domainError(409, "INVALID_PHASE", "round_submit ではないため実行できません。");
   }
@@ -533,23 +542,35 @@ function buildSubmittedRoom(room, mePlayer, roundIndex, payload) {
   if (!phrase) {
     throw domainError(400, "INVALID_TARGET", "提出ワードが空です。");
   }
+  const renderedLines = buildRenderedLines(payload, selectedTiles);
 
   round.submissions.push({
     playerId: updatedPlayer.playerId,
     displayName: updatedPlayer.displayName,
     phrase,
     fontId: String(payload.fontId || "broadcast"),
-    renderedLines: buildRenderedLines(payload, selectedTiles),
+    renderedLines,
     submittedAt: nowIso()
   });
 
   updatedPlayer.usedTileIds = [...usedTileIds, ...payload.tileIds];
   updatedPlayer.handCount = Math.max(0, STARTING_HAND_SIZE - updatedPlayer.usedTileIds.length);
 
+  const roundOrder = getRoundPlayerOrder(updatedRoom, roundIndex);
   const nextTurnPlayerId =
-    updatedRoom.playerOrder.find(
+    roundOrder.find(
       (playerId) => !round.submissions.some((submission) => submission.playerId === playerId)
     ) || null;
+
+  setReveal(updatedRoom, {
+    kind: "submission",
+    roundIndex,
+    displayName: updatedPlayer.displayName,
+    playerId: updatedPlayer.playerId,
+    phrase,
+    fontId: String(payload.fontId || "broadcast"),
+    renderedLines
+  });
 
   if (nextTurnPlayerId) {
     updatedRoom.game.currentTurnPlayerId = nextTurnPlayerId;
@@ -607,6 +628,15 @@ function setRoundWinner(updatedRoom, round, winnerPlayerId, source, counts) {
   };
   updatedRoom.game.phase = "round_result";
   updatedRoom.game.currentTurnPlayerId = null;
+  setReveal(updatedRoom, {
+    kind: "round_winner",
+    roundIndex: round.roundIndex,
+    displayName: submission.displayName,
+    playerId: winnerPlayerId,
+    phrase: submission.phrase,
+    fontId: submission.fontId,
+    renderedLines: submission.renderedLines
+  });
 }
 
 function summarizeFinalVotes(finalVote, validTargetIds, ballots) {
@@ -650,6 +680,15 @@ function setFinalWinner(updatedRoom, finalVote, winnerCandidateId, source, count
   updatedRoom.game.phase = "final_result";
   updatedRoom.game.currentTurnPlayerId = null;
   updatedRoom.status = "finished";
+  setReveal(updatedRoom, {
+    kind: "champion",
+    roundIndex: null,
+    displayName: candidate.displayName,
+    playerId: candidate.playerId,
+    phrase: candidate.phrase,
+    fontId: candidate.fontId,
+    renderedLines: candidate.renderedLines
+  });
 }
 
 function buildChampionHistoryEntry(room) {
@@ -717,6 +756,7 @@ function buildRecentChampionItems(historyItems, limit) {
 }
 
 function buildVotedRoom(room, mePlayer, roundIndex, targetPlayerId, mode = "vote") {
+  requireNoActiveReveal(room);
   const expectedPhase = mode === "revote" ? "round_revote" : "round_vote";
   if (room.game?.phase !== expectedPhase) {
     throw domainError(409, "INVALID_PHASE", `${expectedPhase} ではないため実行できません。`);
@@ -783,6 +823,7 @@ function buildVotedRoom(room, mePlayer, roundIndex, targetPlayerId, mode = "vote
 }
 
 function buildHostDecisionRoom(room, mePlayer, roundIndex, winnerPlayerId) {
+  requireNoActiveReveal(room);
   if (room.game?.phase !== "round_host_decide") {
     throw domainError(409, "INVALID_PHASE", "round_host_decide ではないため実行できません。");
   }
@@ -814,6 +855,7 @@ function buildHostDecisionRoom(room, mePlayer, roundIndex, winnerPlayerId) {
 function beginFinalVote(updatedRoom) {
   updatedRoom.game.phase = "final_vote";
   updatedRoom.game.currentTurnPlayerId = null;
+  clearReveal(updatedRoom);
   updatedRoom.game.finalVote = {
     phaseStatus: "vote",
     candidates: updatedRoom.game.rounds.map((round) => ({
@@ -846,6 +888,7 @@ function getEligibleFinalVoterIds(finalVote, players, mode = "vote") {
 }
 
 function buildFinalVotedRoom(room, mePlayer, candidateId, mode = "vote") {
+  requireNoActiveReveal(room);
   const expectedPhase = mode === "revote" ? "final_revote" : "final_vote";
   if (room.game?.phase !== expectedPhase) {
     throw domainError(409, "INVALID_PHASE", `${expectedPhase} ではないため実行できません。`);
@@ -910,6 +953,7 @@ function buildFinalVotedRoom(room, mePlayer, candidateId, mode = "vote") {
 }
 
 function buildFinalHostDecisionRoom(room, mePlayer, candidateId) {
+  requireNoActiveReveal(room);
   if (room.game?.phase !== "final_host_decide") {
     throw domainError(409, "INVALID_PHASE", "final_host_decide ではないため実行できません。");
   }
@@ -936,6 +980,7 @@ function buildFinalHostDecisionRoom(room, mePlayer, candidateId) {
 }
 
 function buildRestartedRoom(room, mePlayer) {
+  requireNoActiveReveal(room);
   if (!mePlayer.isHost) {
     throw domainError(403, "NOT_HOST", "ホストのみ実行できます。");
   }
@@ -958,14 +1003,15 @@ function buildRestartedRoom(room, mePlayer) {
   updatedRoom.game = {
     phase: "lobby",
     roundIndex: null,
-    currentTurnPlayerId: null,
-    deckId: null,
-    deckVersion: null,
-    initialHands: {},
-    rounds: createEmptyRounds(),
-    finalVote: null,
-    champion: null
-  };
+      currentTurnPlayerId: null,
+      deckId: null,
+      deckVersion: null,
+      initialHands: {},
+      rounds: createEmptyRounds(room.playerCount),
+      finalVote: null,
+      champion: null,
+      reveal: null
+    };
   updatedRoom.updatedAt = nowIso();
   updatedRoom.expiresAt = Math.floor(Date.now() / 1000) + ROOM_TTL_SECONDS;
   updatedRoom.revision += 1;
@@ -973,6 +1019,7 @@ function buildRestartedRoom(room, mePlayer) {
 }
 
 function buildProceedRoom(room, mePlayer, roundIndex) {
+  requireNoActiveReveal(room);
   if (room.game?.phase !== "round_result") {
     throw domainError(409, "INVALID_PHASE", "round_result ではないため実行できません。");
   }
@@ -984,7 +1031,7 @@ function buildProceedRoom(room, mePlayer, roundIndex) {
   }
 
   const updatedRoom = clone(room);
-  if (roundIndex < 2) {
+  if (roundIndex < updatedRoom.game.rounds.length - 1) {
     startRound(updatedRoom, roundIndex + 1);
   } else {
     beginFinalVote(updatedRoom);
@@ -993,6 +1040,36 @@ function buildProceedRoom(room, mePlayer, roundIndex) {
   updatedRoom.expiresAt = Math.floor(Date.now() / 1000) + ROOM_TTL_SECONDS;
   updatedRoom.revision += 1;
   return updatedRoom;
+}
+
+function buildClosedRevealRoom(room, mePlayer, revealId = "") {
+  const currentReveal = room.game?.reveal;
+  if (!currentReveal) {
+    return { room: clone(room), changed: false };
+  }
+  if (revealId && currentReveal.revealId && currentReveal.revealId !== revealId) {
+    return { room: clone(room), changed: false };
+  }
+
+  const updatedRoom = clone(room);
+  const reveal = updatedRoom.game.reveal;
+  const acknowledgedPlayerIds = new Set(reveal.acknowledgedPlayerIds || []);
+  if (acknowledgedPlayerIds.has(mePlayer.playerId)) {
+    return { room: updatedRoom, changed: false };
+  }
+  acknowledgedPlayerIds.add(mePlayer.playerId);
+
+  const requiredPlayerIds = updatedRoom.players.map((player) => player.playerId);
+  if (requiredPlayerIds.every((playerId) => acknowledgedPlayerIds.has(playerId))) {
+    clearReveal(updatedRoom);
+  } else {
+    reveal.acknowledgedPlayerIds = [...acknowledgedPlayerIds];
+  }
+
+  updatedRoom.updatedAt = nowIso();
+  updatedRoom.expiresAt = Math.floor(Date.now() / 1000) + ROOM_TTL_SECONDS;
+  updatedRoom.revision += 1;
+  return { room: updatedRoom, changed: true };
 }
 
 function createRoomState(params) {
@@ -1032,9 +1109,10 @@ function createRoomState(params) {
       deckId: null,
       deckVersion: null,
       initialHands: {},
-      rounds: createEmptyRounds(),
+      rounds: createEmptyRounds(playerCount),
       finalVote: null,
-      champion: null
+      champion: null,
+      reveal: null
     },
     createdAt: issuedAt,
     updatedAt: issuedAt,
@@ -1134,6 +1212,23 @@ function toFinalVoteView(finalVote) {
   };
 }
 
+function toRevealView(reveal) {
+  if (!reveal) {
+    return null;
+  }
+  return {
+    revealId: reveal.revealId,
+    kind: reveal.kind,
+    roundIndex: reveal.roundIndex ?? null,
+    displayName: reveal.displayName,
+    playerId: reveal.playerId,
+    phrase: reveal.phrase,
+    fontId: reveal.fontId,
+    renderedLines: clone(reveal.renderedLines || []),
+    acknowledgedPlayerIds: clone(reveal.acknowledgedPlayerIds || [])
+  };
+}
+
 function mapRoomResponse(room, mePlayer) {
   const players = [...room.players].sort((left, right) => left.seatOrder - right.seatOrder);
   return {
@@ -1150,9 +1245,10 @@ function mapRoomResponse(room, mePlayer) {
       roundIndex: room.game?.roundIndex ?? null,
       currentTurnPlayerId: room.game?.currentTurnPlayerId ?? null,
       players: players.map(toPlayerView),
-      rounds: Array.isArray(room.game?.rounds) ? room.game.rounds.map(toRoundView) : createEmptyRounds().map(toRoundView),
+      rounds: Array.isArray(room.game?.rounds) ? room.game.rounds.map(toRoundView) : createEmptyRounds(room.playerCount).map(toRoundView),
       finalVote: toFinalVoteView(room.game?.finalVote),
-      champion: room.game?.champion ? clone(room.game.champion) : null
+      champion: room.game?.champion ? clone(room.game.champion) : null,
+      reveal: toRevealView(room.game?.reveal)
     },
     me: {
       playerId: mePlayer.playerId,
@@ -1501,6 +1597,37 @@ async function createDynamoRoomRepository(options = {}) {
       }
 
       throw domainError(409, "CONFLICT_RETRY", "再接続処理が競合しました。もう一度お試しください。", true);
+    },
+
+    async closeReveal(roomId, playerToken, revealId = "") {
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        const room = await getRoomItem(roomId);
+        if (!room) {
+          throw domainError(404, "ROOM_NOT_FOUND", "指定された room は存在しません。");
+        }
+        const mePlayer = getPlayerByToken(room, playerToken);
+        if (!mePlayer) {
+          throw domainError(401, "PLAYER_TOKEN_INVALID", "playerToken が必要です。");
+        }
+
+        const result = buildClosedRevealRoom(room, mePlayer, revealId);
+        if (!result.changed) {
+          return { room: result.room, mePlayer };
+        }
+
+        try {
+          await putRoomItem(result.room, room.revision);
+          const updatedMePlayer = result.room.players.find((player) => player.playerId === mePlayer.playerId);
+          return { room: result.room, mePlayer: updatedMePlayer };
+        } catch (error) {
+          if (toConditionalFailure(error)) {
+            continue;
+          }
+          throw error;
+        }
+      }
+
+      throw domainError(409, "CONFLICT_RETRY", "公開ポップアップの更新が競合しました。もう一度お試しください。", true);
     },
 
     async setStartPlayer(roomId, playerToken, startPlayerId) {
@@ -1994,6 +2121,26 @@ function createMemoryRoomRepository() {
       return { room: clone(updatedRoom), mePlayer: clone(player) };
     },
 
+    async closeReveal(roomId, playerToken, revealId = "") {
+      const room = rooms.get(roomId);
+      if (!room) {
+        throw domainError(404, "ROOM_NOT_FOUND", "指定された room は存在しません。");
+      }
+      const mePlayer = getPlayerByToken(room, playerToken);
+      if (!mePlayer) {
+        throw domainError(401, "PLAYER_TOKEN_INVALID", "playerToken が必要です。");
+      }
+
+      const result = buildClosedRevealRoom(room, mePlayer, revealId);
+      if (!result.changed) {
+        return { room: result.room, mePlayer: clone(mePlayer) };
+      }
+
+      saveRoom(result.room);
+      const updatedMePlayer = result.room.players.find((player) => player.playerId === mePlayer.playerId);
+      return { room: clone(result.room), mePlayer: clone(updatedMePlayer) };
+    },
+
     async setStartPlayer(roomId, playerToken, startPlayerId) {
       const room = rooms.get(roomId);
       if (!room) {
@@ -2280,6 +2427,19 @@ function createHandler(options = {}) {
             return fail(401, "PLAYER_TOKEN_INVALID", "playerToken が必要です。");
           }
           const result = await repository.reconnectRoom(matched.params[0], playerToken);
+          return ok(toRoomPayload(result.room, result.mePlayer));
+        }
+        case "closeReveal": {
+          const body = parseBody(event);
+          if (body === null) {
+            return fail(400, "INVALID_JSON", "JSON の形式が不正です。");
+          }
+          const playerToken = getHeader(event, "X-Omojan-Player-Token");
+          if (!playerToken) {
+            return fail(401, "PLAYER_TOKEN_INVALID", "playerToken が必要です。");
+          }
+          const repository = await roomRepositoryPromise;
+          const result = await repository.closeReveal(matched.params[0], playerToken, String(body?.revealId || "").trim());
           return ok(toRoomPayload(result.room, result.mePlayer));
         }
         case "startPlayer": {

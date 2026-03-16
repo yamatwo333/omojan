@@ -134,13 +134,15 @@ test("admin page supports search, filter, and csv bulk import", async ({ page })
   await page.locator("#csvFileInput").setInputFiles({
     name: "append.csv",
     mimeType: "text/csv",
-    buffer: Buffer.from("text,enabled\n爆笑ラーメン,true\n無言会議,false\n", "utf8")
+    buffer: Buffer.from("text,enabled\n爆笑ラーメン,true\n無言会議,false\n謝罪会見,true\n", "utf8")
   });
 
-  await expect(page.locator("#feedback")).toContainText("2件を追加しました。");
+  await expect(page.locator("#feedback")).toContainText("3件を追加しました。");
+  await expect(page.locator("#feedback")).toContainText("重複ワードを1件自動削除しました。");
   await expect(page.locator('[data-tile-text-index]')).toHaveCount(5);
   await expect(page.locator('[data-tile-text-index="0"]')).toHaveValue("爆笑ラーメン");
   await expect(page.locator('[data-tile-text-index="1"]')).toHaveValue("無言会議");
+  await expect(page.locator('[data-tile-text-index="2"]')).toHaveValue("謝罪会見");
 
   await page.fill("#searchInput", "爆笑");
   await expect(page.locator('[data-tile-text-index]')).toHaveCount(1);
@@ -183,9 +185,12 @@ test("admin page adds a new word at the top", async ({ page }) => {
   await expect(page.locator('[data-tile-text-index="0"]')).toHaveValue("");
 
   await page.fill('[data-tile-text-index="0"]', "先頭追加ワード");
+  await page.fill('[data-tile-text-index="2"]', "先頭追加ワード");
   await page.getByRole("button", { name: "保存する" }).click();
-  await expect(page.locator("#feedback")).toContainText("保存しました。");
+  await expect(page.locator("#feedback")).toContainText("重複ワードを1件自動削除");
   await page.reload();
 
+  await expect(page.locator('[data-tile-text-index]')).toHaveCount(3);
   await expect(page.locator('[data-tile-text-index="0"]')).toHaveValue("先頭追加ワード");
+  await expect(page.locator('[data-tile-text-index="1"]')).toHaveValue("現場猫");
 });

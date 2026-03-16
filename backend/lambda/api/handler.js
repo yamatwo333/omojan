@@ -256,11 +256,16 @@ function buildDeckState(deckId, source = {}, version = 1) {
 function normalizeDeckForStorage(deckId, payload = {}, existingDeck = null) {
   const sourceTiles = Array.isArray(payload.tiles) ? payload.tiles : [];
   const usedTileIds = new Set();
-  const normalizedTiles = sourceTiles.map((tile, index) => {
+  const usedTexts = new Set();
+  const normalizedTiles = sourceTiles.reduce((tiles, tile, index) => {
     const text = String(tile?.text || "").trim().slice(0, 40);
     if (!text) {
       throw domainError(400, "INVALID_TILE_TEXT", `牌 ${index + 1} のテキストが空です。`);
     }
+    if (usedTexts.has(text)) {
+      return tiles;
+    }
+    usedTexts.add(text);
 
     let tileId = String(tile?.tileId || "").trim().slice(0, 64).replace(/[^A-Za-z0-9_-]/g, "_");
     if (!tileId) {
@@ -271,12 +276,13 @@ function normalizeDeckForStorage(deckId, payload = {}, existingDeck = null) {
     }
     usedTileIds.add(tileId);
 
-    return {
+    tiles.push({
       tileId,
       text,
       enabled: tile?.enabled !== false
-    };
-  });
+    });
+    return tiles;
+  }, []);
 
   if (!normalizedTiles.length) {
     throw domainError(400, "DECK_EMPTY", "デッキには1枚以上の牌が必要です。");

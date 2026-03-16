@@ -783,6 +783,28 @@
         return tiles;
       }
 
+      function dedupeTilesByText(tiles) {
+        const seenTexts = new Set();
+        const deduped = [];
+        let removedCount = 0;
+
+        for (const tile of tiles) {
+          const text = String(tile?.text || "").trim();
+          if (!text) {
+            deduped.push(tile);
+            continue;
+          }
+          if (seenTexts.has(text)) {
+            removedCount += 1;
+            continue;
+          }
+          seenTexts.add(text);
+          deduped.push(tile);
+        }
+
+        return { tiles: deduped, removedCount };
+      }
+
       async function loadDeck() {
         state.pending = true;
         setFeedback("");
@@ -822,12 +844,13 @@
         setFeedback("");
         render();
         try {
+          const deduped = dedupeTilesByText(state.deck.tiles);
           const data = await fetchJson("/admin/decks/default", {
             method: "PUT",
             body: {
               deckName: state.deck.deckName,
               version: state.deck.version,
-              tiles: state.deck.tiles.map((tile) => ({
+              tiles: deduped.tiles.map((tile) => ({
                 tileId: tile.tileId,
                 text: String(tile.text || "").trim(),
                 enabled: tile.enabled !== false
@@ -845,7 +868,11 @@
             }))
           };
           window.localStorage.setItem(PASSCODE_KEY, state.passcode);
-          setFeedback("保存しました。次の新規ゲームから反映されます。");
+          setFeedback(
+            deduped.removedCount
+              ? `保存しました。重複ワードを${deduped.removedCount}件自動削除し、次の新規ゲームから反映されます。`
+              : "保存しました。次の新規ゲームから反映されます。"
+          );
         } catch (error) {
           setFeedback(error instanceof Error ? error.message : "保存に失敗しました。", true);
         } finally {
@@ -867,16 +894,18 @@
         try {
           const csvText = await file.text();
           const importedTiles = buildImportedTiles(csvText);
-          state.deck.tiles =
+          const mergedTiles =
             state.importMode === "replace"
               ? importedTiles
               : [...importedTiles, ...state.deck.tiles];
+          const deduped = dedupeTilesByText(mergedTiles);
+          state.deck.tiles = deduped.tiles;
           state.searchQuery = "";
           state.filterMode = "all";
           setFeedback(
             state.importMode === "replace"
-              ? `${importedTiles.length}件で置き換えました。`
-              : `${importedTiles.length}件を追加しました。`
+              ? `${state.deck.tiles.length}件で置き換えました${deduped.removedCount ? `。重複ワードを${deduped.removedCount}件自動削除しました` : ""}。`
+              : `${importedTiles.length}件を追加しました${deduped.removedCount ? `。重複ワードを${deduped.removedCount}件自動削除しました` : ""}。`
           );
         } catch (error) {
           setFeedback(error instanceof Error ? error.message : "CSV の取り込みに失敗しました。", true);

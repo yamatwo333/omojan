@@ -504,6 +504,41 @@ test("admin deck API rejects stale version on save", async () => {
   assert.equal(staleSaveBody.error.code, "CONFLICT_RETRY");
 });
 
+test("admin deck API removes duplicate words and keeps the first one", async () => {
+  const adminPasscode = "test-admin-passcode";
+  const handler = createTestHandler({ adminSharedPasscode: adminPasscode });
+
+  const initialResponse = await handler(
+    createEvent("GET", "/v1/admin/decks/default", {
+      headers: createAdminHeaders(adminPasscode)
+    })
+  );
+  const initialBody = await parseResponse(initialResponse);
+
+  const saveResponse = await handler(
+    createEvent("PUT", "/v1/admin/decks/default", {
+      headers: createAdminHeaders(adminPasscode),
+      body: {
+        deckName: "default",
+        version: initialBody.data.version,
+        tiles: [
+          { tileId: "dup_top", text: "重複ワード", enabled: true },
+          { tileId: "unique_1", text: "別ワード", enabled: true },
+          { tileId: "dup_bottom", text: "重複ワード", enabled: false }
+        ]
+      }
+    })
+  );
+  const saveBody = await parseResponse(saveResponse);
+
+  assert.equal(saveResponse.statusCode, 200);
+  assert.equal(saveBody.ok, true);
+  assert.equal(saveBody.data.tiles.length, 2);
+  assert.equal(saveBody.data.tiles[0].tileId, "dup_top");
+  assert.equal(saveBody.data.tiles[0].text, "重複ワード");
+  assert.equal(saveBody.data.tiles[1].text, "別ワード");
+});
+
 test("dynamo deck repository can save default deck before it exists in table", async () => {
   let storedDeckItem = null;
   let lastPutInput = null;

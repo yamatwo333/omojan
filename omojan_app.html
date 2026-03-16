@@ -950,7 +950,15 @@
       const APP_SESSION_MAP_KEY = "omojan-app-sessions";
       const APP_ROOM_ID_KEY = "omojan-app-room-id";
       const APP_PLAYER_TOKEN_KEY = "omojan-app-player-token";
-      const POLL_INTERVAL_MS = 3000;
+      const POLL_INTERVALS_MS = {
+        activeTurn: 2300,
+        waiting: 1700,
+        lobby: 4500,
+        result: 5200,
+        hidden: 12000,
+        backoffStep: 1400,
+        max: 16000
+      };
 
       const lineModes = [
         { id: "boundary", label: "ワードの境目で改行" },
@@ -990,8 +998,16 @@
         selectedHostTarget: "",
         selectedFinalTarget: "",
         pollTimer: 0,
+        pollFailureCount: 0,
         feedbackTimer: 0,
-        lastSyncAt: ""
+        lastSyncAt: "",
+        renderCache: {
+          appKey: "",
+          loadingKey: "",
+          feedbackKey: "",
+          bannerKey: "",
+          revealKey: ""
+        }
       };
 
       class AppError extends Error {
@@ -1353,25 +1369,40 @@
         `;
       }
 
-      function hydrateWordBoards() {
-        document.querySelectorAll(".auto-fit-word").forEach((node) => {
-          const lines = Array.from(node.querySelectorAll(".word-line")).map((line) => line.textContent || "");
-          const fontClass = getFontClass(node.dataset.fontId || "classic");
-          const lineMode = node.dataset.lineMode || (lines.length <= 1 ? "single" : "manual");
-          const maxFont = Number(node.dataset.maxFont || "46");
-          const minFont = Number(node.dataset.minFont || "18");
-          const width = node.clientWidth || 300;
-          const height = node.clientHeight || 120;
-          let chosen = minFont;
-          for (let fontSize = maxFont; fontSize >= minFont; fontSize -= 1) {
-            if (doesWordFit(lines, fontClass, lineMode, fontSize, width, height)) {
-              chosen = fontSize;
-              break;
-            }
+      function hydrateWordBoard(node) {
+        if (!node) {
+          return;
+        }
+        const lines = Array.from(node.querySelectorAll(".word-line")).map((line) => line.textContent || "");
+        const fontClass = getFontClass(node.dataset.fontId || "classic");
+        const lineMode = node.dataset.lineMode || (lines.length <= 1 ? "single" : "manual");
+        const maxFont = Number(node.dataset.maxFont || "46");
+        const minFont = Number(node.dataset.minFont || "18");
+        const width = node.clientWidth || 300;
+        const height = node.clientHeight || 120;
+        let chosen = minFont;
+        for (let fontSize = maxFont; fontSize >= minFont; fontSize -= 1) {
+          if (doesWordFit(lines, fontClass, lineMode, fontSize, width, height)) {
+            chosen = fontSize;
+            break;
           }
-          node.dataset.variant = Array.from(node.classList).find((className) => className.endsWith("-word")) || "";
-          applyWordMarkup(node, lines, fontClass, lineMode, chosen);
-        });
+        }
+        node.dataset.variant = Array.from(node.classList).find((className) => className.endsWith("-word")) || node.dataset.variant || "";
+        applyWordMarkup(node, lines, fontClass, lineMode, chosen);
+      }
+
+      function hydrateWordBoards(root = document) {
+        if (!root) {
+          return;
+        }
+        const nodes = [];
+        if (root.matches?.(".auto-fit-word")) {
+          nodes.push(root);
+        }
+        if (root.querySelectorAll) {
+          nodes.push(...root.querySelectorAll(".auto-fit-word"));
+        }
+        nodes.forEach((node) => hydrateWordBoard(node));
       }
 
       function getInviteUrl(code) {
@@ -1486,6 +1517,60 @@
         return `最終同期 ${new Date(state.lastSyncAt).toLocaleTimeString("ja-JP", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}`;
       }
 
+      function getRecentChampionsStamp() {
+        return state.recentChampions.map((item) => `${item.phrase}:${item.displayName}:${item.wonAt}`).join("|");
+      }
+
+      function getAppRenderKey(room = state.room, view = deriveView(room)) {
+        const base = [view, state.pendingAction ? "pending" : "idle"];
+        if (!room) {
+          return base.concat([
+            state.createDisplayName,
+            state.joinDisplayName,
+            state.inviteCode,
+            String(state.playerCount),
+            getRecentChampionsStamp()
+          ]).join("|");
+        }
+
+        const revision = String(room.revision ?? "no-revision");
+        base.push(revision);
+
+        switch (view) {
+          case "welcome":
+            return base.concat([
+              state.createDisplayName,
+              state.joinDisplayName,
+              state.inviteCode,
+              String(state.playerCount),
+              getRecentChampionsStamp()
+            ]).join("|");
+          case "lobby":
+            return base.concat([
+              state.selectedStartPlayerId,
+              String(room.playerCount || ""),
+              getRecentChampionsStamp()
+            ]).join("|");
+          case "submit":
+            return base.concat([
+              state.draftSelectedTileIds.join(","),
+              state.draftFontId,
+              state.draftLineMode,
+              state.draftManualBreaks.join(",")
+            ]).join("|");
+          case "vote":
+            return base.concat([state.selectedVoteTarget]).join("|");
+          case "revote":
+          case "hostDecide":
+            return base.concat([state.selectedHostTarget]).join("|");
+          case "finalVote":
+          case "finalHostDecide":
+            return base.concat([state.selectedFinalTarget]).join("|");
+          default:
+            return base.join("|");
+        }
+      }
+
       function getStatusContext() {
         const view = deriveView();
         const room = state.room;
@@ -1507,6 +1592,16 @@
       }
 
       function renderFeedbackDock() {
+        const feedbackKey = state.errorMessage
+          ? `error|${state.errorMessage}`
+          : state.copyMessage
+            ? `message|${state.copyMessage}`
+            : "empty";
+        if (state.renderCache.feedbackKey === feedbackKey) {
+          return;
+        }
+        state.renderCache.feedbackKey = feedbackKey;
+
         if (state.errorMessage) {
           els.feedbackDock.innerHTML = `<div class="error">${escapeHtml(state.errorMessage)}</div>`;
           return;
@@ -1519,10 +1614,20 @@
       }
 
       function setBanner() {
-        els.statusLabel.textContent = getStatusText();
-        els.statusContext.textContent = getStatusContext();
-        els.refreshTopBtn.disabled = state.pendingAction || state.isLoading;
-        els.refreshTopBtn.textContent = state.roomId ? "更新" : "再読込";
+        const bannerKey = [
+          getStatusText(),
+          getStatusContext(),
+          state.pendingAction ? "pending" : "idle",
+          state.isLoading ? "loading" : "ready",
+          state.roomId ? "room" : "welcome"
+        ].join("|");
+        if (state.renderCache.bannerKey !== bannerKey) {
+          state.renderCache.bannerKey = bannerKey;
+          els.statusLabel.textContent = getStatusText();
+          els.statusContext.textContent = getStatusContext();
+          els.refreshTopBtn.disabled = state.pendingAction || state.isLoading;
+          els.refreshTopBtn.textContent = state.roomId ? "更新" : "再読込";
+        }
         renderFeedbackDock();
       }
 
@@ -1722,6 +1827,7 @@
         try {
           const payload = await apiRequest(`/rooms/${encodeURIComponent(state.roomId)}`);
           setRoom(payload.data.room);
+          state.pollFailureCount = 0;
         } catch (error) {
           if (recoverLostSession(error, "refresh")) {
             return;
@@ -1760,9 +1866,39 @@
         return Boolean(state.roomId && state.playerToken && deriveView() !== "welcome");
       }
 
+      function getPollIntervalMs() {
+        if (!shouldPoll()) {
+          return 0;
+        }
+
+        const view = deriveView();
+        let baseInterval = POLL_INTERVALS_MS.activeTurn;
+
+        if (document.visibilityState === "hidden") {
+          baseInterval = POLL_INTERVALS_MS.hidden;
+        } else if (getActiveReveal()) {
+          baseInterval = POLL_INTERVALS_MS.waiting;
+        } else if (view === "wait") {
+          baseInterval = POLL_INTERVALS_MS.waiting;
+        } else if (view === "lobby") {
+          baseInterval = POLL_INTERVALS_MS.lobby;
+        } else if (view === "roundResult" || view === "finalResult") {
+          baseInterval = POLL_INTERVALS_MS.result;
+        }
+
+        return Math.min(
+          baseInterval + state.pollFailureCount * POLL_INTERVALS_MS.backoffStep,
+          POLL_INTERVALS_MS.max
+        );
+      }
+
       function schedulePoll() {
         clearPollTimer();
         if (!shouldPoll() || state.pendingAction || !state.roomId || !state.playerToken) {
+          return;
+        }
+        const intervalMs = getPollIntervalMs();
+        if (!intervalMs) {
           return;
         }
         state.pollTimer = window.setTimeout(async () => {
@@ -1770,10 +1906,11 @@
             await refreshRoom();
             render();
           } catch (error) {
+            state.pollFailureCount += 1;
             setFeedback(error instanceof Error ? error.message : "最新状態の取得に失敗しました。", true);
             render();
           }
-        }, POLL_INTERVAL_MS);
+        }, intervalMs);
       }
 
       async function restoreSession() {
@@ -2657,7 +2794,6 @@
       function renderApp() {
         const room = state.room;
         const view = deriveView(room);
-
         const renderMap = {
           welcome: renderLanding,
           lobby: () => renderLobby(room),
@@ -2671,17 +2807,21 @@
           finalHostDecide: () => renderHostDecide(room, true),
           finalResult: () => renderFinalResult(room)
         };
-
-        els.app.innerHTML = (renderMap[view] || renderLanding)();
+        const appKey = getAppRenderKey(room, view);
+        const shouldUpdateApp = state.renderCache.appKey !== appKey;
+        if (shouldUpdateApp) {
+          state.renderCache.appKey = appKey;
+          els.app.innerHTML = (renderMap[view] || renderLanding)();
+          hydrateWordBoards(els.app);
+        }
 
         const previewWord = document.getElementById("previewWord");
-        if (previewWord && deriveView(room) === "submit") {
+        if (previewWord && view === "submit") {
           const layout = computeDraftLayout();
           previewWord.dataset.variant = "preview-word";
           applyWordMarkup(previewWord, layout.lines, getFontClass(state.draftFontId), state.draftLineMode, layout.fontSize);
         }
 
-        hydrateWordBoards();
         setBanner();
         schedulePoll();
       }
@@ -2732,26 +2872,43 @@
       function renderReveal() {
         const reveal = getActiveReveal();
         if (!reveal) {
+          state.renderCache.revealKey = "";
           els.revealOverlay.hidden = true;
           return;
         }
         const presentation = buildRevealPresentation(reveal);
+        const revealKey = [
+          reveal.revealId,
+          reveal.kind,
+          presentation.badge,
+          presentation.meta,
+          presentation.buttonLabel,
+          presentation.acknowledged ? "ack" : "open",
+          state.pendingAction ? "pending" : "idle",
+          presentation.lines.join("|"),
+          presentation.fontId || "classic"
+        ].join("|");
+
+        if (state.renderCache.revealKey === revealKey) {
+          els.revealOverlay.hidden = false;
+          return;
+        }
+        state.renderCache.revealKey = revealKey;
 
         els.revealOverlay.hidden = false;
         els.revealCard.classList.toggle("is-champion", presentation.kind === "champion");
         els.revealBadge.textContent = presentation.badge;
         els.revealMeta.textContent = presentation.meta;
         els.revealWord.dataset.variant = presentation.kind === "champion" ? "champion-word" : "result-word";
-        applyWordMarkup(
-          els.revealWord,
-          presentation.lines,
-          getFontClass(presentation.fontId || "classic"),
-          presentation.lines.length <= 1 ? "single" : "manual",
-          presentation.kind === "champion" ? 46 : 42
-        );
+        els.revealWord.dataset.fontId = presentation.fontId || "classic";
+        els.revealWord.dataset.lineMode = presentation.lines.length <= 1 ? "single" : "manual";
+        els.revealWord.dataset.maxFont = presentation.kind === "champion" ? "46" : "42";
+        els.revealWord.dataset.minFont = presentation.kind === "champion" ? "22" : "18";
+        els.revealWord.className = `word-board auto-fit-word ${els.revealWord.dataset.variant}`;
+        els.revealWord.innerHTML = presentation.lines.map((line) => `<span class="word-line">${escapeHtml(line)}</span>`).join("");
+        hydrateWordBoard(els.revealWord);
         els.closeRevealBtn.textContent = presentation.buttonLabel;
         els.closeRevealBtn.disabled = Boolean(presentation.acknowledged || state.pendingAction);
-        hydrateWordBoards();
       }
 
       async function copyText(text, successMessage) {
@@ -3155,14 +3312,36 @@
         render();
       }
 
+      document.addEventListener("visibilitychange", async () => {
+        clearPollTimer();
+        if (document.visibilityState === "visible" && shouldPoll() && !state.pendingAction) {
+          try {
+            await refreshRoom();
+          } catch (error) {
+            if (!recoverLostSession(error, "refresh")) {
+              setFeedback(describeAppError(error, "refresh"), true);
+            }
+          }
+          render();
+          return;
+        }
+        schedulePoll();
+      });
+
       function render() {
         if (state.isLoading && !state.room) {
           setBanner();
-          els.app.innerHTML = `<div class="card"><h2>読み込み中</h2><p>ルーム情報と最近の優勝ワードを確認しています。</p></div>`;
+          const loadingKey = "loading";
+          if (state.renderCache.loadingKey !== loadingKey) {
+            state.renderCache.loadingKey = loadingKey;
+            state.renderCache.appKey = "";
+            els.app.innerHTML = `<div class="card"><h2>読み込み中</h2><p>ルーム情報と最近の優勝ワードを確認しています。</p></div>`;
+          }
           renderReveal();
           return;
         }
 
+        state.renderCache.loadingKey = "";
         renderApp();
         renderReveal();
       }

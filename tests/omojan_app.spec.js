@@ -176,6 +176,56 @@ async function reconnect(page) {
   await expect(page.locator("#statusLabel")).toContainText("接続中");
 }
 
+async function submitCurrentVote(page, action = "submit-vote") {
+  const candidate = page.locator(
+    action === "submit-final-vote" ? "[data-final-vote-id]:not([disabled])" : "[data-vote-id]:not([disabled])"
+  ).first();
+  await candidate.click();
+  await expect(candidate).toHaveAttribute("aria-pressed", "true");
+  await page.locator(`button[data-action="${action}"]`).click();
+}
+
+async function completeRoundByHostDecision(host, guest, roundLabel, hostDecisionWinnerName) {
+  await expect(host.locator("body")).toContainText("HostFlowTest の手番");
+  await expect(guest.locator("body")).toContainText("HostFlowTest の手番");
+
+  await submitCurrentDraft(host);
+
+  await reconnect(guest);
+  await expect(guest.locator("body")).toContainText("GuestFlowTest の手番", { timeout: 10000 });
+  await submitCurrentDraft(guest);
+
+  await reconnect(host);
+  await reconnect(guest);
+  await expect(host.getByRole("heading", { name: "このラウンドで一番おもしろいワードに投票" })).toBeVisible({ timeout: 10000 });
+  await expect(guest.getByRole("heading", { name: "このラウンドで一番おもしろいワードに投票" })).toBeVisible({ timeout: 10000 });
+
+  await submitCurrentVote(host, "submit-vote");
+  await submitCurrentVote(guest, "submit-vote");
+
+  await reconnect(host);
+  await reconnect(guest);
+  await expect(host.getByRole("heading", { name: "再投票" })).toBeVisible({ timeout: 10000 });
+  await expect(guest.getByRole("heading", { name: "再投票" })).toBeVisible({ timeout: 10000 });
+
+  await host.locator("[data-revote-id]:not([disabled])").first().click();
+  await guest.locator("[data-revote-id]:not([disabled])").first().click();
+  await host.locator('button[data-action="submit-revote"]').click();
+  await guest.locator('button[data-action="submit-revote"]').click();
+
+  await reconnect(host);
+  await expect(host.getByRole("heading", { name: "ホスト裁定" })).toBeVisible({ timeout: 10000 });
+  await host.locator("[data-host-pick-id]", { hasText: hostDecisionWinnerName }).click();
+  await host.locator('button[data-action="submit-host-pick"]').click();
+
+  await reconnect(host);
+  await reconnect(guest);
+  await expect(host.getByRole("heading", { name: roundLabel })).toBeVisible({ timeout: 10000 });
+  await expect(guest.getByRole("heading", { name: roundLabel })).toBeVisible({ timeout: 10000 });
+  await expect(host.locator("body")).toContainText("票数内訳");
+  await expect(guest.locator("body")).toContainText("票数内訳");
+}
+
 test.beforeAll(async () => {
   await startServers();
 });
@@ -207,48 +257,67 @@ test("app can complete create, join, start, submit, vote, host decision, and sho
 
   await host.getByRole("button", { name: "この順で開始" }).click();
 
-  await expect(host.locator("body")).toContainText("HostFlowTest の手番");
-  await expect(guest.locator("body")).toContainText("HostFlowTest の手番");
+  await completeRoundByHostDecision(host, guest, "ラウンド1", "GuestFlowTest");
 
-  await submitCurrentDraft(host);
+  await hostContext.close();
+  await guestContext.close();
+});
 
+test("app can complete a full game through final champion and restart", async ({ browser }) => {
+  test.setTimeout(60000);
+
+  const { hostContext, guestContext, host, guest } = await createTwoPlayerRoom(browser);
+
+  await host.getByRole("button", { name: "この順で開始" }).click();
+
+  await completeRoundByHostDecision(host, guest, "ラウンド1", "GuestFlowTest");
+  await host.getByRole("button", { name: "次のラウンドへ" }).click();
   await reconnect(guest);
-  await expect(guest.locator("body")).toContainText("GuestFlowTest の手番", { timeout: 10000 });
-  await submitCurrentDraft(guest);
+
+  await completeRoundByHostDecision(host, guest, "ラウンド2", "HostFlowTest");
+  await host.getByRole("button", { name: "次のラウンドへ" }).click();
+  await reconnect(guest);
+
+  await completeRoundByHostDecision(host, guest, "ラウンド3", "GuestFlowTest");
+  await host.getByRole("button", { name: "最終投票へ進む" }).click();
+  await reconnect(guest);
+
+  await expect(host.getByRole("heading", { name: "最終投票" })).toBeVisible({ timeout: 10000 });
+  await expect(guest.getByRole("heading", { name: "最終投票" })).toBeVisible({ timeout: 10000 });
+  await submitCurrentVote(host, "submit-final-vote");
+  await submitCurrentVote(guest, "submit-final-vote");
 
   await reconnect(host);
   await reconnect(guest);
-  await expect(host.getByRole("heading", { name: "このラウンドで一番おもしろいワードに投票" })).toBeVisible({ timeout: 10000 });
-  await expect(guest.getByRole("heading", { name: "このラウンドで一番おもしろいワードに投票" })).toBeVisible({ timeout: 10000 });
+  await expect(host.getByRole("heading", { name: "最終再投票" })).toBeVisible({ timeout: 10000 });
+  await expect(guest.getByRole("heading", { name: "最終再投票" })).toBeVisible({ timeout: 10000 });
+  await host.locator("[data-final-vote-id]:not([disabled])").first().click();
+  await guest.locator("[data-final-vote-id]:not([disabled])").first().click();
+  await host.locator('button[data-action="submit-final-vote"]').click();
+  await guest.locator('button[data-action="submit-final-vote"]').click();
 
-  const hostVoteCandidate = host.locator("[data-vote-id]:not([disabled])").first();
-  const guestVoteCandidate = guest.locator("[data-vote-id]:not([disabled])").first();
-  await hostVoteCandidate.click();
-  await guestVoteCandidate.click();
-  await host.locator('button[data-action="submit-vote"]').click();
-  await guest.locator('button[data-action="submit-vote"]').click();
+  await reconnect(host);
+  await expect(host.getByRole("heading", { name: "最終ホスト裁定" })).toBeVisible({ timeout: 10000 });
+  const finalPick = host.locator("[data-final-pick-id]").first();
+  const championPhrase = ((await finalPick.locator(".muted").textContent()) || "").trim();
+  await finalPick.click();
+  await host.locator('button[data-action="submit-final-host-pick"]').click();
+
+  await expect(host.locator("#revealOverlay")).toBeVisible({ timeout: 10000 });
+  await expect(host.locator("#revealOverlay")).toContainText("総合優勝");
+  await host.getByRole("button", { name: "閉じる" }).click();
 
   await reconnect(host);
   await reconnect(guest);
-  await expect(host.getByRole("heading", { name: "再投票" })).toBeVisible({ timeout: 10000 });
-  await expect(guest.getByRole("heading", { name: "再投票" })).toBeVisible({ timeout: 10000 });
+  await expect(host.getByRole("heading", { name: "総合優勝" })).toBeVisible({ timeout: 10000 });
+  await expect(guest.getByRole("heading", { name: "総合優勝" })).toBeVisible({ timeout: 10000 });
+  await expect(host.locator("body")).toContainText(championPhrase);
+  await expect(guest.locator("body")).toContainText(championPhrase);
 
-  await host.locator("[data-revote-id]:not([disabled])").first().click();
-  await guest.locator("[data-revote-id]:not([disabled])").first().click();
-  await host.locator('button[data-action="submit-revote"]').click();
-  await guest.locator('button[data-action="submit-revote"]').click();
-
-  await reconnect(host);
-  await expect(host.getByRole("heading", { name: "ホスト裁定" })).toBeVisible({ timeout: 10000 });
-  await host.locator("[data-host-pick-id]").first().click();
-  await host.locator('button[data-action="submit-host-pick"]').click();
-
-  await reconnect(host);
+  await host.getByRole("button", { name: "もう一度最初から" }).click();
   await reconnect(guest);
-  await expect(host.getByRole("heading", { name: "ラウンド1" })).toBeVisible({ timeout: 10000 });
-  await expect(guest.getByRole("heading", { name: "ラウンド1" })).toBeVisible({ timeout: 10000 });
-  await expect(host.locator("body")).toContainText("票数内訳");
-  await expect(guest.locator("body")).toContainText("票数内訳");
+  await expect(host.getByRole("heading", { name: "ルーム待機中" })).toBeVisible({ timeout: 10000 });
+  await expect(guest.getByRole("heading", { name: "ルーム待機中" })).toBeVisible({ timeout: 10000 });
 
   await hostContext.close();
   await guestContext.close();

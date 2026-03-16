@@ -1,6 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { createHandler, createMemoryRoomRepository, normalizePathname } = require("./handler");
+const { createHandler, createMemoryRoomRepository, createDynamoRoomRepository, normalizePathname } = require("./handler");
 
 function createEvent(method, path, options = {}) {
   return {
@@ -455,6 +455,93 @@ test("admin deck API requires passcode and updated deck is used on next game sta
   const configuredWords = new Set(body.data.tiles.map((tile) => tile.text));
   assert.equal(room.myHand.length, 10);
   assert.equal(room.myHand.every((tile) => configuredWords.has(tile.text)), true);
+});
+
+test("admin deck API rejects stale version on save", async () => {
+  const adminPasscode = "test-admin-passcode";
+  const handler = createTestHandler({ adminSharedPasscode: adminPasscode });
+
+  const initialResponse = await handler(
+    createEvent("GET", "/v1/admin/decks/default", {
+      headers: createAdminHeaders(adminPasscode)
+    })
+  );
+  const initialBody = await parseResponse(initialResponse);
+  assert.equal(initialResponse.statusCode, 200);
+
+  const basePayload = {
+    deckName: "default",
+    version: initialBody.data.version,
+    tiles: Array.from({ length: 2 }, (_, index) => ({
+      tileId: `tile_conflict_${index + 1}`,
+      text: `競合確認${index + 1}`,
+      enabled: true
+    }))
+  };
+
+  const firstSaveResponse = await handler(
+    createEvent("PUT", "/v1/admin/decks/default", {
+      headers: createAdminHeaders(adminPasscode),
+      body: basePayload
+    })
+  );
+  const firstSaveBody = await parseResponse(firstSaveResponse);
+  assert.equal(firstSaveResponse.statusCode, 200);
+  assert.equal(firstSaveBody.ok, true);
+
+  const staleSaveResponse = await handler(
+    createEvent("PUT", "/v1/admin/decks/default", {
+      headers: createAdminHeaders(adminPasscode),
+      body: {
+        ...basePayload,
+        deckName: "default stale"
+      }
+    })
+  );
+  const staleSaveBody = await parseResponse(staleSaveResponse);
+  assert.equal(staleSaveResponse.statusCode, 409);
+  assert.equal(staleSaveBody.ok, false);
+  assert.equal(staleSaveBody.error.code, "CONFLICT_RETRY");
+});
+
+test("dynamo deck repository can save default deck before it exists in table", async () => {
+  let storedDeckItem = null;
+  let lastPutInput = null;
+
+  const repository = await createDynamoRoomRepository({
+    tableName: "OmojanTest",
+    documentClient: {
+      async send(command) {
+        const input = command.input || {};
+        if (input.Key?.PK === "DECK#default" && input.Key?.SK === "META") {
+          return { Item: storedDeckItem };
+        }
+        if (input.Item?.PK === "DECK#default" && input.Item?.SK === "META") {
+          lastPutInput = input;
+          storedDeckItem = JSON.parse(JSON.stringify(input.Item));
+          return {};
+        }
+        throw new Error("Unexpected command in test");
+      }
+    }
+  });
+
+  const initialDeck = await repository.getDeck("default");
+  assert.ok(initialDeck.version >= 1);
+
+  const savedDeck = await repository.replaceDeck("default", {
+    deckName: "default",
+    version: initialDeck.version,
+    tiles: [
+      { tileId: "tile_first_1", text: "初回保存1", enabled: true },
+      { tileId: "tile_first_2", text: "初回保存2", enabled: true }
+    ]
+  });
+
+  assert.equal(savedDeck.version, initialDeck.version + 1);
+  assert.equal(savedDeck.tiles.length, 2);
+  assert.equal(lastPutInput.ConditionExpression, "attribute_not_exists(PK)");
+  assert.equal(storedDeckItem.version, initialDeck.version + 1);
 });
 
 test("room create/join/get/reconnect work in lobby", async () => {

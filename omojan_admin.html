@@ -812,6 +812,7 @@
             method: "PUT",
             body: {
               deckName: state.deck.deckName,
+              version: state.deck.version,
               tiles: state.deck.tiles.map((tile) => ({
                 tileId: tile.tileId,
                 text: String(tile.text || "").trim(),

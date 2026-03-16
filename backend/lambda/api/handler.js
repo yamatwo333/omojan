@@ -1252,7 +1252,7 @@ async function createDynamoRoomRepository(options = {}) {
     return response.Items || [];
   }
 
-  async function getDeckItem(deckId) {
+  async function getPersistedDeckItem(deckId) {
     const response = await documentClient.send(
       new modules.GetCommand({
         TableName: tableName,
@@ -1262,8 +1262,13 @@ async function createDynamoRoomRepository(options = {}) {
         }
       })
     );
-    if (response.Item) {
-      return response.Item;
+    return response.Item || null;
+  }
+
+  async function getDeckItem(deckId) {
+    const persistedItem = await getPersistedDeckItem(deckId);
+    if (persistedItem) {
+      return persistedItem;
     }
     if (deckId === defaultDeck.deckId) {
       return {
@@ -1304,11 +1309,20 @@ async function createDynamoRoomRepository(options = {}) {
     },
 
     async replaceDeck(deckId, payload) {
+      const requestedVersion = Number(payload?.version);
+      const hasRequestedVersion = Number.isFinite(requestedVersion) && requestedVersion > 0;
+
       for (let attempt = 0; attempt < 5; attempt += 1) {
-        const existingDeck = await getDeckItem(deckId);
+        const persistedDeck = await getPersistedDeckItem(deckId);
+        const existingDeck =
+          persistedDeck ||
+          (deckId === defaultDeck.deckId ? buildDeckState(deckId, defaultDeck, defaultDeck.version || 1) : null);
+        if (hasRequestedVersion && persistedDeck && requestedVersion !== persistedDeck.version) {
+          throw domainError(409, "CONFLICT_RETRY", "デッキ更新が競合しました。もう一度お試しください。", true);
+        }
         const normalizedDeck = normalizeDeckForStorage(deckId, payload, existingDeck);
         try {
-          await putDeckItem(normalizedDeck, existingDeck?.PK ? existingDeck.version : null);
+          await putDeckItem(normalizedDeck, persistedDeck ? (hasRequestedVersion ? requestedVersion : persistedDeck.version) : null);
           return buildDeckState(deckId, normalizedDeck, normalizedDeck.version);
         } catch (error) {
           if (toConditionalFailure(error)) {
@@ -1857,6 +1871,15 @@ function createMemoryRoomRepository() {
 
     async replaceDeck(deckId, payload) {
       const existingDeck = decks.get(deckId) || null;
+      const requestedVersion = Number(payload?.version);
+      if (
+        Number.isFinite(requestedVersion) &&
+        requestedVersion > 0 &&
+        existingDeck &&
+        requestedVersion !== existingDeck.version
+      ) {
+        throw domainError(409, "CONFLICT_RETRY", "デッキ更新が競合しました。もう一度お試しください。", true);
+      }
       const nextDeck = normalizeDeckForStorage(deckId, payload, existingDeck);
       saveDeck(nextDeck);
       return clone(nextDeck);

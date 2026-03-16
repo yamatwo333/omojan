@@ -8,6 +8,16 @@ const ADMIN_PASSCODE = "test-admin-passcode";
 const STATIC_PORT = 8001;
 const API_PORT = 8789;
 const STATIC_URL = `http://127.0.0.1:${STATIC_PORT}/omojan_admin.html?apiBaseUrl=${encodeURIComponent(`http://127.0.0.1:${API_PORT}/v1`)}`;
+const API_BASE_URL = `http://127.0.0.1:${API_PORT}/v1`;
+
+const BASE_DECK_PAYLOAD = {
+  deckName: "test-default",
+  tiles: [
+    { tileId: "tile_a", text: "現場猫", enabled: true },
+    { tileId: "tile_b", text: "謝罪会見", enabled: true },
+    { tileId: "tile_c", text: "深夜テンション", enabled: false }
+  ]
+};
 
 let staticServer = null;
 let apiServer = null;
@@ -59,8 +69,27 @@ async function stopServers() {
   }
 }
 
+async function resetDeck() {
+  const response = await fetch(`${API_BASE_URL}/admin/decks/default`, {
+    method: "PUT",
+    headers: {
+      "content-type": "application/json",
+      "X-Omojan-Admin-Passcode": ADMIN_PASSCODE
+    },
+    body: JSON.stringify(BASE_DECK_PAYLOAD)
+  });
+  const payload = await response.json();
+  if (!response.ok || payload.ok === false) {
+    throw new Error(payload?.error?.message || "Failed to reset deck");
+  }
+}
+
 test.beforeAll(async () => {
   await startServers();
+});
+
+test.beforeEach(async () => {
+  await resetDeck();
 });
 
 test.afterAll(async () => {
@@ -82,4 +111,62 @@ test("admin page can load and save default deck", async ({ page }) => {
   await page.reload();
   await expect(page.locator("#deckCard")).toBeVisible();
   await expect(page.locator('[data-tile-text-index="0"]')).toHaveValue("管理確認ワード");
+});
+
+test("admin page supports search, filter, and csv bulk import", async ({ page }) => {
+  await page.goto(STATIC_URL);
+  await page.fill("#adminPasscode", ADMIN_PASSCODE);
+  await page.getByRole("button", { name: "デッキを読む" }).click();
+
+  await expect(page.locator('[data-tile-text-index]')).toHaveCount(3);
+
+  await page.fill("#searchInput", "謝罪");
+  await expect(page.locator('[data-tile-text-index]')).toHaveCount(1);
+  await expect(page.locator('[data-tile-text-index]')).toHaveValue("謝罪会見");
+
+  await page.fill("#searchInput", "");
+  await page.getByRole("button", { name: "無効" }).click();
+  await expect(page.locator('[data-tile-text-index]')).toHaveCount(1);
+  await expect(page.locator('[data-tile-text-index]')).toHaveValue("深夜テンション");
+
+  await page.getByRole("button", { name: "すべて" }).click();
+  await page.getByRole("button", { name: "CSVから追加" }).click();
+  await page.locator("#csvFileInput").setInputFiles({
+    name: "append.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from("text,enabled\n爆笑ラーメン,true\n無言会議,false\n", "utf8")
+  });
+
+  await expect(page.locator("#feedback")).toContainText("2件を追加しました。");
+  await expect(page.locator('[data-tile-text-index]')).toHaveCount(5);
+
+  await page.fill("#searchInput", "爆笑");
+  await expect(page.locator('[data-tile-text-index]')).toHaveCount(1);
+  await expect(page.locator('[data-tile-text-index]')).toHaveValue("爆笑ラーメン");
+
+  await page.fill("#searchInput", "");
+  await page.getByRole("button", { name: "CSVで置換" }).click();
+  await page.locator("#csvFileInput").setInputFiles({
+    name: "replace.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from("tileId,text,enabled\nalpha,ラーメン侍,true\nbeta,拍手喝采,false\n", "utf8")
+  });
+
+  await expect(page.locator("#feedback")).toContainText("2件で置き換えました。");
+  await expect(page.locator('[data-tile-text-index]')).toHaveCount(2);
+  await expect(page.locator('[data-tile-text-index="0"]')).toHaveValue("ラーメン侍");
+  await expect(page.locator('[data-tile-text-index="1"]')).toHaveValue("拍手喝采");
+
+  await page.getByRole("button", { name: "保存する" }).click();
+  await expect(page.locator("#feedback")).toContainText("保存しました。");
+  await page.reload();
+
+  await expect(page.locator("#deckCard")).toBeVisible();
+  await expect(page.locator('[data-tile-text-index]')).toHaveCount(2);
+  await expect(page.locator('[data-tile-text-index="0"]')).toHaveValue("ラーメン侍");
+  await expect(page.locator('[data-tile-text-index="1"]')).toHaveValue("拍手喝采");
+
+  await page.getByRole("button", { name: "無効" }).click();
+  await expect(page.locator('[data-tile-text-index]')).toHaveCount(1);
+  await expect(page.locator('[data-tile-text-index]')).toHaveValue("拍手喝采");
 });

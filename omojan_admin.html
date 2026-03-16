@@ -186,6 +186,35 @@
         color: var(--ink);
       }
 
+      .toolbar {
+        display: grid;
+        gap: 12px;
+        margin-top: 16px;
+      }
+
+      .chip-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 10px 12px;
+        border-radius: 999px;
+        border: 1px solid rgba(184, 138, 50, 0.38);
+        background: rgba(255, 250, 238, 0.96);
+        color: var(--green);
+        font-weight: 800;
+      }
+
+      .chip.active {
+        background: rgba(36, 69, 47, 0.12);
+        border-color: rgba(36, 69, 47, 0.28);
+      }
+
       .message,
       .error {
         margin-top: 14px;
@@ -261,6 +290,33 @@
         font-size: 13px;
       }
 
+      .subhint {
+        margin-top: 6px;
+        color: rgba(31, 24, 18, 0.58);
+        font-size: 12px;
+        line-height: 1.6;
+      }
+
+      .empty-state {
+        padding: 18px 14px;
+        border-radius: 16px;
+        border: 1px dashed rgba(100, 73, 47, 0.22);
+        color: rgba(31, 24, 18, 0.62);
+        text-align: center;
+      }
+
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
       @media (max-width: 640px) {
         main {
           padding-inline: 12px;
@@ -311,6 +367,10 @@
               <label for="deckName">デッキ名</label>
               <input id="deckName" class="input" type="text" maxlength="40" />
             </div>
+            <div class="field">
+              <label for="searchInput">牌を検索</label>
+              <input id="searchInput" class="input" type="text" maxlength="40" placeholder="ワードや tileId で検索" />
+            </div>
           </div>
 
           <div class="summary-pills" id="summaryPills"></div>
@@ -321,6 +381,21 @@
             <button class="btn secondary" id="addTileBtn" type="button">牌を追加</button>
           </div>
 
+          <section class="toolbar">
+            <div class="chip-row" id="filterChipRow">
+              <button class="chip active" type="button" data-filter-mode="all">すべて</button>
+              <button class="chip" type="button" data-filter-mode="enabled">有効</button>
+              <button class="chip" type="button" data-filter-mode="disabled">無効</button>
+            </div>
+
+            <div class="button-row">
+              <button class="btn secondary" id="appendCsvBtn" type="button">CSVから追加</button>
+              <button class="btn secondary" id="replaceCsvBtn" type="button">CSVで置換</button>
+            </div>
+            <p class="subhint">CSV は `text` 列だけでも使えます。`tileId,text,enabled` 形式にも対応します。</p>
+          </section>
+
+          <input id="csvFileInput" class="sr-only" type="file" accept=".csv,text/csv" />
           <div class="hint">空のワードは保存できません。削除したい牌は行ごと消します。</div>
           <div class="tile-list" id="tileList"></div>
         </section>
@@ -336,6 +411,9 @@
         apiBaseUrl: "",
         passcode: "",
         deck: null,
+        searchQuery: "",
+        filterMode: "all",
+        importMode: "append",
         pending: false,
         feedback: "",
         error: ""
@@ -350,10 +428,14 @@
         feedback: document.getElementById("feedback"),
         deckCard: document.getElementById("deckCard"),
         deckName: document.getElementById("deckName"),
+        searchInput: document.getElementById("searchInput"),
         summaryPills: document.getElementById("summaryPills"),
         saveDeckBtn: document.getElementById("saveDeckBtn"),
         reloadDeckBtn: document.getElementById("reloadDeckBtn"),
         addTileBtn: document.getElementById("addTileBtn"),
+        appendCsvBtn: document.getElementById("appendCsvBtn"),
+        replaceCsvBtn: document.getElementById("replaceCsvBtn"),
+        csvFileInput: document.getElementById("csvFileInput"),
         tileList: document.getElementById("tileList")
       };
 
@@ -395,10 +477,12 @@
           return "";
         }
         const enabledCount = state.deck.tiles.filter((tile) => tile.enabled !== false).length;
+        const visibleCount = getFilteredTiles().length;
         return `
           <span class="summary-pill">version<strong>${escapeHtml(state.deck.version)}</strong></span>
           <span class="summary-pill">総数<strong>${escapeHtml(state.deck.tiles.length)}</strong></span>
           <span class="summary-pill">有効<strong>${escapeHtml(enabledCount)}</strong></span>
+          <span class="summary-pill">表示<strong>${escapeHtml(visibleCount)}</strong></span>
         `;
       }
 
@@ -414,14 +498,40 @@
         els.feedback.innerHTML = "";
       }
 
+      function getFilteredTiles() {
+        if (!state.deck) {
+          return [];
+        }
+        const query = String(state.searchQuery || "").trim().toLowerCase();
+        return state.deck.tiles
+          .map((tile, index) => ({ tile, index }))
+          .filter(({ tile }) => {
+            if (state.filterMode === "enabled" && tile.enabled === false) {
+              return false;
+            }
+            if (state.filterMode === "disabled" && tile.enabled !== false) {
+              return false;
+            }
+            if (!query) {
+              return true;
+            }
+            return `${tile.text} ${tile.tileId || ""}`.toLowerCase().includes(query);
+          });
+      }
+
       function renderTiles() {
         if (!state.deck) {
           els.tileList.innerHTML = "";
           return;
         }
-        els.tileList.innerHTML = state.deck.tiles
+        const filteredTiles = getFilteredTiles();
+        if (!filteredTiles.length) {
+          els.tileList.innerHTML = `<div class="empty-state">一致する牌はありません。</div>`;
+          return;
+        }
+        els.tileList.innerHTML = filteredTiles
           .map(
-            (tile, index) => `
+            ({ tile, index }) => `
               <article class="tile-row">
                 <header>
                   <div>
@@ -462,6 +572,8 @@
         els.saveDeckBtn.disabled = state.pending || !state.deck;
         els.reloadDeckBtn.disabled = state.pending || !state.deck;
         els.addTileBtn.disabled = state.pending || !state.deck;
+        els.appendCsvBtn.disabled = state.pending || !state.deck;
+        els.replaceCsvBtn.disabled = state.pending || !state.deck;
         renderFeedback();
 
         if (!state.deck) {
@@ -471,7 +583,11 @@
 
         els.deckCard.hidden = false;
         els.deckName.value = state.deck.deckName || "";
+        els.searchInput.value = state.searchQuery;
         els.summaryPills.innerHTML = buildSummaryPills();
+        document.querySelectorAll("[data-filter-mode]").forEach((button) => {
+          button.classList.toggle("active", button.dataset.filterMode === state.filterMode);
+        });
         renderTiles();
       }
 
@@ -507,6 +623,103 @@
             throw new Error(`牌 ${index + 1} のワードを入力してください。`);
           }
         }
+      }
+
+      function parseCsv(text) {
+        const rows = [];
+        let currentCell = "";
+        let currentRow = [];
+        let insideQuotes = false;
+        const source = String(text || "").replace(/^\uFEFF/, "");
+
+        for (let index = 0; index < source.length; index += 1) {
+          const char = source[index];
+          const nextChar = source[index + 1];
+
+          if (char === '"') {
+            if (insideQuotes && nextChar === '"') {
+              currentCell += '"';
+              index += 1;
+            } else {
+              insideQuotes = !insideQuotes;
+            }
+            continue;
+          }
+
+          if (!insideQuotes && char === ",") {
+            currentRow.push(currentCell);
+            currentCell = "";
+            continue;
+          }
+
+          if (!insideQuotes && (char === "\n" || char === "\r")) {
+            if (char === "\r" && nextChar === "\n") {
+              index += 1;
+            }
+            currentRow.push(currentCell);
+            if (currentRow.some((cell) => String(cell).trim() !== "")) {
+              rows.push(currentRow);
+            }
+            currentCell = "";
+            currentRow = [];
+            continue;
+          }
+
+          currentCell += char;
+        }
+
+        currentRow.push(currentCell);
+        if (currentRow.some((cell) => String(cell).trim() !== "")) {
+          rows.push(currentRow);
+        }
+
+        return rows.map((row) => row.map((cell) => String(cell).trim()));
+      }
+
+      function parseEnabledValue(value) {
+        const normalized = String(value || "").trim().toLowerCase();
+        if (!normalized) {
+          return true;
+        }
+        if (["false", "0", "off", "no", "disabled", "無効"].includes(normalized)) {
+          return false;
+        }
+        return true;
+      }
+
+      function buildImportedTiles(csvText) {
+        const rows = parseCsv(csvText);
+        if (!rows.length) {
+          throw new Error("CSV にデータがありません。");
+        }
+
+        const normalizedHeaders = rows[0].map((cell) => cell.toLowerCase());
+        const hasHeader = normalizedHeaders.some((cell) => ["tileid", "tile_id", "text", "word", "enabled"].includes(cell));
+        const dataRows = hasHeader ? rows.slice(1) : rows;
+        const tileIdIndex = hasHeader ? normalizedHeaders.findIndex((cell) => ["tileid", "tile_id"].includes(cell)) : -1;
+        const textIndex = hasHeader ? normalizedHeaders.findIndex((cell) => ["text", "word"].includes(cell)) : 0;
+        const enabledIndex = hasHeader ? normalizedHeaders.findIndex((cell) => cell === "enabled") : 1;
+
+        const tiles = dataRows
+          .map((row, index) => {
+            const text = String(row[textIndex] || "").trim();
+            if (!text) {
+              return null;
+            }
+            const importedTileId = tileIdIndex >= 0 ? String(row[tileIdIndex] || "").trim() : "";
+            return {
+              tileId: importedTileId || createLocalTile().tileId,
+              text,
+              enabled: parseEnabledValue(enabledIndex >= 0 ? row[enabledIndex] : "")
+            };
+          })
+          .filter(Boolean);
+
+        if (!tiles.length) {
+          throw new Error("CSV に有効なワードがありません。");
+        }
+
+        return tiles;
       }
 
       async function loadDeck() {
@@ -579,6 +792,38 @@
         }
       }
 
+      async function importCsv(file) {
+        if (!state.deck) {
+          setFeedback("先にデッキを読んでください。", true);
+          render();
+          return;
+        }
+        if (!file) {
+          return;
+        }
+
+        try {
+          const csvText = await file.text();
+          const importedTiles = buildImportedTiles(csvText);
+          state.deck.tiles =
+            state.importMode === "replace"
+              ? importedTiles
+              : [...state.deck.tiles, ...importedTiles];
+          state.searchQuery = "";
+          state.filterMode = "all";
+          setFeedback(
+            state.importMode === "replace"
+              ? `${importedTiles.length}件で置き換えました。`
+              : `${importedTiles.length}件を追加しました。`
+          );
+        } catch (error) {
+          setFeedback(error instanceof Error ? error.message : "CSV の取り込みに失敗しました。", true);
+        } finally {
+          els.csvFileInput.value = "";
+          render();
+        }
+      }
+
       document.addEventListener("input", (event) => {
         const target = event.target;
         if (target.id === "adminPasscode") {
@@ -587,6 +832,11 @@
         }
         if (target.id === "deckName" && state.deck) {
           state.deck.deckName = target.value;
+          return;
+        }
+        if (target.id === "searchInput") {
+          state.searchQuery = target.value;
+          render();
           return;
         }
         if (target.matches("[data-tile-text-index]") && state.deck) {
@@ -630,12 +880,36 @@
           return;
         }
 
+        const filterButton = event.target.closest("[data-filter-mode]");
+        if (filterButton) {
+          state.filterMode = filterButton.dataset.filterMode;
+          render();
+          return;
+        }
+
+        if (event.target.id === "appendCsvBtn") {
+          state.importMode = "append";
+          els.csvFileInput.click();
+          return;
+        }
+
+        if (event.target.id === "replaceCsvBtn") {
+          state.importMode = "replace";
+          els.csvFileInput.click();
+          return;
+        }
+
         if (event.target.id === "clearPasscodeBtn") {
           state.passcode = "";
           window.localStorage.removeItem(PASSCODE_KEY);
           setFeedback("保存したパスコードを消しました。");
           render();
         }
+      });
+
+      els.csvFileInput.addEventListener("change", async () => {
+        const [file] = els.csvFileInput.files || [];
+        await importCsv(file);
       });
 
       function initialize() {

@@ -1006,7 +1006,17 @@
           waitShellKey: "",
           waitFocusKey: "",
           waitSyncKey: "",
-          waitSubmissionsKey: ""
+          waitSubmissionsKey: "",
+          decisionShellKey: "",
+          decisionFocusKey: "",
+          decisionSummaryKey: "",
+          decisionCardsKey: "",
+          decisionActionsKey: "",
+          resultShellKey: "",
+          resultHeroKey: "",
+          resultExtraKey: "",
+          resultCountsKey: "",
+          resultActionsKey: ""
         },
         googleFonts: {
           requested: false,
@@ -1654,13 +1664,16 @@
               room.me?.playerId || ""
             ]).join("|");
           case "vote":
-            return base.concat([state.selectedVoteTarget]).join("|");
           case "revote":
           case "hostDecide":
-            return base.concat([state.selectedHostTarget]).join("|");
           case "finalVote":
           case "finalHostDecide":
-            return base.concat([state.selectedFinalTarget]).join("|");
+          case "roundResult":
+          case "finalResult":
+            return base.concat([
+              room.roomId || "",
+              room.me?.playerId || ""
+            ]).join("|");
           default:
             return base.join("|");
         }
@@ -2746,6 +2759,287 @@
         patchSlot(els.app, "#waitSubmissionsSlot", "waitSubmissionsKey", submissionsKey, renderWaitSubmissions(room));
       }
 
+      function isDecisionView(view) {
+        return ["vote", "revote", "hostDecide", "finalVote", "finalHostDecide"].includes(view);
+      }
+
+      function isResultView(view) {
+        return ["roundResult", "finalResult"].includes(view);
+      }
+
+      function resetIncrementalViewCaches() {
+        state.renderCache.waitShellKey = "";
+        state.renderCache.waitFocusKey = "";
+        state.renderCache.waitSyncKey = "";
+        state.renderCache.waitSubmissionsKey = "";
+        state.renderCache.decisionShellKey = "";
+        state.renderCache.decisionFocusKey = "";
+        state.renderCache.decisionSummaryKey = "";
+        state.renderCache.decisionCardsKey = "";
+        state.renderCache.decisionActionsKey = "";
+        state.renderCache.resultShellKey = "";
+        state.renderCache.resultHeroKey = "";
+        state.renderCache.resultExtraKey = "";
+        state.renderCache.resultCountsKey = "";
+        state.renderCache.resultActionsKey = "";
+      }
+
+      function renderDecisionShell(title) {
+        return `
+          ${renderScreenAlerts()}
+          <section class="card">
+            <h2>${escapeHtml(title)}</h2>
+            <div id="decisionFocusSlot"></div>
+            <div id="decisionSummarySlot"></div>
+            <div id="decisionCardsSlot"></div>
+            <div id="decisionActionsSlot"></div>
+          </section>
+        `;
+      }
+
+      function buildDecisionConfig(room, view) {
+        const round = getCurrentRound(room);
+        const isFinal = view === "finalVote" || view === "finalHostDecide";
+        const isRevote = view === "revote" || room.game.phase === "final_revote";
+        const allowSelfVote = allowsSelfVote(room);
+
+        if (view === "vote" || view === "revote" || view === "finalVote") {
+          const candidates = isFinal ? getFinalCandidates(room, isRevote ? "revote" : "vote") : getVoteCandidates(room, view === "revote" ? "revote" : "vote");
+          const source = isFinal ? room.game.finalVote : round;
+          return {
+            type: "vote",
+            title: isFinal ? (isRevote ? "最終再投票" : "最終投票") : (view === "revote" ? "再投票" : "このラウンドで一番おもしろいワードに投票"),
+            label: isFinal ? (isRevote ? "最終再投票" : "総合優勝を決める投票") : (view === "revote" ? "同票の再投票" : getCurrentRound(room)?.label || "投票"),
+            description: isFinal
+              ? (isRevote ? (allowSelfVote ? "2人戦なので自分のワードも選べます。" : "同票の候補から選びます。") : (allowSelfVote ? "2人戦なので自分のワードも選べます。" : "総合優勝を1つ選びます。"))
+              : (view === "revote" ? (allowSelfVote ? "2人戦なので自分のワードも選べます。" : "同票のワードから選びます。") : (allowSelfVote ? "2人戦なので自分のワードも選べます。" : "自分以外のワードから選びます。")),
+            summaryTitle: isRevote ? "同票になったワード" : "",
+            summaryHtml:
+              isRevote && source?.voteSummary
+                ? renderTiedCountSummary(
+                    source.voteSummary.counts,
+                    isFinal ? source.voteSummary.tiedCandidateIds : source.voteSummary.tiedPlayerIds,
+                    isFinal ? "candidateId" : "playerId"
+                  )
+                : "",
+            candidates,
+            selectedId: isFinal ? state.selectedFinalTarget : (view === "revote" ? state.selectedHostTarget : state.selectedVoteTarget),
+            dataAttr: isFinal ? "final-vote-id" : (view === "revote" ? "revote-id" : "vote-id"),
+            selfId: room.me.playerId,
+            allowSelfVote,
+            action: isFinal ? "submit-final-vote" : (view === "revote" ? "submit-revote" : "submit-vote"),
+            buttonLabel: isFinal ? (isRevote ? "このワードに再投票" : "このワードに投票") : (view === "revote" ? "このワードに再投票" : "このワードに投票")
+          };
+        }
+
+        const source = isFinal ? room.game.finalVote : round;
+        const counts = source?.voteSummary?.counts || [];
+        const tiedIds = isFinal ? source?.voteSummary?.tiedCandidateIds || [] : source?.voteSummary?.tiedPlayerIds || [];
+        return {
+          type: "host",
+          title: isFinal ? "最終ホスト裁定" : "ホスト裁定",
+          label: isFinal ? "最終裁定" : getCurrentRound(room)?.label || "ホスト裁定",
+          description: isFinal ? "ホストが総合優勝を決めます。" : "ホストが勝ちワードを決めます。",
+          summaryTitle: "同票になったワード",
+          summaryHtml: renderTiedCountSummary(counts, tiedIds, isFinal ? "candidateId" : "playerId"),
+          candidates: isFinal ? source.candidates.filter((candidate) => tiedIds.includes(candidate.candidateId)) : getVoteCandidates(room, "revote"),
+          selectedId: isFinal ? state.selectedFinalTarget : state.selectedHostTarget,
+          dataAttr: isFinal ? "final-pick-id" : "host-pick-id",
+          selfId: "__none__",
+          allowSelfVote: true,
+          action: isFinal ? "submit-final-host-pick" : "submit-host-pick",
+          buttonLabel: "このワードで確定"
+        };
+      }
+
+      function renderDecisionFocus(config) {
+        const selectedCandidate = config.candidates.find((candidate) => (candidate.candidateId ?? candidate.playerId) === config.selectedId) || null;
+        const pills =
+          config.type === "host"
+            ? [
+                { label: "同票", value: `${config.candidates.length}語` },
+                { label: "選択", value: selectedCandidate ? selectedCandidate.displayName : "未選択" }
+              ]
+            : [
+                { label: "候補", value: `${config.candidates.length}語` },
+                { label: "選択", value: selectedCandidate ? selectedCandidate.displayName : "未選択" }
+              ];
+        return renderFocusCallout({
+          label: config.label,
+          title: selectedCandidate ? selectedCandidate.phrase : (config.type === "host" ? "ホストが勝ちワードを決めます" : "まだワードを選んでいません"),
+          description: selectedCandidate ? (config.type === "host" ? "このワードで決定します。" : "このワードで確定します。") : config.description,
+          pills
+        });
+      }
+
+      function renderDecisionSummary(config) {
+        if (!config.summaryHtml) {
+          return "";
+        }
+        return renderSection(config.summaryTitle, config.summaryHtml, { className: "panel" });
+      }
+
+      function renderDecisionCards(config) {
+        return renderVoteCards(config.candidates, config.selectedId, config.dataAttr, config.selfId, {
+          allowSelfVote: config.allowSelfVote,
+          disableSelf: config.type === "host" ? false : undefined
+        });
+      }
+
+      function renderDecisionActions(config) {
+        return `
+          <div class="button-row">
+            <button class="btn primary" type="button" data-action="${config.action}" ${config.selectedId && !state.pendingAction ? "" : "disabled"}>
+              ${escapeHtml(config.buttonLabel)}
+            </button>
+          </div>
+        `;
+      }
+
+      function updateDecisionView(room, view) {
+        const config = buildDecisionConfig(room, view);
+        const shellKey = `${view}|${room.roomId}|${room.me.playerId}`;
+        if (state.renderCache.decisionShellKey !== shellKey) {
+          state.renderCache.decisionShellKey = shellKey;
+          state.renderCache.decisionFocusKey = "";
+          state.renderCache.decisionSummaryKey = "";
+          state.renderCache.decisionCardsKey = "";
+          state.renderCache.decisionActionsKey = "";
+          els.app.innerHTML = renderDecisionShell(config.title);
+        }
+
+        const candidatesStamp = config.candidates
+          .map((candidate) => `${candidate.candidateId ?? candidate.playerId}:${candidate.phrase}:${candidate.fontId}:${(candidate.renderedLines || []).join("/")}`)
+          .join("|");
+        const focusKey = [view, room.revision, config.selectedId || "", state.pendingAction ? "pending" : "idle", candidatesStamp].join("|");
+        const summaryKey = [view, room.revision, config.summaryTitle, config.summaryHtml].join("|");
+        const cardsKey = [view, room.revision, config.selectedId || "", candidatesStamp].join("|");
+        const actionsKey = [view, config.selectedId || "", state.pendingAction ? "pending" : "idle", config.action].join("|");
+
+        patchSlot(els.app, "#decisionFocusSlot", "decisionFocusKey", focusKey, renderDecisionFocus(config));
+        patchSlot(els.app, "#decisionSummarySlot", "decisionSummaryKey", summaryKey, renderDecisionSummary(config));
+        patchSlot(els.app, "#decisionCardsSlot", "decisionCardsKey", cardsKey, renderDecisionCards(config));
+        patchSlot(els.app, "#decisionActionsSlot", "decisionActionsKey", actionsKey, renderDecisionActions(config));
+      }
+
+      function renderResultShell(title) {
+        return `
+          ${renderScreenAlerts()}
+          <section class="card">
+            <h2>${escapeHtml(title)}</h2>
+            <div id="resultHeroSlot"></div>
+            <div id="resultExtraSlot"></div>
+            <div id="resultCountsSlot"></div>
+            <div id="resultActionsSlot"></div>
+          </section>
+        `;
+      }
+
+      function buildResultConfig(room, view) {
+        if (view === "roundResult") {
+          const round = getCurrentRound(room);
+          const winner = round?.winner;
+          return {
+            title: round?.label || "ラウンド結果",
+            heroHtml: renderWordStage({
+              stageClass: "result-stage",
+              label: "勝利ワード",
+              entry: winner,
+              wordClass: "result-word",
+              maxFont: 40,
+              minFont: 20,
+              emptyText: "結果待ちです。",
+              footerHtml: winner
+                ? renderSummaryPills([
+                    { label: "勝ちワードの持ち主", value: winner.displayName },
+                    { label: "得票", value: `${winner.voteCount}票` }
+                  ])
+                : ""
+            }),
+            extraHtml: "",
+            countsHtml: renderCountBreakdown("票数内訳", round?.voteSummary?.counts || [], (item) => `${item.count}票 / ${item.displayName}`),
+            actionsHtml: room.me.isHost
+              ? `
+                  <div class="button-row">
+                    <button class="btn primary" type="button" data-action="proceed-round" ${state.pendingAction ? "disabled" : ""}>
+                      ${room.game.roundIndex === room.game.rounds.length - 1 ? "最終投票へ進む" : "次のラウンドへ"}
+                    </button>
+                    <button class="btn subtle" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>この端末の参加情報を消す</button>
+                  </div>
+                `
+              : `
+                  <div class="button-row">
+                    <div class="info-box">ホストの進行待ちです。</div>
+                    <button class="btn subtle" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>この端末の参加情報を消す</button>
+                  </div>
+                `
+          };
+        }
+
+        const champion = room.game.champion;
+        return {
+          title: "総合優勝",
+          heroHtml: `
+            ${renderFocusCallout({
+              label: "本日の決着",
+              title: champion ? `${champion.phrase}` : "総合優勝を集計中",
+              description: champion ? "最終投票で決まった総合優勝です。" : "",
+              pills: champion ? [{ label: "持ち主", value: champion.displayName }] : []
+            })}
+            ${renderWordStage({
+              stageClass: "champion-stage",
+              label: "総合優勝",
+              entry: champion,
+              wordClass: "champion-word",
+              maxFont: 48,
+              minFont: 22,
+              emptyText: "未確定です。",
+              footerHtml: champion ? `<p class="stage-footnote">${escapeHtml(champion.displayName)} のワード</p>` : ""
+            })}
+          `,
+          extraHtml: renderSection("各ラウンドの勝ちワード", renderRoundWinnerGrid(room.game.rounds), { className: "panel" }),
+          countsHtml: room.game.finalVote?.voteSummary
+            ? renderCountBreakdown("最終投票の票数内訳", room.game.finalVote.voteSummary.counts, (item) => `${item.count}票 / ${item.displayName}`)
+            : "",
+          actionsHtml: room.me.isHost
+            ? `
+                <div class="button-row">
+                  <button class="btn primary" type="button" data-action="restart-game" ${state.pendingAction ? "disabled" : ""}>もう一度最初から</button>
+                  <button class="btn subtle" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>この端末の参加情報を消す</button>
+                </div>
+              `
+            : `
+                <div class="button-row">
+                  <div class="info-box">ホストの再開待ちです。</div>
+                  <button class="btn subtle" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>この端末の参加情報を消す</button>
+                </div>
+              `
+        };
+      }
+
+      function updateResultView(room, view) {
+        const config = buildResultConfig(room, view);
+        const shellKey = `${view}|${room.roomId}|${room.me.playerId}`;
+        if (state.renderCache.resultShellKey !== shellKey) {
+          state.renderCache.resultShellKey = shellKey;
+          state.renderCache.resultHeroKey = "";
+          state.renderCache.resultExtraKey = "";
+          state.renderCache.resultCountsKey = "";
+          state.renderCache.resultActionsKey = "";
+          els.app.innerHTML = renderResultShell(config.title);
+        }
+
+        const heroKey = [view, room.revision, config.heroHtml].join("|");
+        const extraKey = [view, room.revision, config.extraHtml].join("|");
+        const countsKey = [view, room.revision, config.countsHtml].join("|");
+        const actionsKey = [view, room.revision, state.pendingAction ? "pending" : "idle", room.me.isHost ? "host" : "guest"].join("|");
+
+        patchSlot(els.app, "#resultHeroSlot", "resultHeroKey", heroKey, config.heroHtml);
+        patchSlot(els.app, "#resultExtraSlot", "resultExtraKey", extraKey, config.extraHtml);
+        patchSlot(els.app, "#resultCountsSlot", "resultCountsKey", countsKey, config.countsHtml);
+        patchSlot(els.app, "#resultActionsSlot", "resultActionsKey", actionsKey, config.actionsHtml);
+      }
+
       function renderVoteCards(candidates, selectedId, dataAttr, selfId, options = {}) {
         return `
           <div class="action-grid">
@@ -2979,12 +3273,33 @@
         if (view === "wait") {
           state.renderCache.appKey = appKey;
           updateWaitView(room);
-        } else if (shouldUpdateApp) {
+        } else if (isDecisionView(view)) {
           state.renderCache.appKey = appKey;
           state.renderCache.waitShellKey = "";
           state.renderCache.waitFocusKey = "";
           state.renderCache.waitSyncKey = "";
           state.renderCache.waitSubmissionsKey = "";
+          state.renderCache.resultShellKey = "";
+          state.renderCache.resultHeroKey = "";
+          state.renderCache.resultExtraKey = "";
+          state.renderCache.resultCountsKey = "";
+          state.renderCache.resultActionsKey = "";
+          updateDecisionView(room, view);
+        } else if (isResultView(view)) {
+          state.renderCache.appKey = appKey;
+          state.renderCache.waitShellKey = "";
+          state.renderCache.waitFocusKey = "";
+          state.renderCache.waitSyncKey = "";
+          state.renderCache.waitSubmissionsKey = "";
+          state.renderCache.decisionShellKey = "";
+          state.renderCache.decisionFocusKey = "";
+          state.renderCache.decisionSummaryKey = "";
+          state.renderCache.decisionCardsKey = "";
+          state.renderCache.decisionActionsKey = "";
+          updateResultView(room, view);
+        } else if (shouldUpdateApp) {
+          state.renderCache.appKey = appKey;
+          resetIncrementalViewCaches();
           els.app.innerHTML = (renderMap[view] || renderLanding)();
           hydrateWordBoards(els.app);
         }

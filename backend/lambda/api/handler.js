@@ -352,13 +352,41 @@ function getPlayableDeck(deck) {
   };
 }
 
+function shuffleArray(items) {
+  const shuffled = items.slice();
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const swapIndex = crypto.randomInt(0, index + 1);
+    [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
+  }
+  return shuffled;
+}
+
+function buildDrawPile(deck, totalCards) {
+  const copyCount = Math.max(1, Math.ceil(totalCards / deck.tiles.length));
+  const expanded = [];
+
+  for (let copyIndex = 0; copyIndex < copyCount; copyIndex += 1) {
+    for (const tile of deck.tiles) {
+      expanded.push({
+        tileId: tile.tileId,
+        text: tile.text,
+        copyIndex
+      });
+    }
+  }
+
+  return shuffleArray(expanded).slice(0, totalCards);
+}
+
 function dealInitialHands(players, deck) {
   let cursor = 0;
   const hands = {};
+  const totalCards = players.length * STARTING_HAND_SIZE;
+  const drawPile = buildDrawPile(deck, totalCards);
 
   for (const player of players) {
     hands[player.playerId] = Array.from({ length: STARTING_HAND_SIZE }, (_, index) => {
-      const sourceTile = deck.tiles[cursor % deck.tiles.length];
+      const sourceTile = drawPile[cursor];
       cursor += 1;
       return {
         tileId: `${sourceTile.tileId}__${player.playerId}_${index + 1}`,

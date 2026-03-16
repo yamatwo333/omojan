@@ -162,6 +162,7 @@ type PlayerState = {
 
 - 新しく開始するルームは最新の `deckVersion` を使う
 - 既に開始済みのルームは、開始時点の `deckVersion` と `initialHands` を保持する
+- `initialHands` はゲーム開始時に最新デッキをシャッフルして確定する
 - そのため、進行中の試合が途中で壊れない
 
 ```ts

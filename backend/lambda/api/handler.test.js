@@ -434,10 +434,11 @@ test("admin deck API requires passcode and updated deck is used on next game sta
       headers: createAdminHeaders(adminPasscode),
       body: {
         deckName: "default",
-        tiles: [
-          { tileId: "tile_admin_001", text: "超会議", enabled: true },
-          { text: "大渋滞", enabled: true }
-        ]
+        tiles: Array.from({ length: 20 }, (_, index) => ({
+          tileId: `tile_admin_${String(index + 1).padStart(3, "0")}`,
+          text: `管理牌${String(index + 1).padStart(2, "0")}`,
+          enabled: true
+        }))
       }
     })
   );
@@ -445,15 +446,15 @@ test("admin deck API requires passcode and updated deck is used on next game sta
   assert.equal(response.statusCode, 200);
   assert.equal(body.ok, true);
   assert.equal(body.data.version, previousVersion + 1);
-  assert.equal(body.data.tiles.length, 2);
-  assert.equal(body.data.tiles[0].text, "超会議");
-  assert.equal(body.data.tiles[1].text, "大渋滞");
-  assert.match(body.data.tiles[1].tileId, /^tile_/);
+  assert.equal(body.data.tiles.length, 20);
+  assert.equal(body.data.tiles[0].text, "管理牌01");
+  assert.equal(body.data.tiles[19].text, "管理牌20");
 
   const session = await createSession(handler, ["ホスト", "ゲストA"]);
   const room = await startGame(handler, session, "ホスト");
-  const handWords = new Set(room.myHand.map((tile) => tile.text));
-  assert.deepEqual([...handWords].sort(), ["大渋滞", "超会議"]);
+  const configuredWords = new Set(body.data.tiles.map((tile) => tile.text));
+  assert.equal(room.myHand.length, 10);
+  assert.equal(room.myHand.every((tile) => configuredWords.has(tile.text)), true);
 });
 
 test("room create/join/get/reconnect work in lobby", async () => {

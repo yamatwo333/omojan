@@ -761,7 +761,7 @@
     <main>
       <header class="page-header">
         <h1>おもじゃん</h1>
-        <p>友達に URL を共有して、そのままブラウザで遊べる最小アプリです。ロビー作成、招待参加、提出、投票、再投票、ホスト裁定、総合優勝まで API で進みます。</p>
+        <p>URL共有ですぐ遊べる、おもじゃんの最小アプリです。</p>
       </header>
 
       <section class="phone-shell">
@@ -1529,17 +1529,17 @@
         const cannotRevoteFinal = room.game.phase === "final_revote" && !canPlayerVoteFinal(room, room.me.playerId, "revote");
 
         const phaseMessageMap = {
-          lobby: room.me.isHost ? "プレイヤーがそろったら開始順を決めてゲームを始めます。" : "ホストが開始するまでこの画面で待機します。",
-          round_vote: "あなたは投票済みです。ほかの参加者の投票を待っています。",
-          round_revote: "あなたは再投票済みです。ほかの参加者の投票を待っています。",
+          lobby: room.me.isHost ? "開始順を決めて始めます。" : "ホストの開始待ちです。",
+          round_vote: "ほかの投票を待っています。",
+          round_revote: "ほかの投票を待っています。",
           final_vote: cannotVoteFinal
-            ? "投票できる候補がないため、ほかの参加者の最終投票を待っています。"
-            : "あなたは最終投票済みです。ほかの参加者の投票を待っています。",
+            ? "ほかの最終投票を待っています。"
+            : "ほかの最終投票を待っています。",
           final_revote: cannotRevoteFinal
-            ? "再投票できる候補がないため、ほかの参加者の最終投票を待っています。"
-            : "あなたは最終再投票済みです。ほかの参加者の投票を待っています。",
-          round_result: room.me.isHost ? "確認したら次のラウンドへ進めます。" : "ホストが次へ進めるまで待っています。",
-          final_result: room.me.isHost ? "このルームでもう一度遊べます。" : "ホストが再開するまで待っています。"
+            ? "ほかの最終投票を待っています。"
+            : "ほかの最終投票を待っています。",
+          round_result: room.me.isHost ? "次へ進めます。" : "ホストの進行待ちです。",
+          final_result: room.me.isHost ? "このルームでもう一度遊べます。" : "ホストの再開待ちです。"
         };
 
         if (currentPlayer) {
@@ -1688,7 +1688,7 @@
               label,
               title: selectedCandidate ? selectedCandidate.phrase : "まだワードを選んでいません",
               description: selectedCandidate
-                ? "このワードに投票されます。問題なければそのまま確定できます。"
+                ? "このワードで確定します。"
                 : description,
               pills: [
                 { label: "候補", value: `${candidates.length}語` },
@@ -1729,7 +1729,7 @@
               label,
               title: selectedCandidate ? selectedCandidate.phrase : "ホストが勝ちワードを決めます",
               description: selectedCandidate
-                ? "このワードで確定すると、そのまま次の結果画面へ進みます。"
+                ? "このワードで決定します。"
                 : description,
               pills: [
                 { label: "同票", value: `${candidates.length}語` },
@@ -1843,8 +1843,8 @@
           label: `ROOM / ${room.inviteCode}`,
           title: room.me.isHost ? "メンバーがそろったら開始" : "ホストの開始を待っています",
           description: room.me.isHost
-            ? "招待URLを共有して、最初に動く人を決めたらそのまま開始できます。"
-            : "このルームコードのまま待機すれば、ホストが開始したあと自動で次の画面へ進みます。",
+            ? "招待URLを共有して開始します。"
+            : "ホストの開始待ちです。",
           pills: [
             { label: "参加", value: `${players.length}/${maxPlayers}人` },
             { label: "あなた", value: room.me.isHost ? "ホスト" : room.me.displayName }
@@ -1861,8 +1861,8 @@
           label: getCurrentRound(room)?.label || "提出中",
           title: draftText || "まずは2牌を選ぶ",
           description: draftText
-            ? "この見た目のまま、提出すると全員の画面中央に大きく公開されます。"
-            : "自動で選ばれている2牌をそのまま使っても、手札から選び直しても大丈夫です。",
+            ? "この見た目で中央に公開されます。"
+            : "2牌を選んでワードを作ります。",
           pills: [
             { label: "選択", value: `${selectedTiles.length}/2牌` },
             { label: "改行", value: modeLabel || "-" },
@@ -1878,7 +1878,7 @@
 
           <section class="card">
             <h2>ルームを作る</h2>
-            <p>ホストとしてルームを作り、招待 URL をそのまま友達に共有します。</p>
+            <p>ルームを作って招待URLを共有します。</p>
             <div class="field-stack">
               <div class="field">
                 <label for="createDisplayName">表示名</label>
@@ -1904,7 +1904,7 @@
 
           <section class="card">
             <h2>招待 URL から参加</h2>
-            <p>受け取った招待コードを入れて参加します。URL に招待コードが入っていれば自動で埋まります。</p>
+            <p>招待コードを入れて参加します。</p>
             <div class="field-stack">
               <div class="field">
                 <label for="inviteCode">招待コード</label>
@@ -1977,7 +1977,7 @@
                   </div>
                 `
                 : `
-                    <div class="info-box">ホストが開始順を決めてゲームを始めるまで待っています。</div>
+                    <div class="info-box">ホストの開始待ちです。</div>
                     ${renderPlayerOrderPreview(room)}
                   `
             }
@@ -2010,9 +2010,9 @@
                 ${
                   getDraftText(room)
                     ? layout.safetyAdjusted
-                      ? "長いワードでも提出時に崩れないよう、自動で改行や縮小を補正します。"
-                      : "提出される見え方をそのまま確認できます。"
-                    : "まずは牌を2つ選ぶと、ここに見た目が出ます。"
+                      ? "提出時に自動で整えます。"
+                      : "提出時と同じ見え方です。"
+                    : "2牌を選ぶとここに出ます。"
                 }
               </p>
             </section>
@@ -2097,7 +2097,7 @@
             ${renderFocusCallout({
               label: getCurrentRound(room)?.label || "進行中",
               title: getWaitingMessage(room),
-              description: "ほかのプレイヤーの操作が終わると、自動更新または再接続で次の画面へ進みます。",
+              description: "自動で更新します。",
               pills: [
                 { label: "同期", value: formatLastSync() },
                 { label: "公開", value: submissions.length ? `${submissions.length}語` : "まだなし" }
@@ -2144,8 +2144,8 @@
           title: mode === "revote" ? "再投票" : "このラウンドで一番おもしろいワードに投票",
           description:
             mode === "revote"
-              ? "同票になったワードだけでもう一度選びます。"
-              : "自分のワード以外から、このラウンドでいちばんおもしろいワードを1つ選びます。",
+              ? "同票のワードから選びます。"
+              : "自分以外のワードから選びます。",
           summaryHtml:
             mode === "revote" && round?.voteSummary
               ? renderSection(
@@ -2177,8 +2177,8 @@
           label: isFinal ? "最終裁定" : getCurrentRound(room)?.label || "ホスト裁定",
           title: isFinal ? "最終ホスト裁定" : "ホスト裁定",
           description: isFinal
-            ? "最終投票でも同票だったため、ホストが総合優勝ワードを決めます。"
-            : "再投票でも同票だったため、ホストがこの局の勝ちワードを決めます。",
+            ? "ホストが総合優勝を決めます。"
+            : "ホストが勝ちワードを決めます。",
           counts,
           tiedIds,
           idField: isFinal ? "candidateId" : "playerId",
@@ -2210,7 +2210,6 @@
                       { label: "勝ちワードの持ち主", value: winner.displayName },
                       { label: "得票", value: `${winner.voteCount}票` }
                     ])}
-                    <p class="stage-footnote">この局でいちばん支持を集めたワードです。</p>
                   `
                 : ""
             })}
@@ -2224,7 +2223,7 @@
                     </button>
                   </div>
                 `
-                : `<div class="info-box">ホストが次へ進めるまで待機します。</div>`
+                : `<div class="info-box">ホストの進行待ちです。</div>`
             }
           </section>
         `;
@@ -2238,8 +2237,8 @@
           label: isRevote ? "最終再投票" : "総合優勝を決める投票",
           title: isRevote ? "最終再投票" : "最終投票",
           description: isRevote
-            ? "同票になった最終候補だけでもう一度選びます。"
-            : "各ラウンドの勝ちワードから、総合優勝を1つ選びます。",
+            ? "同票の候補から選びます。"
+            : "総合優勝を1つ選びます。",
           summaryHtml:
             isRevote && finalVote?.voteSummary
               ? renderSection(
@@ -2266,7 +2265,7 @@
             ${renderFocusCallout({
               label: "本日の決着",
               title: champion ? `${champion.phrase}` : "総合優勝を集計中",
-              description: champion ? "3ラウンドの勝ちワードから、最終投票で選ばれた総合優勝ワードです。" : "",
+              description: champion ? "最終投票で決まった総合優勝です。" : "",
               pills: champion ? [{ label: "持ち主", value: champion.displayName }] : []
             })}
             ${renderWordStage({
@@ -2299,7 +2298,7 @@
                     <button class="btn primary" type="button" data-action="restart-game" ${state.pendingAction ? "disabled" : ""}>もう一度最初から</button>
                   </div>
                 `
-                : `<div class="info-box">ホストが再開すると同じルームで続けて遊べます。</div>`
+                : `<div class="info-box">ホストの再開待ちです。</div>`
             }
           </section>
         `;

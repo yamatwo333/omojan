@@ -322,11 +322,10 @@ function normalizeDeckForStorage(deckId, payload = {}, existingDeck = null) {
 }
 
 function createEmptyRounds(playerCount = 4) {
-  const winds = ["一", "二", "三", "四"];
   return Array.from({ length: normalizePlayerCount(playerCount) }, (_, roundIndex) => ({
     roundIndex,
     label: `ラウンド${roundIndex + 1}`,
-    wind: `東${winds[roundIndex] || roundIndex + 1}局`,
+    wind: `ラウンド${roundIndex + 1}`,
     phaseStatus: "pending",
     submissions: [],
     votes: {},

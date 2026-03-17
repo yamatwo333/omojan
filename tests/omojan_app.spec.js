@@ -296,8 +296,10 @@ async function completeRoundByHostDecision(host, guest, roundLabel, hostDecision
   await host.locator('button[data-action="submit-host-pick"]').click();
   await acknowledgeRevealForAll([host, guest]);
 
-  await expect(host.getByRole("heading", { name: roundLabel })).toBeVisible({ timeout: 10000 });
-  await expect(guest.getByRole("heading", { name: roundLabel })).toBeVisible({ timeout: 10000 });
+  await expect(host.getByRole("heading", { name: "結果発表" })).toBeVisible({ timeout: 10000 });
+  await expect(guest.getByRole("heading", { name: "結果発表" })).toBeVisible({ timeout: 10000 });
+  await expect(host.locator("body")).toContainText(roundLabel);
+  await expect(guest.locator("body")).toContainText(roundLabel);
   await expect(host.locator("body")).toContainText("票数内訳");
   await expect(guest.locator("body")).toContainText("票数内訳");
 }
@@ -381,6 +383,10 @@ test("app can complete a full game through final champion and restart", async ({
   await acknowledgeRevealForAll([host, guest]);
   await expect(host.getByRole("heading", { name: "結果一覧" })).toBeVisible({ timeout: 10000 });
   await expect(guest.getByRole("heading", { name: "結果一覧" })).toBeVisible({ timeout: 10000 });
+  await expect(host.locator("#statusContext")).toContainText("結果一覧");
+  await expect(host.locator(".champion-stage .stage-footnote")).not.toContainText("のワード");
+  await expect(host.locator(".champion-stage .stage-footnote")).toContainText(/HostFlowTest|GuestFlowTest/);
+  await expect(host.locator(".round-winner-card").first().locator("footer")).toContainText(/HostFlowTest|GuestFlowTest/);
   await expect(host.locator("body")).toContainText(championPhrase);
   await expect(guest.locator("body")).toContainText(championPhrase);
 
@@ -388,6 +394,46 @@ test("app can complete a full game through final champion and restart", async ({
   await reconnect(guest);
   await expect(host.getByRole("heading", { name: "ルーム待機中" })).toBeVisible({ timeout: 10000 });
   await expect(guest.getByRole("heading", { name: "ルーム待機中" })).toBeVisible({ timeout: 10000 });
+
+  await hostContext.close();
+  await guestContext.close();
+});
+
+test("mobile submit view keeps a floating preview and uses unified reveal labels", async ({ browser }) => {
+  test.setTimeout(60000);
+  const hostContext = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const guestContext = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const host = await hostContext.newPage();
+  const guest = await guestContext.newPage();
+
+  await host.goto(STATIC_URL);
+  await host.fill("#createDisplayName", "HostMobileTest");
+  await host.getByRole("button", { name: "2人" }).click();
+  await host.getByRole("button", { name: "ルームを作る" }).click();
+  await expect(host.getByRole("heading", { name: "ルーム待機中" })).toBeVisible();
+  const inviteCode = ((await host.locator(".room-code").textContent()) || "").trim();
+
+  await guest.goto(`${STATIC_URL}&invite=${encodeURIComponent(inviteCode)}`);
+  await guest.fill("#joinDisplayName", "GuestMobileTest");
+  await guest.getByRole("button", { name: "参加する" }).click();
+  await expect(guest.getByRole("heading", { name: "ルーム待機中" })).toBeVisible();
+
+  await host.getByRole("button", { name: "この順で開始" }).click();
+  await expect(host.locator(".page-header")).toHaveClass(/is-hidden/);
+  await expect(host.locator(".status-row")).toHaveClass(/is-hidden/);
+
+  await host.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  await host.waitForTimeout(900);
+  const previewState = await host.locator(".preview-card").evaluate((card) => ({
+    top: card.getBoundingClientRect().top,
+    className: card.className
+  }));
+  expect(previewState.top).toBeLessThanOrEqual(12);
+
+  await submitCurrentDraft(host);
+  await expect(host.locator("#revealBadge")).toHaveText("ラウンド1");
+  await expect(host.locator("#revealMeta")).toHaveText("HostMobileTest");
+  await expect(host.locator("#revealCard")).toHaveClass(/is-submission/);
 
   await hostContext.close();
   await guestContext.close();
@@ -429,7 +475,8 @@ test("app restores session after reopening the browser context", async ({ browse
   await host.locator('button[data-action="submit-host-pick"]').click();
   await acknowledgeRevealForAll([host, guest]);
 
-  ({ context: guestContext, page: guest } = await reopenWithStoredSession(browser, guestContext, "ラウンド1"));
+  ({ context: guestContext, page: guest } = await reopenWithStoredSession(browser, guestContext, "結果発表"));
+  await expect(guest.locator("body")).toContainText("ラウンド1");
   await expect(guest.locator("body")).toContainText("票数内訳");
 
   await hostContext.close();

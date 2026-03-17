@@ -327,6 +327,7 @@
       }
 
       .preview-card.is-sticky {
+        position: -webkit-sticky;
         position: sticky;
         top: 8px;
         z-index: 8;
@@ -414,11 +415,11 @@
       }
 
       .vote-word {
-        min-height: 116px;
+        min-height: 124px;
       }
 
       .result-word {
-        min-height: 132px;
+        min-height: 142px;
       }
 
       .champion-word {
@@ -435,7 +436,7 @@
       .preview-caption {
         margin: 10px 0 0;
         color: var(--muted);
-        font-size: 12px;
+        font-size: 13px;
         line-height: 1.6;
         text-align: center;
       }
@@ -911,14 +912,14 @@
       .reveal-card .preview-caption {
         margin-top: 12px;
         text-align: center;
-        font-size: 14px;
-        font-weight: 700;
+        font-size: 16px;
+        font-weight: 800;
       }
 
       .reveal-card.is-champion .preview-caption {
-        font-size: 14px;
+        font-size: 16px;
         color: #7b3416;
-        font-weight: 700;
+        font-weight: 800;
       }
 
       .reveal-card.is-champion .reveal-badge {
@@ -949,7 +950,7 @@
       .reveal-card.is-submission .word-board {
         min-height: min(52vh, 340px);
         margin-top: 0;
-        padding: 16px 18px 10px;
+        padding: 20px 22px 14px;
       }
 
       .reveal-card.is-submission .reveal-actions {
@@ -969,7 +970,7 @@
       .reveal-card.is-submission .preview-caption {
         margin-top: 10px;
         color: var(--green);
-        font-size: 15px;
+        font-size: 16px;
         font-weight: 800;
       }
 
@@ -1047,7 +1048,7 @@
       }
 
       .round-winner-card .word-board {
-        min-height: 118px;
+        min-height: 136px;
       }
 
       .champion-stage.is-grand {
@@ -1084,7 +1085,7 @@
       .champion-stage.is-grand .stage-footnote {
         margin-top: 12px;
         color: #7b3416;
-        font-size: 15px;
+        font-size: 16px;
         font-weight: 800;
       }
 
@@ -1143,7 +1144,7 @@
         }
 
         .page-header {
-          padding-top: calc(36px + env(safe-area-inset-top));
+          padding-top: calc(52px + env(safe-area-inset-top));
         }
 
         .phone {
@@ -1157,6 +1158,54 @@
 
         .phone-shell {
           display: block;
+        }
+
+        .preview-card.is-sticky,
+        .preview-card.is-floating {
+          top: calc(10px + env(safe-area-inset-top));
+        }
+
+        .status-row,
+        .status-context,
+        .mini-btn {
+          font-size: 13px;
+        }
+
+        .card,
+        .panel {
+          padding: 16px;
+        }
+
+        .card h2,
+        .panel h3 {
+          font-size: 20px;
+        }
+
+        .card p,
+        .panel p,
+        .section-note {
+          font-size: 15px;
+        }
+
+        .field label,
+        .section-label,
+        .badge,
+        .chip,
+        .room-code,
+        .player-card span,
+        .history-card span,
+        .muted {
+          font-size: 13px;
+        }
+
+        .btn {
+          min-height: 54px;
+          font-size: 16px;
+        }
+
+        .tile {
+          min-height: 82px;
+          font-size: 15px;
         }
       }
     </style>
@@ -2032,18 +2081,16 @@
           return "通信が不安定なため自動で再試行中";
         }
         const view = deriveView();
-        const room = state.room;
-        const round = getCurrentRound(room);
         const contextMap = {
           welcome: "ルーム作成 / 参加",
-          lobby: room?.inviteCode ? `ROOM / ${room.inviteCode}` : "ルーム待機",
-          submit: round?.wind || "提出",
-          wait: round?.wind || "待機",
-          vote: round?.label || "投票",
-          revote: round?.label || "再投票",
-          hostDecide: round?.label || "ホスト裁定",
-          roundResult: round?.label || "ラウンド結果",
-          finalVote: room?.game?.phase === "final_revote" ? "最終再投票" : "最終投票",
+          lobby: state.room?.inviteCode ? `ROOM / ${state.room.inviteCode}` : "ルーム待機",
+          submit: "あなたの手番",
+          wait: "待機中",
+          vote: "投票",
+          revote: "再投票",
+          hostDecide: "ホスト裁定",
+          roundResult: "結果発表",
+          finalVote: state.room?.game?.phase === "final_revote" ? "最終再投票" : "最終投票",
           finalHostDecide: "最終ホスト裁定",
           finalResult: "結果一覧"
         };
@@ -2700,7 +2747,7 @@
 
         return `
           <section class="${stageClass}">
-            <small>${escapeHtml(label)}</small>
+            ${label ? `<small>${escapeHtml(label)}</small>` : ""}
             ${
               entry
                 ? renderWordBoard(entry.renderedLines, entry.fontId, wordClass, { maxFont, minFont })
@@ -2860,7 +2907,7 @@
                     <header>
                       <strong>${escapeHtml(round.label)}</strong>
                     </header>
-                    ${renderWordBoard(round.winner.renderedLines, round.winner.fontId, "result-word", { maxFont: 48, minFont: 24 })}
+                    ${renderWordBoard(round.winner.renderedLines, round.winner.fontId, "result-word", { maxFont: 56, minFont: 28 })}
                     <footer>${escapeHtml(resolvePlayerDisplayName(room, round.winner.playerId, round.winner.displayName))}</footer>
                   </article>
                 `
@@ -3605,14 +3652,14 @@
           const round = getCurrentRound(room);
           const winner = round?.winner;
           return {
-            title: round?.label || "ラウンド結果",
+            title: "結果発表",
             heroHtml: renderWordStage({
               stageClass: "result-stage",
-              label: "勝利ワード",
+              label: round?.label || "ラウンド結果",
               entry: winner,
               wordClass: "result-word",
-              maxFont: 40,
-              minFont: 20,
+              maxFont: 48,
+              minFont: 24,
               emptyText: "結果待ちです。",
               footerHtml: winner
                 ? renderSummaryPills([
@@ -3646,13 +3693,13 @@
           title: "結果一覧",
           heroHtml: renderWordStage({
             stageClass: "champion-stage is-grand",
-            label: "総合優勝",
+            label: "",
             entry: champion,
             wordClass: "champion-word",
-            maxFont: 64,
-            minFont: 26,
+            maxFont: 70,
+            minFont: 30,
             emptyText: "未確定です。",
-            footerHtml: champion ? `<p class="stage-footnote">${escapeHtml(resolvePlayerDisplayName(room, champion.playerId, champion.displayName))} のワード</p>` : ""
+            footerHtml: champion ? `<p class="stage-footnote">${escapeHtml(resolvePlayerDisplayName(room, champion.playerId, champion.displayName))}</p>` : ""
           }),
           extraHtml: renderSection("各ラウンドの勝ちワード", renderRoundWinnerGrid(room.game.rounds, room), { className: "panel" }),
           countsHtml: room.game.finalVote?.voteSummary
@@ -3713,7 +3760,7 @@
                     ${disabled ? "disabled" : ""}
                   >
                     <span class="badge">${escapeHtml(candidate.displayName)}</span>
-                    ${renderWordBoard(candidate.renderedLines, candidate.fontId, "vote-word", { maxFont: 52, minFont: 26 })}
+                    ${renderWordBoard(candidate.renderedLines, candidate.fontId, "vote-word", { maxFont: 58, minFont: 28 })}
                   </button>
                 `;
               })
@@ -3781,14 +3828,14 @@
         return `
           ${renderScreenAlerts()}
           <section class="card">
-            <h2>${escapeHtml(round?.label || "ラウンド結果")}</h2>
+            <h2>結果発表</h2>
             ${renderWordStage({
               stageClass: "result-stage",
-              label: "勝利ワード",
+              label: round?.label || "ラウンド結果",
               entry: winner,
               wordClass: "result-word",
-              maxFont: 40,
-              minFont: 20,
+              maxFont: 48,
+              minFont: 24,
               emptyText: "結果待ちです。",
               footerHtml: winner
                 ? `
@@ -3854,21 +3901,15 @@
           ${renderScreenAlerts()}
           <section class="card">
             <h2>結果一覧</h2>
-            ${renderFocusCallout({
-              label: "本日の決着",
-              title: champion ? `${champion.phrase}` : "総合優勝を集計中",
-              description: champion ? "最終投票で決まった総合優勝です。" : "",
-              pills: champion ? [{ label: "持ち主", value: champion.displayName }] : []
-            })}
             ${renderWordStage({
-              stageClass: "champion-stage",
-              label: "総合優勝",
+              stageClass: "champion-stage is-grand",
+              label: "",
               entry: champion,
               wordClass: "champion-word",
-              maxFont: 48,
-              minFont: 22,
+              maxFont: 70,
+              minFont: 30,
               emptyText: "未確定です。",
-              footerHtml: champion ? `<p class="stage-footnote">${escapeHtml(resolvePlayerDisplayName(room, champion.playerId, champion.displayName))} のワード</p>` : ""
+              footerHtml: champion ? `<p class="stage-footnote">${escapeHtml(resolvePlayerDisplayName(room, champion.playerId, champion.displayName))}</p>` : ""
             })}
 
             ${renderSection(
@@ -4137,11 +4178,12 @@
         }
 
         const slotRect = submitTopSlot.getBoundingClientRect();
-        const floatTop = 8;
+        const isMobile = window.matchMedia("(max-width: 520px)").matches;
+        const floatTop = isMobile ? 12 : 8;
         const cardHeight = previewCard.offsetHeight;
         const revealOpen = !els.revealOverlay.hidden;
-        const hasScrolled = window.scrollY > 12;
-        const canFloat = !revealOpen && (hasScrolled || slotRect.top < floatTop);
+        const hasScrolled = window.scrollY > 1;
+        const canFloat = !revealOpen && (isMobile || hasScrolled || slotRect.top < floatTop);
 
         if (!canFloat) {
           submitTopSlot.style.minHeight = "";
@@ -4253,7 +4295,7 @@
             acknowledged: meAcknowledged,
             kind: "champion",
             variant: "champion-word",
-            maxFont: 70,
+            maxFont: 68,
             minFont: 28
           };
         }
@@ -4267,7 +4309,7 @@
             acknowledged: meAcknowledged,
             kind: "round_winner",
             variant: "result-word",
-            maxFont: 50,
+            maxFont: 54,
             minFont: 22
           };
         }
@@ -4280,7 +4322,7 @@
           acknowledged: meAcknowledged,
           kind: "submission",
           variant: "preview-word",
-          maxFont: 98,
+          maxFont: 90,
           minFont: 32
         };
       }

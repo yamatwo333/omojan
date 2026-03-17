@@ -996,6 +996,7 @@
         pollTimer: 0,
         pollFailureCount: 0,
         feedbackTimer: 0,
+        renderFrame: 0,
         lastSyncAt: "",
         renderCache: {
           appKey: "",
@@ -1266,7 +1267,7 @@
             state.copyMessage = "";
             state.errorMessage = "";
             state.feedbackTimer = 0;
-            render();
+            renderCurrentView({ includeReveal: false });
           }, autoHideMs);
         }
       }
@@ -3628,15 +3629,68 @@
           hydrateWordBoards(els.app);
         }
 
-        const previewWord = document.getElementById("previewWord");
-        if (previewWord && view === "submit") {
-          const layout = computeDraftLayout();
-          previewWord.dataset.variant = "preview-word";
-          applyWordMarkup(previewWord, layout.lines, getFontClass(state.draftFontId), state.draftLineMode, layout.fontSize);
-        }
+        updateSubmitPreview(room);
 
         setBanner();
         schedulePoll();
+      }
+
+      function updateSubmitPreview(room) {
+        const previewWord = document.getElementById("previewWord");
+        if (!previewWord || deriveView(room) !== "submit") {
+          return;
+        }
+        const layout = computeDraftLayout();
+        previewWord.dataset.variant = "preview-word";
+        applyWordMarkup(previewWord, layout.lines, getFontClass(state.draftFontId), state.draftLineMode, layout.fontSize);
+      }
+
+      function updateCurrentViewOnly(room = state.room, view = deriveView(room)) {
+        ensureGoogleFontsLoaded(collectVisibleFontIds(room, view));
+
+        if (isLandingView(view)) {
+          updateLandingView();
+          return true;
+        }
+        if (isLobbyView(view) && room) {
+          updateLobbyView(room);
+          return true;
+        }
+        if (isSubmitView(view) && room) {
+          updateSubmitView(room);
+          updateSubmitPreview(room);
+          return true;
+        }
+        if (view === "wait" && room) {
+          updateWaitView(room);
+          return true;
+        }
+        if (isDecisionView(view) && room) {
+          updateDecisionView(room, view);
+          return true;
+        }
+        if (isResultView(view) && room) {
+          updateResultView(room, view);
+          return true;
+        }
+        return false;
+      }
+
+      function renderCurrentView(options = {}) {
+        if (state.isLoading && !state.room) {
+          render(options);
+          return;
+        }
+
+        if (!updateCurrentViewOnly()) {
+          render(options);
+          return;
+        }
+
+        setBanner();
+        if (options.includeReveal !== false) {
+          renderReveal();
+        }
       }
 
       function getActiveReveal() {
@@ -3732,13 +3786,13 @@
           window.prompt("コピーしてください", text);
         }
         setFeedback(successMessage, false, 2400);
-        render();
+        renderCurrentView({ includeReveal: false });
       }
 
       async function runAction(action) {
         state.pendingAction = true;
         setFeedback("");
-        render();
+        renderCurrentView();
         try {
           await action();
         } catch (error) {
@@ -3799,7 +3853,7 @@
           state.draftSelectedTileIds = [...state.draftSelectedTileIds, tileId];
         }
         sanitizeManualBreaks(room);
-        render();
+        renderCurrentView({ includeReveal: false });
       }
 
       function toggleManualBreak(point) {
@@ -3808,7 +3862,7 @@
         } else {
           state.draftManualBreaks = [...state.draftManualBreaks, point];
         }
-        render();
+        renderCurrentView({ includeReveal: false });
       }
 
       const selectionClickHandlers = [
@@ -3816,14 +3870,14 @@
           selector: "[data-player-count]",
           handle: (button) => {
             state.playerCount = Number(button.dataset.playerCount);
-            render();
+            renderCurrentView({ includeReveal: false });
           }
         },
         {
           selector: "[data-start-player-id]",
           handle: (button) => {
             state.selectedStartPlayerId = button.dataset.startPlayerId;
-            render();
+            renderCurrentView({ includeReveal: false });
           }
         },
         {
@@ -3837,14 +3891,14 @@
           handle: (button) => {
             state.draftLineMode = button.dataset.lineMode;
             sanitizeManualBreaks();
-            render();
+            renderCurrentView({ includeReveal: false });
           }
         },
         {
           selector: "[data-font-id]",
           handle: (button) => {
             state.draftFontId = button.dataset.fontId;
-            render();
+            renderCurrentView({ includeReveal: false });
           }
         },
         {
@@ -3857,35 +3911,35 @@
           selector: "[data-vote-id]",
           handle: (button) => {
             state.selectedVoteTarget = button.dataset.voteId;
-            render();
+            renderCurrentView({ includeReveal: false });
           }
         },
         {
           selector: "[data-revote-id]",
           handle: (button) => {
             state.selectedHostTarget = button.dataset.revoteId;
-            render();
+            renderCurrentView({ includeReveal: false });
           }
         },
         {
           selector: "[data-host-pick-id]",
           handle: (button) => {
             state.selectedHostTarget = button.dataset.hostPickId;
-            render();
+            renderCurrentView({ includeReveal: false });
           }
         },
         {
           selector: "[data-final-vote-id]",
           handle: (button) => {
             state.selectedFinalTarget = button.dataset.finalVoteId;
-            render();
+            renderCurrentView({ includeReveal: false });
           }
         },
         {
           selector: "[data-final-pick-id]",
           handle: (button) => {
             state.selectedFinalTarget = button.dataset.finalPickId;
-            render();
+            renderCurrentView({ includeReveal: false });
           }
         }
       ];
@@ -3907,7 +3961,7 @@
         },
         "clear-messages": async () => {
           setFeedback("");
-          render();
+          renderCurrentView({ includeReveal: false });
         },
         "close-reveal": async () => {
           const reveal = getActiveReveal();
@@ -3982,13 +4036,13 @@
           if (state.draftSelectedTileIds.length === 2) {
             state.draftSelectedTileIds = [state.draftSelectedTileIds[1], state.draftSelectedTileIds[0]];
             sanitizeManualBreaks();
-            render();
+            renderCurrentView({ includeReveal: false });
           }
         },
         "clear-selection": async () => {
           state.draftSelectedTileIds = [];
           state.draftManualBreaks = [];
-          render();
+          renderCurrentView({ includeReveal: false });
         },
         "submit-word": async () => {
           await runAction(async () => {
@@ -4142,7 +4196,7 @@
         schedulePoll();
       });
 
-      function render() {
+      function flushRender() {
         if (state.isLoading && !state.room) {
           setBanner();
           const loadingKey = "loading";
@@ -4158,6 +4212,26 @@
         state.renderCache.loadingKey = "";
         renderApp();
         renderReveal();
+      }
+
+      function render(options = {}) {
+        if (options.immediate) {
+          if (state.renderFrame) {
+            window.cancelAnimationFrame(state.renderFrame);
+            state.renderFrame = 0;
+          }
+          flushRender();
+          return;
+        }
+
+        if (state.renderFrame) {
+          return;
+        }
+
+        state.renderFrame = window.requestAnimationFrame(() => {
+          state.renderFrame = 0;
+          flushRender();
+        });
       }
 
       initializeApp();

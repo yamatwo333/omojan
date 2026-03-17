@@ -1003,6 +1003,11 @@
           feedbackKey: "",
           bannerKey: "",
           revealKey: "",
+          lobbyShellKey: "",
+          lobbyTopKey: "",
+          lobbyPlayersKey: "",
+          lobbyOrderKey: "",
+          lobbyChampionsKey: "",
           submitShellKey: "",
           submitTopKey: "",
           submitSubmissionsKey: "",
@@ -1650,9 +1655,8 @@
             ]).join("|");
           case "lobby":
             return base.concat([
-              state.selectedStartPlayerId,
-              String(room.playerCount || ""),
-              getRecentChampionsStamp()
+              room.roomId || "",
+              room.me?.playerId || ""
             ]).join("|");
           case "submit":
             return base.concat([
@@ -2506,44 +2510,66 @@
       }
 
       function renderLobby(room) {
-        const players = room.game.players || [];
+        return renderLobbyShell();
+      }
+
+      function renderLobbyShell() {
         return `
           ${renderScreenAlerts({ includeCopy: true })}
-
           <section class="card">
             <h2>ルーム待機中</h2>
-            ${renderSummaryPills([
-              { label: "ROOM", value: room.inviteCode },
-              { label: "参加", value: `${players.length}/${room.playerCount}人` },
-              { label: "あなた", value: room.me.isHost ? "ホスト" : room.me.displayName }
-            ])}
-            <div class="button-row">
-              <span class="room-code">${escapeHtml(room.inviteCode)}</span>
-              <button class="btn subtle" type="button" data-action="copy-invite-url">招待URLをコピー</button>
-            </div>
-            <div class="player-list">
-              ${room.game.players
-                .map(
-                  (player) => `
-                    <div class="player-card">
-                      <div>
-                        <strong>${escapeHtml(player.displayName)}</strong>
-                        <span>${player.playerId === room.me.playerId ? "あなた" : `席順 ${player.seatOrder}`}</span>
-                      </div>
-                      <span class="badge">${player.isHost ? "ホスト" : "参加中"}</span>
-                    </div>
-                  `
-                )
-                .join("")}
-            </div>
-            ${renderSyncUtility({
-              title: "このルーム",
-              description: room.me.isHost ? "開始や更新はこの画面で進めます。" : "開始や更新は自動で反映します。",
-              showReconnect: true,
-              showLeave: true
-            })}
+            <div id="lobbyTopSlot"></div>
+            <div id="lobbyPlayersSlot"></div>
           </section>
 
+          <div id="lobbyOrderSlot"></div>
+          <div id="lobbyChampionsSlot"></div>
+        `;
+      }
+
+      function renderLobbyTop(room) {
+        const players = room.game.players || [];
+        return `
+          ${renderSummaryPills([
+            { label: "ROOM", value: room.inviteCode },
+            { label: "参加", value: `${players.length}/${room.playerCount}人` },
+            { label: "あなた", value: room.me.isHost ? "ホスト" : room.me.displayName }
+          ])}
+          <div class="button-row">
+            <span class="room-code">${escapeHtml(room.inviteCode)}</span>
+            <button class="btn subtle" type="button" data-action="copy-invite-url">招待URLをコピー</button>
+          </div>
+        `;
+      }
+
+      function renderLobbyPlayers(room) {
+        return `
+          <div class="player-list">
+            ${room.game.players
+              .map(
+                (player) => `
+                  <div class="player-card">
+                    <div>
+                      <strong>${escapeHtml(player.displayName)}</strong>
+                      <span>${player.playerId === room.me.playerId ? "あなた" : `席順 ${player.seatOrder}`}</span>
+                    </div>
+                    <span class="badge">${player.isHost ? "ホスト" : "参加中"}</span>
+                  </div>
+                `
+              )
+              .join("")}
+          </div>
+          ${renderSyncUtility({
+            title: "このルーム",
+            description: room.me.isHost ? "開始や更新はこの画面で進めます。" : "開始や更新は自動で反映します。",
+            showReconnect: true,
+            showLeave: true
+          })}
+        `;
+      }
+
+      function renderLobbyOrder(room) {
+        return `
           <section class="panel">
             <h3>開始順</h3>
             ${
@@ -2571,12 +2597,40 @@
                   `
             }
           </section>
+        `;
+      }
 
+      function renderLobbyChampions() {
+        return `
           <section class="panel">
             <h3>最近の総合優勝ワード</h3>
             ${renderRecentChampions()}
           </section>
         `;
+      }
+
+      function updateLobbyView(room) {
+        const shellKey = `${room.roomId}|${room.me.playerId}`;
+        if (state.renderCache.lobbyShellKey !== shellKey) {
+          state.renderCache.lobbyShellKey = shellKey;
+          state.renderCache.lobbyTopKey = "";
+          state.renderCache.lobbyPlayersKey = "";
+          state.renderCache.lobbyOrderKey = "";
+          state.renderCache.lobbyChampionsKey = "";
+          els.app.innerHTML = renderLobbyShell();
+        }
+
+        const playersKey = room.game.players
+          .map((player) => `${player.playerId}:${player.displayName}:${player.seatOrder}:${player.isHost ? 1 : 0}`)
+          .join("|");
+        const topKey = `${room.inviteCode}|${room.playerCount}|${room.me.playerId}|${room.me.isHost ? 1 : 0}|${room.game.players.length}`;
+        const orderKey = `${playersKey}|${state.selectedStartPlayerId}|${room.startPlayerId || ""}|${state.pendingAction ? "pending" : "idle"}|${room.me.isHost ? "host" : "guest"}`;
+        const championsKey = getRecentChampionsStamp();
+
+        patchSlot(els.app, "#lobbyTopSlot", "lobbyTopKey", topKey, renderLobbyTop(room));
+        patchSlot(els.app, "#lobbyPlayersSlot", "lobbyPlayersKey", playersKey, renderLobbyPlayers(room));
+        patchSlot(els.app, "#lobbyOrderSlot", "lobbyOrderKey", orderKey, renderLobbyOrder(room));
+        patchSlot(els.app, "#lobbyChampionsSlot", "lobbyChampionsKey", championsKey, renderLobbyChampions());
       }
 
       function renderSubmit(room) {
@@ -2845,7 +2899,16 @@
         return view === "submit";
       }
 
+      function isLobbyView(view) {
+        return view === "lobby";
+      }
+
       function resetIncrementalViewCaches() {
+        state.renderCache.lobbyShellKey = "";
+        state.renderCache.lobbyTopKey = "";
+        state.renderCache.lobbyPlayersKey = "";
+        state.renderCache.lobbyOrderKey = "";
+        state.renderCache.lobbyChampionsKey = "";
         state.renderCache.submitShellKey = "";
         state.renderCache.submitTopKey = "";
         state.renderCache.submitSubmissionsKey = "";
@@ -3354,8 +3417,36 @@
         };
         const appKey = getAppRenderKey(room, view);
         const shouldUpdateApp = state.renderCache.appKey !== appKey;
-        if (isSubmitView(view)) {
+        if (isLobbyView(view)) {
           state.renderCache.appKey = appKey;
+          state.renderCache.submitShellKey = "";
+          state.renderCache.submitTopKey = "";
+          state.renderCache.submitSubmissionsKey = "";
+          state.renderCache.submitLineModeKey = "";
+          state.renderCache.submitFontKey = "";
+          state.renderCache.submitHandKey = "";
+          state.renderCache.waitShellKey = "";
+          state.renderCache.waitFocusKey = "";
+          state.renderCache.waitSyncKey = "";
+          state.renderCache.waitSubmissionsKey = "";
+          state.renderCache.decisionShellKey = "";
+          state.renderCache.decisionFocusKey = "";
+          state.renderCache.decisionSummaryKey = "";
+          state.renderCache.decisionCardsKey = "";
+          state.renderCache.decisionActionsKey = "";
+          state.renderCache.resultShellKey = "";
+          state.renderCache.resultHeroKey = "";
+          state.renderCache.resultExtraKey = "";
+          state.renderCache.resultCountsKey = "";
+          state.renderCache.resultActionsKey = "";
+          updateLobbyView(room);
+        } else if (isSubmitView(view)) {
+          state.renderCache.appKey = appKey;
+          state.renderCache.lobbyShellKey = "";
+          state.renderCache.lobbyTopKey = "";
+          state.renderCache.lobbyPlayersKey = "";
+          state.renderCache.lobbyOrderKey = "";
+          state.renderCache.lobbyChampionsKey = "";
           state.renderCache.waitShellKey = "";
           state.renderCache.waitFocusKey = "";
           state.renderCache.waitSyncKey = "";
@@ -3376,6 +3467,11 @@
           updateWaitView(room);
         } else if (isDecisionView(view)) {
           state.renderCache.appKey = appKey;
+          state.renderCache.lobbyShellKey = "";
+          state.renderCache.lobbyTopKey = "";
+          state.renderCache.lobbyPlayersKey = "";
+          state.renderCache.lobbyOrderKey = "";
+          state.renderCache.lobbyChampionsKey = "";
           state.renderCache.submitShellKey = "";
           state.renderCache.submitTopKey = "";
           state.renderCache.submitSubmissionsKey = "";
@@ -3394,6 +3490,11 @@
           updateDecisionView(room, view);
         } else if (isResultView(view)) {
           state.renderCache.appKey = appKey;
+          state.renderCache.lobbyShellKey = "";
+          state.renderCache.lobbyTopKey = "";
+          state.renderCache.lobbyPlayersKey = "";
+          state.renderCache.lobbyOrderKey = "";
+          state.renderCache.lobbyChampionsKey = "";
           state.renderCache.submitShellKey = "";
           state.renderCache.submitTopKey = "";
           state.renderCache.submitSubmissionsKey = "";

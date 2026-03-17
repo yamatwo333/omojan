@@ -1015,6 +1015,7 @@
           lobbyShellKey: "",
           lobbyTopKey: "",
           lobbyPlayersKey: "",
+          lobbyUtilityKey: "",
           lobbyOrderKey: "",
           lobbyChampionsKey: "",
           submitShellKey: "",
@@ -2093,11 +2094,11 @@
               render();
               return;
             }
-            renderCurrentView({ includeReveal: false });
+            renderPassiveSyncUi();
             schedulePoll();
           } catch (error) {
             setBackgroundSyncIssue(error);
-            renderCurrentView({ includeReveal: false });
+            renderPassiveSyncUi();
             schedulePoll();
           }
         }, intervalMs);
@@ -2176,6 +2177,17 @@
             </div>
           </section>
         `;
+      }
+
+      function getSyncUtilityKey() {
+        return [
+          getStatusText(),
+          formatLastSyncValue(),
+          shouldPoll() ? "auto" : "manual",
+          state.pendingAction ? "pending" : "idle",
+          state.pendingMode,
+          state.syncIssueMessage || ""
+        ].join("|");
       }
 
       function patchSlot(root, selector, cacheKeyName, cacheKey, html) {
@@ -2630,6 +2642,7 @@
             <h2>ルーム待機中</h2>
             <div id="lobbyTopSlot"></div>
             <div id="lobbyPlayersSlot"></div>
+            <div id="lobbyUtilitySlot"></div>
           </section>
 
           <div id="lobbyOrderSlot"></div>
@@ -2669,13 +2682,16 @@
               )
               .join("")}
           </div>
-          ${renderSyncUtility({
-            title: "このルーム",
-            description: room.me.isHost ? "開始や更新はこの画面で進めます。" : "開始や更新は自動で反映します。",
-            showReconnect: true,
-            showLeave: true
-          })}
         `;
+      }
+
+      function renderLobbyUtility(room) {
+        return renderSyncUtility({
+          title: "このルーム",
+          description: room.me.isHost ? "開始や更新はこの画面で進めます。" : "開始や更新は自動で反映します。",
+          showReconnect: true,
+          showLeave: true
+        });
       }
 
       function renderLobbyOrder(room) {
@@ -2725,6 +2741,7 @@
           state.renderCache.lobbyShellKey = shellKey;
           state.renderCache.lobbyTopKey = "";
           state.renderCache.lobbyPlayersKey = "";
+          state.renderCache.lobbyUtilityKey = "";
           state.renderCache.lobbyOrderKey = "";
           state.renderCache.lobbyChampionsKey = "";
           els.app.innerHTML = renderLobbyShell();
@@ -2734,11 +2751,13 @@
           .map((player) => `${player.playerId}:${player.displayName}:${player.seatOrder}:${player.isHost ? 1 : 0}`)
           .join("|");
         const topKey = `${room.inviteCode}|${room.playerCount}|${room.me.playerId}|${room.me.isHost ? 1 : 0}|${room.game.players.length}`;
+        const utilityKey = `${room.me.isHost ? "host" : "guest"}|${getSyncUtilityKey()}`;
         const orderKey = `${playersKey}|${state.selectedStartPlayerId}|${room.startPlayerId || ""}|${state.pendingAction ? "pending" : "idle"}|${room.me.isHost ? "host" : "guest"}`;
         const championsKey = getRecentChampionsStamp();
 
         patchSlot(els.app, "#lobbyTopSlot", "lobbyTopKey", topKey, renderLobbyTop(room));
         patchSlot(els.app, "#lobbyPlayersSlot", "lobbyPlayersKey", playersKey, renderLobbyPlayers(room));
+        patchSlot(els.app, "#lobbyUtilitySlot", "lobbyUtilityKey", utilityKey, renderLobbyUtility(room));
         patchSlot(els.app, "#lobbyOrderSlot", "lobbyOrderKey", orderKey, renderLobbyOrder(room));
         patchSlot(els.app, "#lobbyChampionsSlot", "lobbyChampionsKey", championsKey, renderLobbyChampions());
       }
@@ -2982,12 +3001,7 @@
           round?.roundIndex ?? "",
           submissions.length
         ].join("|");
-        const syncKey = [
-          getStatusText(),
-          formatLastSyncValue(),
-          shouldPoll() ? "auto" : "manual",
-          state.pendingAction ? "pending" : "idle"
-        ].join("|");
+        const syncKey = getSyncUtilityKey();
         const submissionsKey = submissions
           .map((submission) => `${submission.playerId}:${submission.phrase}:${submission.fontId}:${(submission.renderedLines || []).join("/")}`)
           .join("|");
@@ -2995,6 +3009,23 @@
         patchSlot(els.app, "#waitFocusSlot", "waitFocusKey", focusKey, renderWaitFocus(room));
         patchSlot(els.app, "#waitSyncSlot", "waitSyncKey", syncKey, renderWaitSync(room));
         patchSlot(els.app, "#waitSubmissionsSlot", "waitSubmissionsKey", submissionsKey, renderWaitSubmissions(room));
+      }
+
+      function renderPassiveSyncUi(room = state.room, view = deriveView(room)) {
+        setBanner();
+        if (!room || !state.roomId) {
+          return;
+        }
+
+        if (view === "wait") {
+          patchSlot(els.app, "#waitSyncSlot", "waitSyncKey", getSyncUtilityKey(), renderWaitSync(room));
+          return;
+        }
+
+        if (isLobbyView(view)) {
+          const utilityKey = `${room.me.isHost ? "host" : "guest"}|${getSyncUtilityKey()}`;
+          patchSlot(els.app, "#lobbyUtilitySlot", "lobbyUtilityKey", utilityKey, renderLobbyUtility(room));
+        }
       }
 
       function isDecisionView(view) {
@@ -3025,6 +3056,7 @@
         state.renderCache.lobbyShellKey = "";
         state.renderCache.lobbyTopKey = "";
         state.renderCache.lobbyPlayersKey = "";
+        state.renderCache.lobbyUtilityKey = "";
         state.renderCache.lobbyOrderKey = "";
         state.renderCache.lobbyChampionsKey = "";
         state.renderCache.submitShellKey = "";
@@ -3540,6 +3572,7 @@
           state.renderCache.lobbyShellKey = "";
           state.renderCache.lobbyTopKey = "";
           state.renderCache.lobbyPlayersKey = "";
+          state.renderCache.lobbyUtilityKey = "";
           state.renderCache.lobbyOrderKey = "";
           state.renderCache.lobbyChampionsKey = "";
           state.renderCache.submitShellKey = "";
@@ -3599,6 +3632,7 @@
           state.renderCache.lobbyShellKey = "";
           state.renderCache.lobbyTopKey = "";
           state.renderCache.lobbyPlayersKey = "";
+          state.renderCache.lobbyUtilityKey = "";
           state.renderCache.lobbyOrderKey = "";
           state.renderCache.lobbyChampionsKey = "";
           state.renderCache.waitShellKey = "";
@@ -3625,6 +3659,7 @@
           state.renderCache.lobbyShellKey = "";
           state.renderCache.lobbyTopKey = "";
           state.renderCache.lobbyPlayersKey = "";
+          state.renderCache.lobbyUtilityKey = "";
           state.renderCache.lobbyOrderKey = "";
           state.renderCache.lobbyChampionsKey = "";
           state.renderCache.submitShellKey = "";
@@ -3653,6 +3688,7 @@
           state.renderCache.lobbyShellKey = "";
           state.renderCache.lobbyTopKey = "";
           state.renderCache.lobbyPlayersKey = "";
+          state.renderCache.lobbyUtilityKey = "";
           state.renderCache.lobbyOrderKey = "";
           state.renderCache.lobbyChampionsKey = "";
           state.renderCache.submitShellKey = "";
@@ -3680,6 +3716,7 @@
           state.renderCache.lobbyShellKey = "";
           state.renderCache.lobbyTopKey = "";
           state.renderCache.lobbyPlayersKey = "";
+          state.renderCache.lobbyUtilityKey = "";
           state.renderCache.lobbyOrderKey = "";
           state.renderCache.lobbyChampionsKey = "";
           state.renderCache.submitShellKey = "";
@@ -4314,7 +4351,7 @@
               setBackgroundSyncIssue(error);
             }
           }
-          renderCurrentView({ includeReveal: false });
+          renderPassiveSyncUi();
           schedulePoll();
           return;
         }

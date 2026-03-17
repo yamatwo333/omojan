@@ -113,6 +113,16 @@
         font-weight: 800;
       }
 
+      button,
+      .btn,
+      .mini-btn,
+      .chip,
+      .tile,
+      .action-card {
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
+      }
+
       .card,
       .panel,
       .history-card,
@@ -366,7 +376,7 @@
       }
 
       .preview-word {
-        min-height: 142px;
+        min-height: 162px;
       }
 
       .vote-word {
@@ -379,6 +389,13 @@
 
       .champion-word {
         min-height: 152px;
+      }
+
+      .section-note {
+        margin: 8px 0 0;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.65;
       }
 
       .preview-caption {
@@ -761,9 +778,9 @@
       .reveal-card {
         position: relative;
         overflow: hidden;
-        width: min(100%, 430px);
+        width: min(92vw, 520px);
         max-height: min(88vh, 720px);
-        padding: 18px 16px 18px;
+        padding: 20px 14px 22px;
         border-radius: 28px;
         border: 3px solid rgba(35, 68, 47, 0.9);
         background:
@@ -775,8 +792,8 @@
       }
 
       .reveal-card.is-champion {
-        width: min(100%, 420px);
-        padding: 22px 18px 22px;
+        width: min(92vw, 500px);
+        padding: 24px 16px 26px;
         border-width: 4px;
         border-color: rgba(178, 138, 50, 0.92);
         background:
@@ -831,10 +848,18 @@
         display: flex;
         justify-content: center;
         margin-top: 14px;
+        position: relative;
+        z-index: 2;
+      }
+
+      .reveal-actions .btn {
+        width: min(100%, 240px);
+        min-height: 56px;
       }
 
       .reveal-card .preview-caption {
         margin-top: 12px;
+        text-align: center;
       }
 
       .reveal-card.is-champion .preview-caption {
@@ -853,13 +878,24 @@
       }
 
       .reveal-card.is-champion .champion-word {
-        min-height: min(34vh, 196px);
-        padding: 10px 8px;
+        min-height: min(42vh, 250px);
+        padding: 16px 10px;
         border-radius: 24px;
         background: linear-gradient(180deg, rgba(255, 252, 244, 0.92), rgba(248, 236, 199, 0.86));
         box-shadow:
           inset 0 1px 0 rgba(255, 255, 255, 0.9),
           0 16px 24px rgba(113, 79, 10, 0.12);
+      }
+
+      .reveal-card .word-board {
+        min-height: 210px;
+        margin-top: 12px;
+      }
+
+      #revealCard,
+      #closeRevealBtn {
+        position: relative;
+        pointer-events: auto;
       }
 
       .feedback-dock {
@@ -927,6 +963,42 @@
 
       .round-winner-card .word-board {
         min-height: 108px;
+      }
+
+      .champion-stage.is-grand {
+        margin-top: 10px;
+        padding: 22px 18px 20px;
+        border: 3px solid rgba(178, 138, 50, 0.42);
+        background:
+          radial-gradient(circle at top, rgba(255, 252, 226, 0.98), transparent 36%),
+          linear-gradient(180deg, rgba(255, 250, 238, 0.98), rgba(244, 231, 191, 0.96)),
+          #fff7e7;
+        box-shadow:
+          0 20px 34px rgba(29, 22, 15, 0.16),
+          0 0 0 6px rgba(178, 138, 50, 0.16),
+          0 0 56px rgba(255, 214, 110, 0.3);
+      }
+
+      .champion-stage.is-grand small {
+        color: #7f5c12;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+      }
+
+      .champion-stage.is-grand .champion-word {
+        min-height: 232px;
+        border-radius: 24px;
+        background: linear-gradient(180deg, rgba(255, 253, 247, 0.96), rgba(248, 236, 199, 0.9));
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.92),
+          0 18px 28px rgba(113, 79, 10, 0.16);
+      }
+
+      .champion-stage.is-grand .stage-footnote {
+        margin-top: 12px;
+        color: #6b5737;
+        font-size: 15px;
+        font-weight: 800;
       }
 
       .round-winner-card footer {
@@ -1101,6 +1173,7 @@
         feedbackTimer: 0,
         renderFrame: 0,
         lastSyncAt: "",
+        lastRenderedView: "",
         apiHintsOrigin: "",
         apiWarmupOrigin: "",
         renderCache: {
@@ -2727,6 +2800,13 @@
         });
       }
 
+      function scrollAppToTop() {
+        window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+        if (document.scrollingElement) {
+          document.scrollingElement.scrollTop = 0;
+        }
+      }
+
       function renderLanding() {
         return renderLandingShell();
       }
@@ -2954,37 +3034,19 @@
       function renderSubmitShell(room) {
         return `
           ${renderScreenAlerts()}
-
-          <section class="card">
-            <h2>${escapeHtml(getCurrentRound(room)?.wind || "提出")} / ${escapeHtml(room.me.displayName)} の手番</h2>
-            <div id="submitTopSlot"></div>
-          </section>
-
-          <div id="submitSubmissionsSlot"></div>
-          <div id="submitLineModeSlot"></div>
-          <div id="submitFontSlot"></div>
+          <div id="submitTopSlot"></div>
           <div id="submitHandSlot"></div>
+          <div id="submitLineModeSlot"></div>
+          <div id="submitSubmissionsSlot"></div>
         `;
       }
 
       function renderSubmitTop(room) {
-        const layout = computeDraftLayout();
         return `
-          ${renderSubmitHero(room, layout)}
           <section class="preview-card">
-            <small>提出前プレビュー</small>
             <div id="previewWord" class="word-board preview-word ${getFontClass(state.draftFontId)}${state.draftLineMode === "single" ? " is-single-line" : ""}">
-              ${layout.lines.map((line) => `<span class="word-line">${escapeHtml(line)}</span>`).join("")}
+              ${computeDraftLayout().lines.map((line) => `<span class="word-line">${escapeHtml(line)}</span>`).join("")}
             </div>
-            <p class="preview-caption">
-              ${
-                getDraftText(room)
-                  ? layout.safetyAdjusted
-                    ? "提出時に自動で整えます。"
-                    : ""
-                  : ""
-              }
-            </p>
           </section>
         `;
       }
@@ -3002,13 +3064,26 @@
         const chars = Array.from(getDraftText(room));
         return `
           <section class="panel">
-            <h3>改行モード</h3>
+            <h3>見た目</h3>
+            <div class="section-label">改行</div>
             <div class="chip-row">
               ${lineModes
                 .map(
                   (mode) => `
                     <button class="chip${state.draftLineMode === mode.id ? " active" : ""}" type="button" data-line-mode="${mode.id}">
                       ${escapeHtml(mode.label)}
+                    </button>
+                  `
+                )
+                .join("")}
+            </div>
+            <div class="section-label">書体</div>
+            <div class="chip-row">
+              ${fonts
+                .map(
+                  (font) => `
+                    <button class="chip${state.draftFontId === font.id ? " active" : ""}" type="button" data-font-id="${font.id}">
+                      ${escapeHtml(font.label)}
                     </button>
                   `
                 )
@@ -3032,25 +3107,6 @@
                 </section>
               `
               : ""}
-          </section>
-        `;
-      }
-
-      function renderSubmitFonts() {
-        return `
-          <section class="panel">
-            <h3>書体</h3>
-            <div class="chip-row">
-              ${fonts
-                .map(
-                  (font) => `
-                    <button class="chip${state.draftFontId === font.id ? " active" : ""}" type="button" data-font-id="${font.id}">
-                      ${escapeHtml(font.label)}
-                    </button>
-                  `
-                )
-                .join("")}
-            </div>
           </section>
         `;
       }
@@ -3087,7 +3143,6 @@
           state.renderCache.submitTopKey = "";
           state.renderCache.submitSubmissionsKey = "";
           state.renderCache.submitLineModeKey = "";
-          state.renderCache.submitFontKey = "";
           state.renderCache.submitHandKey = "";
           els.app.innerHTML = renderSubmitShell(room);
         }
@@ -3106,10 +3161,10 @@
           .join("|");
         const lineModeKey = [
           state.draftLineMode,
+          state.draftFontId,
           getDraftText(room),
           state.draftManualBreaks.join(",")
         ].join("|");
-        const fontKey = state.draftFontId;
         const handKey = [
           room.revision,
           state.draftSelectedTileIds.join(","),
@@ -3118,10 +3173,9 @@
         ].join("|");
 
         patchSlot(els.app, "#submitTopSlot", "submitTopKey", topKey, renderSubmitTop(room));
-        patchSlot(els.app, "#submitSubmissionsSlot", "submitSubmissionsKey", submissionsKey, renderSubmitSubmissions(room));
         patchSlot(els.app, "#submitLineModeSlot", "submitLineModeKey", lineModeKey, renderSubmitLineMode(room));
-        patchSlot(els.app, "#submitFontSlot", "submitFontKey", fontKey, renderSubmitFonts());
         patchSlot(els.app, "#submitHandSlot", "submitHandKey", handKey, renderSubmitHand(room));
+        patchSlot(els.app, "#submitSubmissionsSlot", "submitSubmissionsKey", submissionsKey, renderSubmitSubmissions(room));
       }
 
       function renderWait(room) {
@@ -3290,11 +3344,9 @@
           const source = isFinal ? room.game.finalVote : round;
           return {
             type: "vote",
-            title: isFinal ? (isRevote ? "最終再投票" : "最終投票") : (view === "revote" ? "再投票" : "このラウンドで一番おもしろいワードに投票"),
-            label: isFinal ? (isRevote ? "最終再投票" : "総合優勝を決める投票") : (view === "revote" ? "同票の再投票" : getCurrentRound(room)?.label || "投票"),
-            description: isFinal
-              ? (isRevote ? (allowSelfVote ? "2人戦なので自分のワードも選べます。" : "同票の候補から選びます。") : (allowSelfVote ? "2人戦なので自分のワードも選べます。" : "総合優勝を1つ選びます。"))
-              : (view === "revote" ? (allowSelfVote ? "2人戦なので自分のワードも選べます。" : "同票のワードから選びます。") : (allowSelfVote ? "2人戦なので自分のワードも選べます。" : "自分以外のワードから選びます。")),
+            title: isFinal ? (isRevote ? "最終再投票" : "最終投票") : (view === "revote" ? "再投票" : "投票"),
+            label: isFinal ? (isRevote ? "最終再投票" : "最終投票") : (view === "revote" ? "再投票" : getCurrentRound(room)?.label || "投票"),
+            description: allowSelfVote && !isRevote ? "2人戦なので自分のワードにも投票できます。" : "",
             summaryTitle: isRevote ? "同票になったワード" : "",
             summaryHtml:
               isRevote && source?.voteSummary
@@ -3321,7 +3373,7 @@
           type: "host",
           title: isFinal ? "最終ホスト裁定" : "ホスト裁定",
           label: isFinal ? "最終裁定" : getCurrentRound(room)?.label || "ホスト裁定",
-          description: isFinal ? "ホストが総合優勝を決めます。" : "ホストが勝ちワードを決めます。",
+          description: "",
           summaryTitle: "同票になったワード",
           summaryHtml: renderTiedCountSummary(counts, tiedIds, isFinal ? "candidateId" : "playerId"),
           candidates: isFinal ? source.candidates.filter((candidate) => tiedIds.includes(candidate.candidateId)) : getVoteCandidates(room, "revote"),
@@ -3335,23 +3387,10 @@
       }
 
       function renderDecisionFocus(config) {
-        const selectedCandidate = config.candidates.find((candidate) => (candidate.candidateId ?? candidate.playerId) === config.selectedId) || null;
-        const pills =
-          config.type === "host"
-            ? [
-                { label: "同票", value: `${config.candidates.length}語` },
-                { label: "選択", value: selectedCandidate ? selectedCandidate.displayName : "未選択" }
-              ]
-            : [
-                { label: "候補", value: `${config.candidates.length}語` },
-                { label: "選択", value: selectedCandidate ? selectedCandidate.displayName : "未選択" }
-              ];
-        return renderFocusCallout({
-          label: config.label,
-          title: selectedCandidate ? selectedCandidate.phrase : (config.type === "host" ? "ホストが勝ちワードを決めます" : "まだワードを選んでいません"),
-          description: selectedCandidate ? (config.type === "host" ? "このワードで決定します。" : "このワードで確定します。") : config.description,
-          pills
-        });
+        if (!config.description) {
+          return "";
+        }
+        return `<p class="section-note">${escapeHtml(config.description)}</p>`;
       }
 
       function renderDecisionSummary(config) {
@@ -3461,24 +3500,16 @@
         const champion = room.game.champion;
         return {
           title: "総合優勝",
-          heroHtml: `
-            ${renderFocusCallout({
-              label: "本日の決着",
-              title: champion ? `${champion.phrase}` : "総合優勝を集計中",
-              description: champion ? "最終投票で決まった総合優勝です。" : "",
-              pills: champion ? [{ label: "持ち主", value: champion.displayName }] : []
-            })}
-            ${renderWordStage({
-              stageClass: "champion-stage",
-              label: "総合優勝",
-              entry: champion,
-              wordClass: "champion-word",
-              maxFont: 48,
-              minFont: 22,
-              emptyText: "未確定です。",
-              footerHtml: champion ? `<p class="stage-footnote">${escapeHtml(champion.displayName)} のワード</p>` : ""
-            })}
-          `,
+          heroHtml: renderWordStage({
+            stageClass: "champion-stage is-grand",
+            label: "総合優勝",
+            entry: champion,
+            wordClass: "champion-word",
+            maxFont: 64,
+            minFont: 26,
+            emptyText: "未確定です。",
+            footerHtml: champion ? `<p class="stage-footnote">${escapeHtml(champion.displayName)} のワード</p>` : ""
+          }),
           extraHtml: renderSection("各ラウンドの勝ちワード", renderRoundWinnerGrid(room.game.rounds), { className: "panel" }),
           countsHtml: room.game.finalVote?.voteSummary
             ? renderCountBreakdown("最終投票の票数内訳", room.game.finalVote.voteSummary.counts, (item) => `${item.count}票 / ${item.displayName}`)
@@ -3539,7 +3570,6 @@
                   >
                     <span class="badge">${escapeHtml(candidate.displayName)}</span>
                     ${renderWordBoard(candidate.renderedLines, candidate.fontId, "vote-word", { maxFont: 34, minFont: 18 })}
-                    <div class="muted">${escapeHtml(candidate.phrase)}</div>
                   </button>
                 `;
               })
@@ -3736,6 +3766,10 @@
       function renderApp() {
         const room = state.room;
         const view = deriveView(room);
+        const viewChanged = state.lastRenderedView !== view;
+        if (viewChanged) {
+          state.lastRenderedView = view;
+        }
         ensureGoogleFontsLoaded(collectVisibleFontIds(room, view));
         const renderMap = {
           welcome: renderLanding,
@@ -3930,6 +3964,11 @@
         updateSubmitPreview(room);
 
         setBanner();
+        if (viewChanged) {
+          window.requestAnimationFrame(() => {
+            scrollAppToTop();
+          });
+        }
         schedulePoll();
       }
 
@@ -4018,7 +4057,10 @@
             meta: `${reveal.displayName} のワード`,
             buttonLabel: meAcknowledged ? "ほかの人を待っています" : "結果一覧を見る",
             acknowledged: meAcknowledged,
-            kind: "champion"
+            kind: "champion",
+            variant: "champion-word",
+            maxFont: 56,
+            minFont: 24
           };
         }
         if (reveal.kind === "round_winner") {
@@ -4029,17 +4071,23 @@
             meta: `${reveal.displayName} のワード`,
             buttonLabel: meAcknowledged ? "ほかの人を待っています" : "閉じる",
             acknowledged: meAcknowledged,
-            kind: "round_winner"
+            kind: "round_winner",
+            variant: "result-word",
+            maxFont: 50,
+            minFont: 22
           };
         }
         return {
           badge: reveal.displayName,
           lines: clone(reveal.renderedLines || [reveal.phrase]),
           fontId: reveal.fontId || "broadcast",
-          meta: round?.wind ? `${round.wind} で公開` : "場に公開",
+          meta: round?.wind || "場に公開",
           buttonLabel: meAcknowledged ? "ほかの人を待っています" : "閉じる",
           acknowledged: meAcknowledged,
-          kind: "submission"
+          kind: "submission",
+          variant: "preview-word",
+          maxFont: 72,
+          minFont: 28
         };
       }
 
@@ -4074,11 +4122,11 @@
         els.revealCard.classList.toggle("is-champion", presentation.kind === "champion");
         els.revealBadge.textContent = presentation.badge;
         els.revealMeta.textContent = presentation.meta;
-        els.revealWord.dataset.variant = presentation.kind === "champion" ? "champion-word" : "result-word";
+        els.revealWord.dataset.variant = presentation.variant || (presentation.kind === "champion" ? "champion-word" : "result-word");
         els.revealWord.dataset.fontId = presentation.fontId || "classic";
         els.revealWord.dataset.lineMode = presentation.lines.length <= 1 ? "single" : "manual";
-        els.revealWord.dataset.maxFont = presentation.kind === "champion" ? "46" : "42";
-        els.revealWord.dataset.minFont = presentation.kind === "champion" ? "22" : "18";
+        els.revealWord.dataset.maxFont = String(presentation.maxFont || (presentation.kind === "champion" ? 56 : 50));
+        els.revealWord.dataset.minFont = String(presentation.minFont || (presentation.kind === "champion" ? 24 : 22));
         els.revealWord.className = `word-board auto-fit-word ${els.revealWord.dataset.variant}`;
         els.revealWord.innerHTML = presentation.lines.map((line) => `<span class="word-line">${escapeHtml(line)}</span>`).join("");
         hydrateWordBoard(els.revealWord);
@@ -4516,6 +4564,17 @@
         actionHandlers["close-reveal"]();
       });
 
+      els.closeRevealBtn.addEventListener("pointerup", (event) => {
+        event.preventDefault();
+        actionHandlers["close-reveal"]();
+      });
+
+      els.revealOverlay.addEventListener("click", (event) => {
+        if (event.target === els.revealOverlay) {
+          actionHandlers["close-reveal"]();
+        }
+      });
+
       els.closeHistoryBtn.addEventListener("click", () => {
         actionHandlers["close-champion-history"]();
       });
@@ -4527,6 +4586,10 @@
       });
 
       document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && !state.championHistoryOpen && getActiveReveal()) {
+          actionHandlers["close-reveal"]();
+          return;
+        }
         if (event.key === "Escape" && state.championHistoryOpen) {
           actionHandlers["close-champion-history"]();
         }

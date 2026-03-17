@@ -207,7 +207,13 @@ async function reopenWithStoredSession(browser, context, expectHeading) {
   const page = await reopenedContext.newPage();
   await page.goto(STATIC_URL);
   if (expectHeading) {
-    await expect(page.getByRole("heading", { name: expectHeading, exact: true })).toBeVisible({ timeout: 10000 });
+    if (typeof expectHeading === "string") {
+      await expect(page.getByRole("heading", { name: expectHeading, exact: true })).toBeVisible({ timeout: 10000 });
+    } else if (expectHeading.selector) {
+      await expect(page.locator(expectHeading.selector)).toBeVisible({ timeout: 10000 });
+    } else if (expectHeading.text) {
+      await expect(page.locator("body")).toContainText(expectHeading.text, { timeout: 10000 });
+    }
   }
   return { context: reopenedContext, page };
 }
@@ -238,6 +244,15 @@ async function submitCurrentVote(page, action = "submit-vote", targetDisplayName
   ]);
 }
 
+async function expectTurnState(host, guest, activeDisplayName) {
+  const activePage = activeDisplayName === "HostFlowTest" ? host : guest;
+  const waitingPage = activeDisplayName === "HostFlowTest" ? guest : host;
+
+  await expect(activePage.locator('button[data-action="submit-word"]')).toBeVisible({ timeout: 10000 });
+  await expect(activePage.locator('button[data-action="submit-word"]')).toBeEnabled({ timeout: 10000 });
+  await expect(waitingPage.locator("body")).toContainText(`${activeDisplayName} の手番です。`, { timeout: 10000 });
+}
+
 async function completeRoundByHostDecision(host, guest, roundLabel, hostDecisionWinnerName, firstTurnDisplayName = "HostFlowTest") {
   const turnOrder =
     firstTurnDisplayName === "GuestFlowTest"
@@ -250,19 +265,17 @@ async function completeRoundByHostDecision(host, guest, roundLabel, hostDecision
           { page: guest, name: "GuestFlowTest" }
         ];
 
-  await expect(host.locator("body")).toContainText(`${firstTurnDisplayName} の手番`);
-  await expect(guest.locator("body")).toContainText(`${firstTurnDisplayName} の手番`);
+  await expectTurnState(host, guest, firstTurnDisplayName);
 
   await submitCurrentDraft(turnOrder[0].page);
   await acknowledgeRevealForAll([host, guest]);
 
-  await expect(host.locator("body")).toContainText(`${turnOrder[1].name} の手番`, { timeout: 10000 });
-  await expect(guest.locator("body")).toContainText(`${turnOrder[1].name} の手番`, { timeout: 10000 });
+  await expectTurnState(host, guest, turnOrder[1].name);
   await submitCurrentDraft(turnOrder[1].page);
   await acknowledgeRevealForAll([host, guest]);
 
-  await expect(host.getByRole("heading", { name: "このラウンドで一番おもしろいワードに投票" })).toBeVisible({ timeout: 10000 });
-  await expect(guest.getByRole("heading", { name: "このラウンドで一番おもしろいワードに投票" })).toBeVisible({ timeout: 10000 });
+  await expect(host.getByRole("heading", { name: "投票" })).toBeVisible({ timeout: 10000 });
+  await expect(guest.getByRole("heading", { name: "投票" })).toBeVisible({ timeout: 10000 });
 
   await submitCurrentVote(host, "submit-vote", "HostFlowTest");
   await submitCurrentVote(guest, "submit-vote", "GuestFlowTest");
@@ -307,7 +320,7 @@ test("app vote card selection enables submit button", async ({ page }) => {
   }, session);
   await page.reload();
 
-  await expect(page.getByRole("heading", { name: "このラウンドで一番おもしろいワードに投票" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "投票" })).toBeVisible();
   const voteCandidate = page.locator("[data-vote-id]:not([disabled])").first();
   await voteCandidate.click();
 
@@ -358,7 +371,7 @@ test("app can complete a full game through final champion and restart", async ({
   await reconnect(host);
   await expect(host.getByRole("heading", { name: "最終ホスト裁定" })).toBeVisible({ timeout: 10000 });
   const finalPick = host.locator("[data-final-pick-id]").first();
-  const championPhrase = ((await finalPick.locator(".muted").textContent()) || "").trim();
+  const championPhrase = (await finalPick.locator(".word-line").allTextContents()).join("");
   await finalPick.click();
   await host.locator('button[data-action="submit-final-host-pick"]').click();
 
@@ -383,22 +396,19 @@ test("app restores session after reopening the browser context", async ({ browse
   let { hostContext, guestContext, host, guest } = await createTwoPlayerRoom(browser);
 
   await host.getByRole("button", { name: "この順で開始" }).click();
-  await expect(host.locator("body")).toContainText("HostFlowTest の手番");
-  await expect(guest.locator("body")).toContainText("HostFlowTest の手番");
+  await expectTurnState(host, guest, "HostFlowTest");
 
-  ({ context: guestContext, page: guest } = await reopenWithStoredSession(browser, guestContext, "待機"));
-  await expect(guest.locator("body")).toContainText("HostFlowTest の手番");
+  ({ context: guestContext, page: guest } = await reopenWithStoredSession(browser, guestContext, { text: "HostFlowTest の手番です。" }));
 
   await submitCurrentDraft(host);
   await acknowledgeRevealForAll([host, guest]);
 
-  ({ context: guestContext, page: guest } = await reopenWithStoredSession(browser, guestContext));
-  await expect(guest.locator("body")).toContainText("GuestFlowTest の手番");
+  ({ context: guestContext, page: guest } = await reopenWithStoredSession(browser, guestContext, { selector: 'button[data-action="submit-word"]' }));
   await submitCurrentDraft(guest);
   await acknowledgeRevealForAll([host, guest]);
 
-  ({ context: hostContext, page: host } = await reopenWithStoredSession(browser, hostContext, "このラウンドで一番おもしろいワードに投票"));
-  ({ context: guestContext, page: guest } = await reopenWithStoredSession(browser, guestContext, "このラウンドで一番おもしろいワードに投票"));
+  ({ context: hostContext, page: host } = await reopenWithStoredSession(browser, hostContext, "投票"));
+  ({ context: guestContext, page: guest } = await reopenWithStoredSession(browser, guestContext, "投票"));
 
   await submitCurrentVote(host, "submit-vote", "HostFlowTest");
   await submitCurrentVote(guest, "submit-vote", "GuestFlowTest");

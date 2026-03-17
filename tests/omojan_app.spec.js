@@ -356,6 +356,9 @@ test("app can complete a full game through final champion and restart", async ({
 
   await expect(host.getByRole("heading", { name: "最終投票" })).toBeVisible({ timeout: 10000 });
   await expect(guest.getByRole("heading", { name: "最終投票" })).toBeVisible({ timeout: 10000 });
+  await expect(host.locator("body")).not.toContainText("2人戦なので自分のワードにも投票できます");
+  await expect(host.locator("[data-final-vote-id]", { hasText: "HostFlowTest" }).first()).toBeEnabled();
+  await expect(guest.locator("[data-final-vote-id]", { hasText: "GuestFlowTest" }).first()).toBeEnabled();
   await submitCurrentVote(host, "submit-final-vote", "HostFlowTest");
   await submitCurrentVote(guest, "submit-final-vote", "GuestFlowTest");
 

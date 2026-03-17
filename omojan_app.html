@@ -49,8 +49,8 @@
 
       .page-header {
         text-align: center;
-        padding-top: 22px;
-        margin-bottom: 12px;
+        padding-top: 34px;
+        margin-bottom: 14px;
       }
 
       .page-header.is-hidden {
@@ -814,7 +814,7 @@
         overflow: hidden;
         width: min(92vw, 520px);
         max-height: min(88vh, 720px);
-        padding: 20px 14px 22px;
+        padding: 22px 16px 24px;
         border-radius: 28px;
         border: 3px solid rgba(35, 68, 47, 0.9);
         background:
@@ -843,8 +843,8 @@
       }
 
       .reveal-card.is-submission {
-        width: min(94vw, 560px);
-        padding: 12px 12px 18px;
+        width: min(92vw, 520px);
+        padding: 18px 16px 20px;
       }
 
       .reveal-card.is-round-winner {
@@ -911,6 +911,8 @@
       .reveal-card .preview-caption {
         margin-top: 12px;
         text-align: center;
+        font-size: 14px;
+        font-weight: 700;
       }
 
       .reveal-card.is-champion .preview-caption {
@@ -941,11 +943,13 @@
       .reveal-card .word-board {
         min-height: 210px;
         margin-top: 12px;
+        padding: 10px 10px 8px;
       }
 
       .reveal-card.is-submission .word-board {
-        min-height: min(60vh, 430px);
+        min-height: min(52vh, 340px);
         margin-top: 0;
+        padding: 16px 18px 10px;
       }
 
       .reveal-card.is-submission .reveal-actions {
@@ -954,20 +958,28 @@
 
       .reveal-card.is-submission .reveal-badge {
         position: absolute;
-        top: 12px;
-        left: 12px;
+        top: 14px;
+        left: 14px;
         z-index: 2;
-        min-height: 30px;
-        padding: 0 10px;
-        font-size: 11px;
+        min-height: 34px;
+        padding: 0 12px;
+        font-size: 12px;
+      }
+
+      .reveal-card.is-submission .preview-caption {
+        margin-top: 10px;
+        color: var(--green);
+        font-size: 15px;
+        font-weight: 800;
       }
 
       .reveal-card.is-round-winner .reveal-badge {
-        border-color: rgba(35, 68, 47, 0.24);
-        background: rgba(36, 69, 47, 0.1);
-        color: var(--green);
-        font-size: 11px;
+        border-color: rgba(35, 68, 47, 0.68);
+        background: linear-gradient(180deg, rgba(35, 68, 47, 0.96), rgba(29, 54, 38, 0.96));
+        color: #fff7ea;
+        font-size: 12px;
         font-weight: 800;
+        box-shadow: 0 10px 18px rgba(35, 68, 47, 0.14);
       }
 
       #revealCard,
@@ -1035,7 +1047,7 @@
       }
 
       .round-winner-card .word-board {
-        min-height: 108px;
+        min-height: 118px;
       }
 
       .champion-stage.is-grand {
@@ -1079,10 +1091,10 @@
       .round-winner-card footer {
         margin-top: 8px;
         color: var(--green);
-        font-size: 13px;
+        font-size: 14px;
         line-height: 1.5;
         text-align: center;
-        font-weight: 700;
+        font-weight: 800;
       }
 
       .measure-word {
@@ -1131,7 +1143,7 @@
         }
 
         .page-header {
-          padding-top: calc(24px + env(safe-area-inset-top));
+          padding-top: calc(36px + env(safe-area-inset-top));
         }
 
         .phone {
@@ -1288,6 +1300,7 @@
           submitLineModeKey: "",
           submitFontKey: "",
           submitHandKey: "",
+          submitUtilityKey: "",
           waitShellKey: "",
           waitFocusKey: "",
           waitSyncKey: "",
@@ -1877,6 +1890,11 @@
           return getFinalCandidates(room, mode).length > 0;
         }
         return getFinalCandidates(room, mode).some((candidate) => candidate.playerId !== playerId);
+      }
+
+      function resolvePlayerDisplayName(room, playerId, fallback = "") {
+        const players = room?.game?.players || room?.players || [];
+        return players.find((player) => player.playerId === playerId)?.displayName || fallback || playerId || "";
       }
 
       function deriveView(room = state.room) {
@@ -2828,7 +2846,7 @@
         `;
       }
 
-      function renderRoundWinnerGrid(rounds) {
+      function renderRoundWinnerGrid(rounds, room = state.room) {
         const winnerRounds = rounds.filter((round) => round.winner);
         if (!winnerRounds.length) {
           return `<div class="empty-state">まだ勝ちワードはありません。</div>`;
@@ -2842,8 +2860,8 @@
                     <header>
                       <strong>${escapeHtml(round.label)}</strong>
                     </header>
-                    ${renderWordBoard(round.winner.renderedLines, round.winner.fontId, "result-word", { maxFont: 42, minFont: 24 })}
-                    <footer>${escapeHtml(round.winner.displayName)}</footer>
+                    ${renderWordBoard(round.winner.renderedLines, round.winner.fontId, "result-word", { maxFont: 48, minFont: 24 })}
+                    <footer>${escapeHtml(resolvePlayerDisplayName(room, round.winner.playerId, round.winner.displayName))}</footer>
                   </article>
                 `
               )
@@ -3150,6 +3168,7 @@
           <div id="submitHandSlot"></div>
           <div id="submitLineModeSlot"></div>
           <div id="submitSubmissionsSlot"></div>
+          <div id="submitUtilitySlot"></div>
         `;
       }
 
@@ -3170,6 +3189,14 @@
           renderSubmissionList(submissions, "まだ公開されたワードはありません。"),
           { className: "panel" }
         );
+      }
+
+      function renderSubmitUtility() {
+        return `
+          <div class="button-row">
+            <button class="btn subtle" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>この端末の参加情報を消す</button>
+          </div>
+        `;
       }
 
       function renderSubmitLineMode(room) {
@@ -3256,6 +3283,7 @@
           state.renderCache.submitSubmissionsKey = "";
           state.renderCache.submitLineModeKey = "";
           state.renderCache.submitHandKey = "";
+          state.renderCache.submitUtilityKey = "";
           els.app.innerHTML = renderSubmitShell(room);
         }
 
@@ -3283,11 +3311,13 @@
           state.pendingAction ? "pending" : "idle",
           room.myHand.map((tile) => `${tile.tileId}:${tile.isUsed ? 1 : 0}`).join("|")
         ].join("|");
+        const utilityKey = state.pendingAction ? "pending" : "idle";
 
         patchSlot(els.app, "#submitTopSlot", "submitTopKey", topKey, renderSubmitTop(room));
         patchSlot(els.app, "#submitLineModeSlot", "submitLineModeKey", lineModeKey, renderSubmitLineMode(room));
         patchSlot(els.app, "#submitHandSlot", "submitHandKey", handKey, renderSubmitHand(room));
         patchSlot(els.app, "#submitSubmissionsSlot", "submitSubmissionsKey", submissionsKey, renderSubmitSubmissions(room));
+        patchSlot(els.app, "#submitUtilitySlot", "submitUtilityKey", utilityKey, renderSubmitUtility());
       }
 
       function renderWait(room) {
@@ -3416,6 +3446,7 @@
         state.renderCache.submitLineModeKey = "";
         state.renderCache.submitFontKey = "";
         state.renderCache.submitHandKey = "";
+        state.renderCache.submitUtilityKey = "";
         state.renderCache.waitShellKey = "";
         state.renderCache.waitFocusKey = "";
         state.renderCache.waitSyncKey = "";
@@ -3458,7 +3489,7 @@
             type: "vote",
             title: isFinal ? (isRevote ? "最終再投票" : "最終投票") : (view === "revote" ? "再投票" : "投票"),
             label: isFinal ? (isRevote ? "最終再投票" : "最終投票") : (view === "revote" ? "再投票" : getCurrentRound(room)?.label || "投票"),
-            description: allowSelfVote && !isRevote ? "2人戦なので自分のワードにも投票できます。" : "",
+            description: "",
             summaryTitle: isRevote ? "同票になったワード" : "",
             summaryHtml:
               isRevote && source?.voteSummary
@@ -3525,6 +3556,7 @@
             <button class="btn primary" type="button" data-action="${config.action}" ${config.selectedId && !state.pendingAction ? "" : "disabled"}>
               ${escapeHtml(config.buttonLabel)}
             </button>
+            <button class="btn subtle" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>この端末の参加情報を消す</button>
           </div>
         `;
       }
@@ -3584,7 +3616,7 @@
               emptyText: "結果待ちです。",
               footerHtml: winner
                 ? renderSummaryPills([
-                    { label: "勝ちワードの持ち主", value: winner.displayName },
+                    { label: "勝ちワードの持ち主", value: resolvePlayerDisplayName(room, winner.playerId, winner.displayName) },
                     { label: "得票", value: `${winner.voteCount}票` }
                   ])
                 : ""
@@ -3620,9 +3652,9 @@
             maxFont: 64,
             minFont: 26,
             emptyText: "未確定です。",
-            footerHtml: champion ? `<p class="stage-footnote">${escapeHtml(champion.displayName)} のワード</p>` : ""
+            footerHtml: champion ? `<p class="stage-footnote">${escapeHtml(resolvePlayerDisplayName(room, champion.playerId, champion.displayName))} のワード</p>` : ""
           }),
-          extraHtml: renderSection("各ラウンドの勝ちワード", renderRoundWinnerGrid(room.game.rounds), { className: "panel" }),
+          extraHtml: renderSection("各ラウンドの勝ちワード", renderRoundWinnerGrid(room.game.rounds, room), { className: "panel" }),
           countsHtml: room.game.finalVote?.voteSummary
             ? renderCountBreakdown("最終投票の票数内訳", room.game.finalVote.voteSummary.counts, (item) => `${item.count}票 / ${item.displayName}`)
             : "",
@@ -3681,7 +3713,7 @@
                     ${disabled ? "disabled" : ""}
                   >
                     <span class="badge">${escapeHtml(candidate.displayName)}</span>
-                    ${renderWordBoard(candidate.renderedLines, candidate.fontId, "vote-word", { maxFont: 46, minFont: 24 })}
+                    ${renderWordBoard(candidate.renderedLines, candidate.fontId, "vote-word", { maxFont: 52, minFont: 26 })}
                   </button>
                 `;
               })
@@ -3698,10 +3730,7 @@
         return renderVoteDecisionScreen({
           label: mode === "revote" ? "同票の再投票" : getCurrentRound(room)?.label || "投票",
           title: mode === "revote" ? "再投票" : "このラウンドで一番おもしろいワードに投票",
-          description:
-            mode === "revote"
-              ? allowSelfVote ? "2人戦なので自分のワードも選べます。" : "同票のワードから選びます。"
-              : allowSelfVote ? "2人戦なので自分のワードも選べます。" : "自分以外のワードから選びます。",
+          description: "",
           summaryHtml:
             mode === "revote" && round?.voteSummary
               ? renderSection(
@@ -3800,9 +3829,7 @@
         return renderVoteDecisionScreen({
           label: isRevote ? "最終再投票" : "総合優勝を決める投票",
           title: isRevote ? "最終再投票" : "最終投票",
-          description: isRevote
-            ? allowSelfVote ? "2人戦なので自分のワードも選べます。" : "同票の候補から選びます。"
-            : allowSelfVote ? "2人戦なので自分のワードも選べます。" : "総合優勝を1つ選びます。",
+          description: "",
           summaryHtml:
             isRevote && finalVote?.voteSummary
               ? renderSection(
@@ -3841,12 +3868,12 @@
               maxFont: 48,
               minFont: 22,
               emptyText: "未確定です。",
-              footerHtml: champion ? `<p class="stage-footnote">${escapeHtml(champion.displayName)} のワード</p>` : ""
+              footerHtml: champion ? `<p class="stage-footnote">${escapeHtml(resolvePlayerDisplayName(room, champion.playerId, champion.displayName))} のワード</p>` : ""
             })}
 
             ${renderSection(
               "各ラウンドの勝ちワード",
-              renderRoundWinnerGrid(room.game.rounds),
+              renderRoundWinnerGrid(room.game.rounds, room),
               { className: "panel" }
             )}
 
@@ -3879,13 +3906,8 @@
         const room = state.room;
         const view = deriveView(room);
         const viewChanged = state.lastRenderedView !== view;
-        const scrollResetKey = getScrollResetKey(room, view);
-        const shouldResetScroll = state.lastScrollResetKey !== scrollResetKey;
         if (viewChanged) {
           state.lastRenderedView = view;
-        }
-        if (shouldResetScroll) {
-          state.lastScrollResetKey = scrollResetKey;
         }
         ensureGoogleFontsLoaded(collectVisibleFontIds(room, view));
         const renderMap = {
@@ -4081,12 +4103,7 @@
         updateSubmitPreview(room);
 
         setBanner();
-        if (shouldResetScroll) {
-          window.requestAnimationFrame(() => {
-            scrollAppToTop();
-            window.setTimeout(scrollAppToTop, 80);
-          });
-        }
+        handleScrollReset(room, view);
         schedulePoll();
       }
 
@@ -4100,6 +4117,7 @@
         previewWord.dataset.variant = "preview-word";
         applyWordMarkup(previewWord, layout.lines, getFontClass(state.draftFontId), state.draftLineMode, layout.fontSize);
         window.requestAnimationFrame(() => syncSubmitPreviewFloating(room));
+        window.setTimeout(() => syncSubmitPreviewFloating(room), 120);
       }
 
       function syncSubmitPreviewFloating(room = state.room) {
@@ -4122,8 +4140,8 @@
         const floatTop = 8;
         const cardHeight = previewCard.offsetHeight;
         const revealOpen = !els.revealOverlay.hidden;
-        const forceMobileFloat = window.matchMedia("(max-width: 520px)").matches;
-        const canFloat = !revealOpen && (forceMobileFloat || slotRect.top < floatTop);
+        const hasScrolled = window.scrollY > 12;
+        const canFloat = !revealOpen && (hasScrolled || slotRect.top < floatTop);
 
         if (!canFloat) {
           submitTopSlot.style.minHeight = "";
@@ -4137,6 +4155,24 @@
         previewCard.classList.add("is-floating");
         previewCard.style.setProperty("--preview-floating-left", `${Math.max(0, slotRect.left)}px`);
         previewCard.style.setProperty("--preview-floating-width", `${slotRect.width}px`);
+      }
+
+      function handleScrollReset(room = state.room, view = deriveView(room)) {
+        const scrollResetKey = getScrollResetKey(room, view);
+        if (state.lastScrollResetKey === scrollResetKey) {
+          return;
+        }
+        state.lastScrollResetKey = scrollResetKey;
+        window.requestAnimationFrame(() => {
+          if (document.activeElement instanceof HTMLElement) {
+            document.activeElement.blur();
+          }
+          scrollAppToTop();
+          window.setTimeout(scrollAppToTop, 80);
+          window.setTimeout(scrollAppToTop, 180);
+          window.requestAnimationFrame(() => syncSubmitPreviewFloating(room));
+          window.setTimeout(() => syncSubmitPreviewFloating(room), 120);
+        });
       }
 
       function updateCurrentViewOnly(room = state.room, view = deriveView(room)) {
@@ -4190,6 +4226,7 @@
         }
 
         setBanner();
+        handleScrollReset(room, view);
         if (options.includeReveal !== false) {
           renderReveal();
         }
@@ -4211,7 +4248,7 @@
             badge: "総合優勝",
             lines: clone(reveal.renderedLines || [reveal.phrase]),
             fontId: reveal.fontId || "classic",
-            meta: `${reveal.displayName} のワード`,
+            meta: resolvePlayerDisplayName(room, reveal.playerId, reveal.displayName),
             buttonLabel: meAcknowledged ? "ほかの人を待っています" : "結果一覧を見る",
             acknowledged: meAcknowledged,
             kind: "champion",
@@ -4225,7 +4262,7 @@
             badge: round?.label || "ラウンド勝利",
             lines: clone(reveal.renderedLines || [reveal.phrase]),
             fontId: reveal.fontId || "classic",
-            meta: reveal.displayName,
+            meta: resolvePlayerDisplayName(room, reveal.playerId, reveal.displayName),
             buttonLabel: meAcknowledged ? "ほかの人を待っています" : "閉じる",
             acknowledged: meAcknowledged,
             kind: "round_winner",
@@ -4235,16 +4272,16 @@
           };
         }
         return {
-          badge: round?.wind || round?.label || "場に公開",
+          badge: round?.label || "ラウンド公開",
           lines: clone(reveal.renderedLines || [reveal.phrase]),
           fontId: reveal.fontId || "broadcast",
-          meta: reveal.displayName,
+          meta: resolvePlayerDisplayName(room, reveal.playerId, reveal.displayName),
           buttonLabel: meAcknowledged ? "ほかの人を待っています" : "閉じる",
           acknowledged: meAcknowledged,
           kind: "submission",
           variant: "preview-word",
-          maxFont: 108,
-          minFont: 36
+          maxFont: 98,
+          minFont: 32
         };
       }
 

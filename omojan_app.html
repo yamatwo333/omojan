@@ -979,8 +979,10 @@
         recentChampions: [],
         isLoading: true,
         pendingAction: false,
+        pendingMode: "",
         errorMessage: "",
         copyMessage: "",
+        syncIssueMessage: "",
         createDisplayName: "",
         joinDisplayName: "",
         inviteCode: "",
@@ -1602,13 +1604,16 @@
 
       function getStatusText() {
         if (state.pendingAction) {
-          return "送信中";
+          return state.pendingMode === "sync" ? "同期中" : "送信中";
         }
         if (state.isLoading) {
           return "同期中";
         }
         if (state.errorMessage) {
           return "要確認";
+        }
+        if (state.syncIssueMessage) {
+          return "再試行中";
         }
         return "接続中";
       }
@@ -1682,6 +1687,9 @@
       }
 
       function getStatusContext() {
+        if (state.syncIssueMessage) {
+          return "通信が不安定なため自動で再試行中";
+        }
         const view = deriveView();
         const room = state.room;
         const round = getCurrentRound(room);
@@ -1786,7 +1794,9 @@
         state.room = null;
         state.roomId = "";
         state.playerToken = "";
+        state.pendingMode = "";
         state.inviteCode = inviteCode;
+        clearBackgroundSyncIssue();
         setFeedback(options.errorMessage || options.copyMessage || "", Boolean(options.errorMessage), options.copyMessage ? 2800 : 0);
 
         if (myName) {
@@ -1923,6 +1933,7 @@
         state.roomId = room.roomId;
         state.selectedStartPlayerId = room.startPlayerId || room.me.playerId;
         state.lastSyncAt = new Date().toISOString();
+        clearBackgroundSyncIssue();
         if (options.playerToken) {
           state.playerToken = options.playerToken;
         }
@@ -1940,11 +1951,10 @@
           const payload = await apiRequest(`/rooms/${encodeURIComponent(state.roomId)}${query}`);
           if (payload.data?.notModified) {
             state.lastSyncAt = new Date().toISOString();
-            state.pollFailureCount = 0;
+            clearBackgroundSyncIssue();
             return false;
           }
           setRoom(payload.data.room);
-          state.pollFailureCount = 0;
           return true;
         } catch (error) {
           if (recoverLostSession(error, "refresh")) {
@@ -2021,12 +2031,17 @@
         }
         state.pollTimer = window.setTimeout(async () => {
           try {
-            await refreshRoom();
-            render();
+            const changed = await refreshRoom();
+            if (changed) {
+              render();
+              return;
+            }
+            renderCurrentView({ includeReveal: false });
+            schedulePoll();
           } catch (error) {
-            state.pollFailureCount += 1;
-            setFeedback(error instanceof Error ? error.message : "最新状態の取得に失敗しました。", true);
-            render();
+            setBackgroundSyncIssue(error);
+            renderCurrentView({ includeReveal: false });
+            schedulePoll();
           }
         }, intervalMs);
       }
@@ -2093,6 +2108,7 @@
             <h3>${escapeHtml(title)}</h3>
             ${description ? `<p>${escapeHtml(description)}</p>` : ""}
             ${renderSummaryPills(pills)}
+            ${state.syncIssueMessage ? `<div class="info-box">${escapeHtml(`${state.syncIssueMessage} 自動で再試行しています。`)}</div>` : ""}
             <div class="utility-actions">
               ${showRefresh ? `<button class="btn subtle" type="button" data-action="refresh-latest" ${state.pendingAction ? "disabled" : ""}>今の状態を更新</button>` : ""}
               ${showReconnect ? `<button class="btn subtle" type="button" data-action="retry-room-connection" ${state.pendingAction ? "disabled" : ""}>再接続する</button>` : ""}
@@ -3682,7 +3698,15 @@
           return;
         }
 
-        if (!updateCurrentViewOnly()) {
+        const room = state.room;
+        const view = deriveView(room);
+        const appKey = getAppRenderKey(room, view);
+        if (state.renderCache.appKey !== appKey) {
+          render(options);
+          return;
+        }
+
+        if (!updateCurrentViewOnly(room, view)) {
           render(options);
           return;
         }
@@ -3789,8 +3813,10 @@
         renderCurrentView({ includeReveal: false });
       }
 
-      async function runAction(action) {
+      async function runAction(action, options = {}) {
+        const { pendingMode = "action" } = options;
         state.pendingAction = true;
+        state.pendingMode = pendingMode;
         setFeedback("");
         renderCurrentView();
         try {
@@ -3801,6 +3827,7 @@
           }
         } finally {
           state.pendingAction = false;
+          state.pendingMode = "";
           render();
         }
       }
@@ -3837,6 +3864,16 @@
         state.selectedVoteTarget = "";
         state.selectedHostTarget = "";
         state.selectedFinalTarget = "";
+      }
+
+      function clearBackgroundSyncIssue() {
+        state.pollFailureCount = 0;
+        state.syncIssueMessage = "";
+      }
+
+      function setBackgroundSyncIssue(error) {
+        state.pollFailureCount += 1;
+        state.syncIssueMessage = describeAppError(error, "refresh");
       }
 
       function toggleDraftTile(tileId) {
@@ -3952,12 +3989,12 @@
               return;
             }
             await loadRecentChampions();
-          });
+          }, { pendingMode: "sync" });
         },
         "retry-room-connection": async () => {
           await runAction(async () => {
             await reconnectRoom();
-          });
+          }, { pendingMode: "sync" });
         },
         "clear-messages": async () => {
           setFeedback("");
@@ -4184,13 +4221,18 @@
         clearPollTimer();
         if (document.visibilityState === "visible" && shouldPoll() && !state.pendingAction) {
           try {
-            await refreshRoom();
+            const changed = await refreshRoom();
+            if (changed) {
+              render();
+              return;
+            }
           } catch (error) {
             if (!recoverLostSession(error, "refresh")) {
-              setFeedback(describeAppError(error, "refresh"), true);
+              setBackgroundSyncIssue(error);
             }
           }
-          render();
+          renderCurrentView({ includeReveal: false });
+          schedulePoll();
           return;
         }
         schedulePoll();

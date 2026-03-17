@@ -846,6 +846,13 @@
         padding: 12px 12px 18px;
       }
 
+      .reveal-card.is-round-winner {
+        border-color: rgba(35, 68, 47, 0.82);
+        box-shadow:
+          0 22px 38px rgba(29, 22, 15, 0.22),
+          0 0 0 5px rgba(35, 68, 47, 0.12);
+      }
+
       .reveal-card.is-champion::before,
       .reveal-card.is-champion::after {
         content: "";
@@ -952,6 +959,14 @@
         min-height: 30px;
         padding: 0 10px;
         font-size: 11px;
+      }
+
+      .reveal-card.is-round-winner .reveal-badge {
+        border-color: rgba(35, 68, 47, 0.24);
+        background: rgba(36, 69, 47, 0.1);
+        color: var(--green);
+        font-size: 11px;
+        font-weight: 800;
       }
 
       #revealCard,
@@ -2803,7 +2818,7 @@
                 (submission) => `
                   <article class="action-card disabled">
                     <span class="badge">${escapeHtml(submission.displayName)}</span>
-                    ${renderWordBoard(submission.renderedLines, submission.fontId, "vote-word", { maxFont: 34, minFont: 18 })}
+                    ${renderWordBoard(submission.renderedLines, submission.fontId, "vote-word", { maxFont: 46, minFont: 24 })}
                   </article>
                 `
               )
@@ -2827,7 +2842,7 @@
                       <strong>${escapeHtml(round.label)}</strong>
                       <span>${escapeHtml(round.winner.displayName)}</span>
                     </header>
-                    ${renderWordBoard(round.winner.renderedLines, round.winner.fontId, "result-word", { maxFont: 30, minFont: 18 })}
+                    ${renderWordBoard(round.winner.renderedLines, round.winner.fontId, "result-word", { maxFont: 42, minFont: 24 })}
                     <footer>${escapeHtml(round.winner.phrase)}</footer>
                   </article>
                 `
@@ -3666,7 +3681,7 @@
                     ${disabled ? "disabled" : ""}
                   >
                     <span class="badge">${escapeHtml(candidate.displayName)}</span>
-                    ${renderWordBoard(candidate.renderedLines, candidate.fontId, "vote-word", { maxFont: 34, minFont: 18 })}
+                    ${renderWordBoard(candidate.renderedLines, candidate.fontId, "vote-word", { maxFont: 46, minFont: 24 })}
                   </button>
                 `;
               })
@@ -4106,7 +4121,8 @@
         const slotRect = submitTopSlot.getBoundingClientRect();
         const floatTop = 8;
         const cardHeight = previewCard.offsetHeight;
-        const canFloat = slotRect.top < floatTop && slotRect.bottom > cardHeight + floatTop + 8;
+        const revealOpen = !els.revealOverlay.hidden;
+        const canFloat = !revealOpen && slotRect.top < floatTop;
 
         if (!canFloat) {
           submitTopSlot.style.minHeight = "";
@@ -4226,7 +4242,7 @@
           acknowledged: meAcknowledged,
           kind: "submission",
           variant: "preview-word",
-          maxFont: 126,
+          maxFont: 118,
           minFont: 40
         };
       }
@@ -4261,6 +4277,7 @@
         els.revealOverlay.hidden = false;
         els.revealCard.classList.toggle("is-champion", presentation.kind === "champion");
         els.revealCard.classList.toggle("is-submission", presentation.kind === "submission");
+        els.revealCard.classList.toggle("is-round-winner", presentation.kind === "round_winner");
         els.revealBadge.textContent = presentation.badge;
         els.revealBadge.hidden = !presentation.badge;
         els.revealMeta.textContent = presentation.meta;

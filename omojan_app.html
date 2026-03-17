@@ -52,6 +52,10 @@
         margin-bottom: 12px;
       }
 
+      .page-header.is-hidden {
+        display: none;
+      }
+
       .page-header h1 {
         margin: 0;
         color: var(--green);
@@ -319,6 +323,15 @@
           linear-gradient(180deg, rgba(255, 250, 241, 0.96), rgba(251, 244, 227, 0.96)),
           #fff9ef;
         box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
+      }
+
+      .preview-card.is-sticky {
+        position: sticky;
+        top: 8px;
+        z-index: 8;
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.78),
+          0 10px 24px rgba(29, 22, 15, 0.08);
       }
 
       .preview-card small,
@@ -1075,13 +1088,21 @@
 
       @media (max-width: 520px) {
         main {
-          padding-inline: 10px;
+          width: 100%;
+          padding: 0 0 32px;
         }
 
         .phone {
-          min-height: calc(100vh - 44px);
-          border-radius: 28px;
+          width: 100%;
+          min-height: 100vh;
+          border: 0;
+          border-radius: 0;
+          box-shadow: none;
           padding: 12px;
+        }
+
+        .phone-shell {
+          display: block;
         }
       }
     </style>
@@ -1199,6 +1220,7 @@
         renderFrame: 0,
         lastSyncAt: "",
         lastRenderedView: "",
+        lastScrollResetKey: "",
         apiHintsOrigin: "",
         apiWarmupOrigin: "",
         renderCache: {
@@ -1257,6 +1279,7 @@
       }
 
       const els = {
+        pageHeader: document.querySelector(".page-header"),
         statusRow: document.querySelector(".status-row"),
         statusContext: document.getElementById("statusContext"),
         statusLabel: document.getElementById("statusLabel"),
@@ -1989,6 +2012,7 @@
       function setBanner() {
         const currentView = deriveView();
         els.statusRow?.classList.toggle("is-hidden", currentView === "submit");
+        els.pageHeader?.classList.toggle("is-hidden", !["welcome", "lobby"].includes(currentView));
         const bannerKey = [
           getStatusText(),
           getStatusContext(),
@@ -2831,9 +2855,24 @@
 
       function scrollAppToTop() {
         window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
         if (document.scrollingElement) {
           document.scrollingElement.scrollTop = 0;
         }
+      }
+
+      function getScrollResetKey(room = state.room, view = deriveView(room)) {
+        if (!room) {
+          return "welcome";
+        }
+        return [
+          view,
+          room.game?.phase || "",
+          room.game?.roundIndex ?? "",
+          room.game?.currentTurnPlayerId || "",
+          room.game?.reveal?.revealId || ""
+        ].join("|");
       }
 
       function renderLanding() {
@@ -3072,7 +3111,7 @@
 
       function renderSubmitTop(room) {
         return `
-          <section class="preview-card">
+          <section class="preview-card is-sticky">
             <div id="previewWord" class="word-board preview-word ${getFontClass(state.draftFontId)}${state.draftLineMode === "single" ? " is-single-line" : ""}">
               ${computeDraftLayout().lines.map((line) => `<span class="word-line">${escapeHtml(line)}</span>`).join("")}
             </div>
@@ -3796,8 +3835,13 @@
         const room = state.room;
         const view = deriveView(room);
         const viewChanged = state.lastRenderedView !== view;
+        const scrollResetKey = getScrollResetKey(room, view);
+        const shouldResetScroll = state.lastScrollResetKey !== scrollResetKey;
         if (viewChanged) {
           state.lastRenderedView = view;
+        }
+        if (shouldResetScroll) {
+          state.lastScrollResetKey = scrollResetKey;
         }
         ensureGoogleFontsLoaded(collectVisibleFontIds(room, view));
         const renderMap = {
@@ -3993,9 +4037,10 @@
         updateSubmitPreview(room);
 
         setBanner();
-        if (viewChanged) {
+        if (shouldResetScroll) {
           window.requestAnimationFrame(() => {
             scrollAppToTop();
+            window.setTimeout(scrollAppToTop, 80);
           });
         }
         schedulePoll();
@@ -4107,16 +4152,16 @@
           };
         }
         return {
-          badge: "",
+          badge: reveal.displayName,
           lines: clone(reveal.renderedLines || [reveal.phrase]),
           fontId: reveal.fontId || "broadcast",
-          meta: "",
+          meta: round?.wind || "場に公開",
           buttonLabel: meAcknowledged ? "ほかの人を待っています" : "閉じる",
           acknowledged: meAcknowledged,
           kind: "submission",
           variant: "preview-word",
-          maxFont: 92,
-          minFont: 36
+          maxFont: 112,
+          minFont: 40
         };
       }
 
@@ -4162,6 +4207,8 @@
         els.revealWord.className = `word-board auto-fit-word ${els.revealWord.dataset.variant}`;
         els.revealWord.innerHTML = presentation.lines.map((line) => `<span class="word-line">${escapeHtml(line)}</span>`).join("");
         hydrateWordBoard(els.revealWord);
+        window.requestAnimationFrame(() => hydrateWordBoard(els.revealWord));
+        window.setTimeout(() => hydrateWordBoard(els.revealWord), 60);
         els.closeRevealBtn.textContent = presentation.buttonLabel;
         els.closeRevealBtn.disabled = Boolean(presentation.acknowledged || state.pendingAction);
       }

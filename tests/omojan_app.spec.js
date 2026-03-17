@@ -376,8 +376,8 @@ test("app can complete a full game through final champion and restart", async ({
   await host.locator('button[data-action="submit-final-host-pick"]').click();
 
   await acknowledgeRevealForAll([host, guest]);
-  await expect(host.getByRole("heading", { name: "総合優勝" })).toBeVisible({ timeout: 10000 });
-  await expect(guest.getByRole("heading", { name: "総合優勝" })).toBeVisible({ timeout: 10000 });
+  await expect(host.getByRole("heading", { name: "結果一覧" })).toBeVisible({ timeout: 10000 });
+  await expect(guest.getByRole("heading", { name: "結果一覧" })).toBeVisible({ timeout: 10000 });
   await expect(host.locator("body")).toContainText(championPhrase);
   await expect(guest.locator("body")).toContainText(championPhrase);
 

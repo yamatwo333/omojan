@@ -49,6 +49,7 @@
 
       .page-header {
         text-align: center;
+        padding-top: 22px;
         margin-bottom: 12px;
       }
 
@@ -1023,7 +1024,7 @@
 
       .round-winner-card header {
         display: flex;
-        justify-content: space-between;
+        justify-content: flex-start;
         gap: 8px;
         align-items: center;
       }
@@ -1031,11 +1032,6 @@
       .round-winner-card header strong {
         color: var(--green);
         font-size: 13px;
-      }
-
-      .round-winner-card header span {
-        color: var(--muted);
-        font-size: 12px;
       }
 
       .round-winner-card .word-board {
@@ -1082,10 +1078,11 @@
 
       .round-winner-card footer {
         margin-top: 8px;
-        color: var(--muted);
-        font-size: 12px;
+        color: var(--green);
+        font-size: 13px;
         line-height: 1.5;
         text-align: center;
+        font-weight: 700;
       }
 
       .measure-word {
@@ -1131,6 +1128,10 @@
         main {
           width: 100%;
           padding: 0 0 32px;
+        }
+
+        .page-header {
+          padding-top: calc(24px + env(safe-area-inset-top));
         }
 
         .phone {
@@ -2026,7 +2027,7 @@
           roundResult: round?.label || "ラウンド結果",
           finalVote: room?.game?.phase === "final_revote" ? "最終再投票" : "最終投票",
           finalHostDecide: "最終ホスト裁定",
-          finalResult: "総合優勝"
+          finalResult: "結果一覧"
         };
         return contextMap[view] || "おもじゃん";
       }
@@ -2840,10 +2841,9 @@
                   <article class="round-winner-card">
                     <header>
                       <strong>${escapeHtml(round.label)}</strong>
-                      <span>${escapeHtml(round.winner.displayName)}</span>
                     </header>
                     ${renderWordBoard(round.winner.renderedLines, round.winner.fontId, "result-word", { maxFont: 42, minFont: 24 })}
-                    <footer>${escapeHtml(round.winner.phrase)}</footer>
+                    <footer>${escapeHtml(round.winner.displayName)}</footer>
                   </article>
                 `
               )
@@ -3611,7 +3611,7 @@
 
         const champion = room.game.champion;
         return {
-          title: "総合優勝",
+          title: "結果一覧",
           heroHtml: renderWordStage({
             stageClass: "champion-stage is-grand",
             label: "総合優勝",
@@ -3826,7 +3826,7 @@
         return `
           ${renderScreenAlerts()}
           <section class="card">
-            <h2>総合優勝</h2>
+            <h2>結果一覧</h2>
             ${renderFocusCallout({
               label: "本日の決着",
               title: champion ? `${champion.phrase}` : "総合優勝を集計中",
@@ -4122,7 +4122,8 @@
         const floatTop = 8;
         const cardHeight = previewCard.offsetHeight;
         const revealOpen = !els.revealOverlay.hidden;
-        const canFloat = !revealOpen && slotRect.top < floatTop;
+        const forceMobileFloat = window.matchMedia("(max-width: 520px)").matches;
+        const canFloat = !revealOpen && (forceMobileFloat || slotRect.top < floatTop);
 
         if (!canFloat) {
           submitTopSlot.style.minHeight = "";
@@ -4224,7 +4225,7 @@
             badge: round?.label || "ラウンド勝利",
             lines: clone(reveal.renderedLines || [reveal.phrase]),
             fontId: reveal.fontId || "classic",
-            meta: `${reveal.displayName} のワード`,
+            meta: reveal.displayName,
             buttonLabel: meAcknowledged ? "ほかの人を待っています" : "閉じる",
             acknowledged: meAcknowledged,
             kind: "round_winner",
@@ -4234,16 +4235,16 @@
           };
         }
         return {
-          badge: reveal.displayName,
+          badge: round?.wind || round?.label || "場に公開",
           lines: clone(reveal.renderedLines || [reveal.phrase]),
           fontId: reveal.fontId || "broadcast",
-          meta: "",
+          meta: reveal.displayName,
           buttonLabel: meAcknowledged ? "ほかの人を待っています" : "閉じる",
           acknowledged: meAcknowledged,
           kind: "submission",
           variant: "preview-word",
-          maxFont: 118,
-          minFont: 40
+          maxFont: 108,
+          minFont: 36
         };
       }
 

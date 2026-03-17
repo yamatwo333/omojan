@@ -335,7 +335,7 @@
 
       .history-row {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-columns: 34px minmax(0, 1fr) auto;
         gap: 12px;
         align-items: center;
         padding: 12px 14px;
@@ -374,13 +374,25 @@
 
       .tile-row {
         display: grid;
-        grid-template-columns: 42px minmax(0, 1fr) auto auto;
+        grid-template-columns: 34px 42px minmax(0, 1fr) auto auto;
         gap: 10px;
         align-items: center;
         padding: 10px 12px;
         border-radius: 16px;
         border: 1px solid rgba(100, 73, 47, 0.14);
         background: rgba(255, 252, 246, 0.92);
+      }
+
+      .row-select {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .row-select input {
+        width: 18px;
+        height: 18px;
+        accent-color: var(--green);
       }
 
       .tile-order {
@@ -482,24 +494,25 @@
         }
 
         .tile-row {
-          grid-template-columns: 42px minmax(0, 1fr);
+          grid-template-columns: 34px 42px minmax(0, 1fr);
         }
 
         .history-row {
-          grid-template-columns: minmax(0, 1fr);
+          grid-template-columns: 34px minmax(0, 1fr);
         }
 
         .tile-meta {
-          grid-column: 1 / 2;
+          grid-column: 2 / 3;
         }
 
         .tile-remove {
-          grid-column: 2 / 3;
+          grid-column: 3 / 4;
           justify-self: end;
         }
 
         .history-row .tile-remove {
           justify-self: end;
+          grid-column: 2 / 3;
         }
       }
     </style>
@@ -577,6 +590,14 @@
               <button class="btn secondary" id="reloadDeckBtn" type="button">読み直す</button>
             </div>
           </section>
+          <section class="action-block">
+            <div class="action-title">選択したワードをまとめて削除</div>
+            <div class="button-row">
+              <button class="btn secondary" id="selectVisibleTilesBtn" type="button">このページを選択</button>
+              <button class="btn secondary" id="clearTileSelectionBtn" type="button">選択を外す</button>
+              <button class="btn primary" id="removeSelectedTilesBtn" type="button">選択したワードを削除</button>
+            </div>
+          </section>
           <div class="tile-list" id="tileList"></div>
           <div class="pagination" id="tilePagination"></div>
         </section>
@@ -587,6 +608,14 @@
           <div class="button-row">
             <button class="btn secondary" id="reloadHistoryBtn" type="button">履歴を読み直す</button>
           </div>
+          <section class="action-block">
+            <div class="action-title">選択した履歴をまとめて削除</div>
+            <div class="button-row">
+              <button class="btn secondary" id="selectVisibleHistoryBtn" type="button">このページを選択</button>
+              <button class="btn secondary" id="clearHistorySelectionBtn" type="button">選択を外す</button>
+              <button class="btn primary" id="removeSelectedHistoryBtn" type="button">選択した履歴を削除</button>
+            </div>
+          </section>
           <div class="history-list" id="historyList"></div>
           <div class="pagination" id="historyPagination"></div>
         </section>
@@ -611,6 +640,8 @@
         historyPage: 1,
         importMode: "append",
         championHistory: [],
+        selectedTileIds: [],
+        selectedChampionIds: [],
         pending: false,
         feedback: "",
         error: "",
@@ -639,11 +670,17 @@
         historyList: document.getElementById("historyList"),
         historyPagination: document.getElementById("historyPagination"),
         addTileBtn: document.getElementById("addTileBtn"),
+        selectVisibleTilesBtn: document.getElementById("selectVisibleTilesBtn"),
+        clearTileSelectionBtn: document.getElementById("clearTileSelectionBtn"),
+        removeSelectedTilesBtn: document.getElementById("removeSelectedTilesBtn"),
         appendCsvBtn: document.getElementById("appendCsvBtn"),
         replaceCsvBtn: document.getElementById("replaceCsvBtn"),
         csvFileInput: document.getElementById("csvFileInput"),
         tileList: document.getElementById("tileList"),
-        tilePagination: document.getElementById("tilePagination")
+        tilePagination: document.getElementById("tilePagination"),
+        selectVisibleHistoryBtn: document.getElementById("selectVisibleHistoryBtn"),
+        clearHistorySelectionBtn: document.getElementById("clearHistorySelectionBtn"),
+        removeSelectedHistoryBtn: document.getElementById("removeSelectedHistoryBtn")
       };
 
       function escapeHtml(value) {
@@ -704,6 +741,7 @@
           <span class="summary-pill">総数<strong>${escapeHtml(state.deck.tiles.length)}</strong></span>
           <span class="summary-pill">有効<strong>${escapeHtml(enabledCount)}</strong></span>
           <span class="summary-pill">表示<strong>${escapeHtml(visibleCount)}</strong></span>
+          <span class="summary-pill">選択<strong>${escapeHtml(state.selectedTileIds.length)}</strong></span>
           <span class="summary-pill">ページ<strong>${escapeHtml(totalPages)}</strong></span>
         `;
       }
@@ -712,6 +750,7 @@
         const totalPages = Math.max(1, Math.ceil(state.championHistory.length / HISTORY_PAGE_SIZE));
         return `
           <span class="summary-pill">履歴<strong>${escapeHtml(state.championHistory.length)}</strong></span>
+          <span class="summary-pill">選択<strong>${escapeHtml(state.selectedChampionIds.length)}</strong></span>
           <span class="summary-pill">ページ<strong>${escapeHtml(totalPages)}</strong></span>
         `;
       }
@@ -787,6 +826,44 @@
         };
       }
 
+      function getHistoryPaginationState() {
+        const totalPages = Math.max(1, Math.ceil(state.championHistory.length / HISTORY_PAGE_SIZE));
+        state.historyPage = Math.min(Math.max(state.historyPage, 1), totalPages);
+        const startIndex = (state.historyPage - 1) * HISTORY_PAGE_SIZE;
+        return {
+          totalPages,
+          page: state.historyPage,
+          pageItems: state.championHistory.slice(startIndex, startIndex + HISTORY_PAGE_SIZE)
+        };
+      }
+
+      function normalizeSelection(values) {
+        return [...new Set((values || []).filter(Boolean))];
+      }
+
+      function syncSelections() {
+        const tileIds = new Set((state.deck?.tiles || []).map((tile) => tile.tileId));
+        const championIds = new Set(state.championHistory.map((item) => item.championId));
+        state.selectedTileIds = normalizeSelection(state.selectedTileIds).filter((tileId) => tileIds.has(tileId));
+        state.selectedChampionIds = normalizeSelection(state.selectedChampionIds).filter((championId) =>
+          championIds.has(championId)
+        );
+      }
+
+      function toggleSelection(listKey, value, checked) {
+        const current = new Set(state[listKey]);
+        if (checked) {
+          current.add(value);
+        } else {
+          current.delete(value);
+        }
+        state[listKey] = [...current];
+      }
+
+      function addVisibleSelection(listKey, values) {
+        state[listKey] = normalizeSelection([...state[listKey], ...values]);
+      }
+
       function renderTiles() {
         if (!state.deck) {
           els.tileList.innerHTML = "";
@@ -803,6 +880,9 @@
           .map(
             ({ tile, index }) => `
               <article class="tile-row">
+                <label class="row-select" aria-label="${escapeHtml(tile.text || "ワード")} を選択">
+                  <input type="checkbox" data-tile-select-id="${escapeHtml(tile.tileId)}" ${state.selectedTileIds.includes(tile.tileId) ? "checked" : ""} />
+                </label>
                 <div class="tile-order">${index + 1}</div>
                 <div class="tile-main">
                   <input
@@ -854,15 +934,15 @@
           return;
         }
 
-        const totalPages = Math.max(1, Math.ceil(state.championHistory.length / HISTORY_PAGE_SIZE));
-        state.historyPage = Math.min(Math.max(state.historyPage, 1), totalPages);
-        const startIndex = (state.historyPage - 1) * HISTORY_PAGE_SIZE;
-        const pageItems = state.championHistory.slice(startIndex, startIndex + HISTORY_PAGE_SIZE);
+        const { totalPages, pageItems } = getHistoryPaginationState();
 
         els.historyList.innerHTML = pageItems
           .map(
             (item) => `
               <article class="history-row">
+                <label class="row-select" aria-label="${escapeHtml(item.phrase)} を選択">
+                  <input type="checkbox" data-champion-select-id="${escapeHtml(item.championId)}" ${state.selectedChampionIds.includes(item.championId) ? "checked" : ""} />
+                </label>
                 <div class="history-main">
                   <div class="history-phrase">${escapeHtml(item.phrase)}</div>
                   <div class="history-meta-line">
@@ -884,6 +964,7 @@
       }
 
       function render() {
+        syncSelections();
         els.apiBaseUrl.value = state.apiBaseUrl;
         els.apiMeta.textContent = `API: ${state.apiBaseUrl}`;
         els.adminPasscode.value = state.passcode;
@@ -893,8 +974,14 @@
         els.reloadDeckBtn.disabled = state.pending || !state.deck;
         els.reloadHistoryBtn.disabled = state.pending || !state.deck;
         els.addTileBtn.disabled = state.pending || !state.deck;
+        els.selectVisibleTilesBtn.disabled = state.pending || !state.deck || !getTilePaginationState().pageItems.length;
+        els.clearTileSelectionBtn.disabled = state.pending || !state.selectedTileIds.length;
+        els.removeSelectedTilesBtn.disabled = state.pending || !state.selectedTileIds.length;
         els.appendCsvBtn.disabled = state.pending || !state.deck;
         els.replaceCsvBtn.disabled = state.pending || !state.deck;
+        els.selectVisibleHistoryBtn.disabled = state.pending || !state.championHistory.length || !getHistoryPaginationState().pageItems.length;
+        els.clearHistorySelectionBtn.disabled = state.pending || !state.selectedChampionIds.length;
+        els.removeSelectedHistoryBtn.disabled = state.pending || !state.selectedChampionIds.length;
         renderFeedback();
 
         if (!state.deck) {
@@ -940,6 +1027,7 @@
       async function loadChampionHistory() {
         const data = await fetchJson("/admin/champions?limit=300");
         state.championHistory = data.items || [];
+        state.selectedChampionIds = [];
       }
 
       function validateDeckBeforeSave() {
@@ -1099,6 +1187,7 @@
           };
           state.tilePage = 1;
           state.historyPage = 1;
+          state.selectedTileIds = [];
           state.activeTab = "deck";
           window.localStorage.setItem(PASSCODE_KEY, state.passcode);
           setFeedback("デッキを読み込みました。");
@@ -1147,6 +1236,7 @@
             }))
           };
           state.tilePage = 1;
+          state.selectedTileIds = [];
           window.localStorage.setItem(PASSCODE_KEY, state.passcode);
           setFeedback(
             deduped.removedCount
@@ -1183,6 +1273,7 @@
           state.searchQuery = "";
           state.filterMode = "all";
           state.tilePage = 1;
+          state.selectedTileIds = [];
           setFeedback(
             state.importMode === "replace"
               ? `${state.deck.tiles.length}件で置き換えました${deduped.removedCount ? `。重複ワードを${deduped.removedCount}件自動削除しました` : ""}。`
@@ -1220,8 +1311,72 @@
         if (target.matches("[data-tile-enabled-index]") && state.deck) {
           const index = Number(target.dataset.tileEnabledIndex);
           state.deck.tiles[index].enabled = target.checked;
+          return;
+        }
+        if (target.matches("[data-tile-select-id]")) {
+          toggleSelection("selectedTileIds", target.dataset.tileSelectId, target.checked);
+          render();
+          return;
+        }
+        if (target.matches("[data-champion-select-id]")) {
+          toggleSelection("selectedChampionIds", target.dataset.championSelectId, target.checked);
+          render();
         }
       });
+
+      function removeTilesByIds(tileIds) {
+        const selectedIds = new Set(tileIds);
+        state.deck.tiles = state.deck.tiles.filter((tile) => !selectedIds.has(tile.tileId));
+        state.selectedTileIds = state.selectedTileIds.filter((tileId) => !selectedIds.has(tileId));
+        state.tilePage = 1;
+      }
+
+      async function deleteChampionHistoryByIds(championIds) {
+        const uniqueIds = normalizeSelection(championIds);
+        if (!uniqueIds.length) {
+          return;
+        }
+        state.pending = true;
+        setFeedback("");
+        render();
+        const removedIds = [];
+        let lastError = null;
+        try {
+          for (const championId of uniqueIds) {
+            try {
+              await fetchJson(`/admin/champions/${encodeURIComponent(championId)}`, {
+                method: "DELETE"
+              });
+              removedIds.push(championId);
+            } catch (error) {
+              lastError = error;
+            }
+          }
+          if (removedIds.length) {
+            const removedSet = new Set(removedIds);
+            state.championHistory = state.championHistory.filter((item) => !removedSet.has(item.championId));
+            state.selectedChampionIds = state.selectedChampionIds.filter((championId) => !removedSet.has(championId));
+            state.historyPage = 1;
+          }
+          if (lastError) {
+            if (removedIds.length) {
+              setFeedback(
+                `総合優勝ワード履歴を${removedIds.length}件削除しました。一部の履歴は削除できませんでした。`,
+                true
+              );
+            } else {
+              setFeedback(lastError instanceof Error ? lastError.message : "履歴の削除に失敗しました。", true);
+            }
+            return;
+          }
+          setFeedback(
+            uniqueIds.length === 1 ? "総合優勝ワード履歴を削除しました。" : `総合優勝ワード履歴を${removedIds.length}件削除しました。`
+          );
+        } finally {
+          state.pending = false;
+          render();
+        }
+      }
 
       document.addEventListener("click", async (event) => {
         const removeChampionButton = event.target.closest("[data-remove-champion-id]");
@@ -1231,29 +1386,16 @@
           if (!confirmed) {
             return;
           }
-          state.pending = true;
-          setFeedback("");
-          render();
-          try {
-            await fetchJson(`/admin/champions/${encodeURIComponent(championId)}`, {
-              method: "DELETE"
-            });
-            state.championHistory = state.championHistory.filter((item) => item.championId !== championId);
-            state.historyPage = Math.max(1, state.historyPage);
-            setFeedback("総合優勝ワード履歴を削除しました。");
-          } catch (error) {
-            setFeedback(error instanceof Error ? error.message : "履歴の削除に失敗しました。", true);
-          } finally {
-            state.pending = false;
-            render();
-          }
+          await deleteChampionHistoryByIds([championId]);
           return;
         }
 
         const removeButton = event.target.closest("[data-remove-index]");
         if (removeButton && state.deck) {
           const index = Number(removeButton.dataset.removeIndex);
+          const tileId = state.deck.tiles[index]?.tileId;
           state.deck.tiles.splice(index, 1);
+          state.selectedTileIds = state.selectedTileIds.filter((selectedId) => selectedId !== tileId);
           render();
           return;
         }
@@ -1313,6 +1455,58 @@
           state.deck.tiles.unshift(createLocalTile());
           state.tilePage = 1;
           render();
+          return;
+        }
+
+        if (event.target.id === "selectVisibleTilesBtn" && state.deck) {
+          addVisibleSelection(
+            "selectedTileIds",
+            getTilePaginationState().pageItems.map(({ tile }) => tile.tileId)
+          );
+          render();
+          return;
+        }
+
+        if (event.target.id === "clearTileSelectionBtn") {
+          state.selectedTileIds = [];
+          render();
+          return;
+        }
+
+        if (event.target.id === "removeSelectedTilesBtn" && state.deck) {
+          const count = state.selectedTileIds.length;
+          const confirmed = window.confirm(`選択したワード ${count} 件を削除します。続けますか？`);
+          if (!confirmed) {
+            return;
+          }
+          removeTilesByIds(state.selectedTileIds);
+          setFeedback(`選択したワードを${count}件削除しました。保存すると次の新規ゲームから反映されます。`);
+          render();
+          return;
+        }
+
+        if (event.target.id === "selectVisibleHistoryBtn") {
+          addVisibleSelection(
+            "selectedChampionIds",
+            getHistoryPaginationState().pageItems.map((item) => item.championId)
+          );
+          render();
+          return;
+        }
+
+        if (event.target.id === "clearHistorySelectionBtn") {
+          state.selectedChampionIds = [];
+          render();
+          return;
+        }
+
+        if (event.target.id === "removeSelectedHistoryBtn") {
+          const count = state.selectedChampionIds.length;
+          const confirmed = window.confirm(`選択した履歴 ${count} 件を削除します。続けますか？`);
+          if (!confirmed) {
+            return;
+          }
+          await deleteChampionHistoryByIds(state.selectedChampionIds);
           return;
         }
 

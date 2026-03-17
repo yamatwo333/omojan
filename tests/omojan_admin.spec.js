@@ -213,6 +213,32 @@ test("admin page can review and delete champion history", async ({ page }) => {
   await expect(page.locator("#historyList")).not.toContainText("現場大洪水");
 });
 
+test("admin page can bulk delete words and champion history", async ({ page }) => {
+  await page.goto(STATIC_URL);
+  await page.fill("#adminPasscode", ADMIN_PASSCODE);
+  await page.getByRole("button", { name: "デッキを読む" }).click();
+
+  await page.locator('[data-tile-select-id="tile_a"]').check();
+  await page.locator('[data-tile-select-id="tile_c"]').check();
+  page.once("dialog", (dialog) => dialog.accept());
+  await page.getByRole("button", { name: "選択したワードを削除" }).click();
+
+  await expect(page.locator("#feedback")).toContainText("選択したワードを2件削除しました。");
+  await expect(page.locator('[data-tile-text-index]')).toHaveCount(1);
+  await expect(page.locator('[data-tile-text-index="0"]')).toHaveValue("謝罪会見");
+
+  await page.getByRole("button", { name: "総合優勝ワード履歴" }).click();
+  const initialHistoryCount = await page.locator("#historyList .history-row").count();
+  expect(initialHistoryCount).toBeGreaterThanOrEqual(2);
+  await page.locator('[data-champion-select-id]').nth(0).check();
+  await page.locator('[data-champion-select-id]').nth(1).check();
+  page.once("dialog", (dialog) => dialog.accept());
+  await page.getByRole("button", { name: "選択した履歴を削除" }).click();
+
+  await expect(page.locator("#feedback")).toContainText("総合優勝ワード履歴を2件削除しました。");
+  await expect(page.locator("#historyList .history-row")).toHaveCount(initialHistoryCount - 2);
+});
+
 test("admin page paginates a long word list", async ({ page }) => {
   await page.goto(STATIC_URL);
   await page.fill("#adminPasscode", ADMIN_PASSCODE);

@@ -112,6 +112,8 @@ async function setupRoundVoteRoom() {
         tileOrder: [0, 1],
         phrase: hostTiles.map((tile) => tile.text).join(""),
         fontId: "broadcast",
+        sizePreset: "large",
+        lineGapPreset: "normal",
         lineMode: "boundary",
         manualBreaks: [],
         renderedLines: hostTiles.map((tile) => tile.text)
@@ -133,6 +135,8 @@ async function setupRoundVoteRoom() {
         tileOrder: [0, 1],
         phrase: guestTiles.map((tile) => tile.text).join(""),
         fontId: "broadcast",
+        sizePreset: "large",
+        lineGapPreset: "normal",
         lineMode: "boundary",
         manualBreaks: [],
         renderedLines: guestTiles.map((tile) => tile.text)
@@ -383,7 +387,6 @@ test("app can complete a full game through final champion and restart", async ({
   await acknowledgeRevealForAll([host, guest]);
   await expect(host.getByRole("heading", { name: "結果一覧" })).toBeVisible({ timeout: 10000 });
   await expect(guest.getByRole("heading", { name: "結果一覧" })).toBeVisible({ timeout: 10000 });
-  await expect(host.locator("#statusContext")).toContainText("結果一覧");
   await expect(host.locator(".champion-stage .stage-footnote")).not.toContainText("のワード");
   await expect(host.locator(".champion-stage .stage-footnote")).toContainText(/HostFlowTest|GuestFlowTest/);
   await expect(host.locator(".round-winner-card").first().locator("footer")).toContainText(/HostFlowTest|GuestFlowTest/);
@@ -420,15 +423,16 @@ test("mobile submit view keeps a floating preview and uses unified reveal labels
 
   await host.getByRole("button", { name: "この順で開始" }).click();
   await expect(host.locator(".page-header")).toHaveClass(/is-hidden/);
-  await expect(host.locator(".status-row")).toHaveClass(/is-hidden/);
 
   await host.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
   await host.waitForTimeout(900);
+  const statusBottom = await host.locator(".status-row").evaluate((row) => row.getBoundingClientRect().bottom);
   const previewState = await host.locator(".preview-card").evaluate((card) => ({
     top: card.getBoundingClientRect().top,
     className: card.className
   }));
-  expect(previewState.top).toBeLessThanOrEqual(12);
+  expect(previewState.className).toContain("is-floating");
+  expect(previewState.top).toBeLessThanOrEqual(statusBottom + 12);
 
   await submitCurrentDraft(host);
   await expect(host.locator("#revealBadge")).toHaveText("ラウンド1");
@@ -505,7 +509,9 @@ test("app shows a friendly message when the room is full", async ({ page }) => {
   await page.fill("#joinDisplayName", "LateGuest");
   await page.getByRole("button", { name: "参加する" }).click();
 
-  await expect(page.locator("#feedbackDock")).toContainText("このルームは満員です。別のルームを使ってください。");
+  await expect(page.locator("#feedbackDock")).toContainText("観戦として参加しました。");
+  await expect(page.getByRole("heading", { name: "ルーム待機中" })).toBeVisible();
+  await expect(page.locator("body")).toContainText("観戦");
 });
 
 test("app can clear the local room session and return to the welcome screen", async ({ browser }) => {
@@ -519,10 +525,10 @@ test("app can clear the local room session and return to the welcome screen", as
 
   const inviteCode = ((await page.locator(".room-code").textContent()) || "").trim();
   page.once("dialog", (dialog) => dialog.accept());
-  await page.getByRole("button", { name: "この端末の参加情報を消す" }).click();
+  await page.getByRole("button", { name: "退出する" }).click();
 
   await expect(page.getByRole("heading", { name: "ルームを作る" })).toBeVisible();
-  await expect(page.locator("#feedbackDock")).toContainText("この端末の参加情報を消しました。");
+  await expect(page.locator("#feedbackDock")).toContainText("退出しました。");
   await expect(page.locator("#inviteCode")).toHaveValue(inviteCode);
 
   await context.close();

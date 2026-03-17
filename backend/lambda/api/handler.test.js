@@ -408,6 +408,7 @@ test("GET /v1/health returns lambda scaffold metadata", async () => {
     "rooms:reconnect",
     "rooms:reveal-close",
     "rooms:start-player",
+    "rooms:player-role",
     "rooms:start",
     "rounds:submit",
     "rounds:vote",
@@ -704,6 +705,83 @@ test("room create/join/get/reconnect work in lobby", async () => {
   assert.equal(reconnectResponse.statusCode, 200);
   assert.equal(reconnectBody.ok, true);
   assert.equal(reconnectBody.data.room.me.displayName, "たなか");
+});
+
+test("joining beyond active player limit enters spectator mode", async () => {
+  const handler = createTestHandler();
+  const createResponse = await handler(
+    createEvent("POST", "/v1/rooms", {
+      body: { displayName: "ホスト", playerCount: 2 }
+    })
+  );
+  const createBody = await parseResponse(createResponse);
+  const inviteCode = createBody.data.room.inviteCode;
+
+  await handler(
+    createEvent("POST", "/v1/rooms/join", {
+      body: { inviteCode, displayName: "ゲストA" }
+    })
+  );
+  const spectatorJoin = await handler(
+    createEvent("POST", "/v1/rooms/join", {
+      body: { inviteCode, displayName: "観戦B" }
+    })
+  );
+  const spectatorBody = await parseResponse(spectatorJoin);
+
+  assert.equal(spectatorJoin.statusCode, 200);
+  assert.equal(spectatorBody.data.room.me.role, "spectator");
+  assert.equal(spectatorBody.data.room.activePlayerCount, 2);
+  assert.equal(spectatorBody.data.room.spectatorCount, 1);
+});
+
+test("host can switch lobby members between player and spectator", async () => {
+  const handler = createTestHandler();
+  const session = await createSession(handler, ["ホスト", "ゲストA"]);
+  const host = findPlayer(session, "ホスト");
+
+  const spectatorJoinResponse = await handler(
+    createEvent("POST", "/v1/rooms/join", {
+      body: { inviteCode: session.inviteCode, displayName: "観戦B" }
+    })
+  );
+  const spectatorJoinBody = await parseResponse(spectatorJoinResponse);
+  const spectator = {
+    displayName: "観戦B",
+    playerId: spectatorJoinBody.data.room.me.playerId,
+    playerToken: spectatorJoinBody.data.playerToken
+  };
+
+  let response = await handler(
+    createEvent("POST", `/v1/rooms/${session.roomId}/player-role`, {
+      headers: { "X-Omojan-Player-Token": host.playerToken },
+      body: { targetPlayerId: spectator.playerId, role: "player" }
+    })
+  );
+  let body = await parseResponse(response);
+  assert.equal(response.statusCode, 409);
+  assert.equal(body.error.code, "ROOM_FULL");
+
+  const guest = findPlayer(session, "ゲストA");
+  response = await handler(
+    createEvent("POST", `/v1/rooms/${session.roomId}/player-role`, {
+      headers: { "X-Omojan-Player-Token": host.playerToken },
+      body: { targetPlayerId: guest.playerId, role: "spectator" }
+    })
+  );
+  body = await parseResponse(response);
+  assert.equal(response.statusCode, 200);
+  assert.equal(body.data.room.game.players.find((player) => player.playerId === guest.playerId).role, "spectator");
+
+  response = await handler(
+    createEvent("POST", `/v1/rooms/${session.roomId}/player-role`, {
+      headers: { "X-Omojan-Player-Token": host.playerToken },
+      body: { targetPlayerId: spectator.playerId, role: "player" }
+    })
+  );
+  body = await parseResponse(response);
+  assert.equal(response.statusCode, 200);
+  assert.equal(body.data.room.game.players.find((player) => player.playerId === spectator.playerId).role, "player");
 });
 
 test("get room returns notModified when client revision is current", async () => {

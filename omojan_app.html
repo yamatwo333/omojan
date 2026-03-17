@@ -83,7 +83,7 @@
 
       .status-row {
         display: flex;
-        justify-content: space-between;
+        justify-content: flex-end;
         align-items: center;
         gap: 12px;
         color: var(--green);
@@ -95,11 +95,7 @@
       }
 
       .status-context {
-        min-width: 0;
-        color: var(--muted);
-        font-size: 12px;
-        font-weight: 700;
-        letter-spacing: 0.04em;
+        display: none;
       }
 
       .status-actions {
@@ -212,6 +208,16 @@
         margin-top: 12px;
       }
 
+      .chip-row.compact {
+        margin-top: 0;
+      }
+
+      .chip-row.compact .chip {
+        min-height: 32px;
+        padding: 0 10px;
+        font-size: 11px;
+      }
+
       .chip,
       .break-dot,
       .tile,
@@ -302,6 +308,12 @@
         line-height: 1.55;
       }
 
+      .player-role-actions {
+        display: grid;
+        justify-items: end;
+        gap: 8px;
+      }
+
       .badge {
         display: inline-flex;
         align-items: center;
@@ -339,7 +351,7 @@
 
       .preview-card.is-floating {
         position: fixed;
-        top: 8px;
+        top: var(--preview-floating-top, 8px);
         left: var(--preview-floating-left, 0);
         width: var(--preview-floating-width, 100%);
         margin-top: 0;
@@ -358,6 +370,7 @@
         min-height: 124px;
         display: flex;
         flex-direction: column;
+        gap: var(--word-line-gap, 0.02em);
         align-items: center;
         justify-content: center;
         text-align: center;
@@ -912,7 +925,7 @@
       .reveal-card .preview-caption {
         margin-top: 12px;
         text-align: center;
-        font-size: 16px;
+        font-size: 18px;
         font-weight: 800;
       }
 
@@ -970,7 +983,7 @@
       .reveal-card.is-submission .preview-caption {
         margin-top: 10px;
         color: var(--green);
-        font-size: 16px;
+        font-size: 18px;
         font-weight: 800;
       }
 
@@ -1178,13 +1191,13 @@
 
         .card h2,
         .panel h3 {
-          font-size: 20px;
+          font-size: 22px;
         }
 
         .card p,
         .panel p,
         .section-note {
-          font-size: 15px;
+          font-size: 16px;
         }
 
         .field label,
@@ -1195,17 +1208,24 @@
         .player-card span,
         .history-card span,
         .muted {
-          font-size: 13px;
+          font-size: 14px;
         }
 
         .btn {
           min-height: 54px;
-          font-size: 16px;
+          font-size: 17px;
         }
 
         .tile {
           min-height: 82px;
-          font-size: 15px;
+          font-size: 16px;
+        }
+
+        .summary-pill,
+        .summary-pill strong,
+        .mini-btn,
+        .status-row {
+          font-size: 14px;
         }
       }
     </style>
@@ -1289,6 +1309,18 @@
         { id: "dot", label: "レトロドット", className: "font-dot" }
       ];
 
+      const sizePresets = [
+        { id: "xl", label: "特大", singleMax: 92, multiMax: 78, minBoost: 6 },
+        { id: "large", label: "大", singleMax: 86, multiMax: 72, minBoost: 2 },
+        { id: "medium", label: "中", singleMax: 78, multiMax: 66, minBoost: -2 },
+        { id: "small", label: "小", singleMax: 70, multiMax: 58, minBoost: -6 }
+      ];
+
+      const lineGapPresets = [
+        { id: "normal", label: "通常", value: "0.02em" },
+        { id: "wide", label: "広め", value: "0.24em" }
+      ];
+
       const state = {
         apiBaseUrl: "",
         room: null,
@@ -1312,6 +1344,8 @@
         selectedStartPlayerId: "",
         draftSelectedTileIds: [],
         draftFontId: "broadcast",
+        draftSizePreset: "large",
+        draftLineGapPreset: "normal",
         draftLineMode: "boundary",
         draftManualBreaks: [],
         selectedVoteTarget: "",
@@ -1600,8 +1634,24 @@
         return fonts.find((font) => font.id === fontId)?.className || "font-classic";
       }
 
+      function getSizePreset(sizePresetId) {
+        return sizePresets.find((preset) => preset.id === sizePresetId) || sizePresets[1];
+      }
+
+      function getLineGapPreset(lineGapPresetId) {
+        return lineGapPresets.find((preset) => preset.id === lineGapPresetId) || lineGapPresets[0];
+      }
+
+      function getActivePlayerCount(room = state.room) {
+        return Number(room?.activePlayerCount || room?.game?.activePlayerIds?.length || room?.playerCount || room?.game?.players?.length || 0);
+      }
+
+      function isSpectator(room = state.room) {
+        return room?.me?.role === "spectator" || room?.me?.isSpectator === true;
+      }
+
       function allowsSelfVote(room = state.room) {
-        return Number(room?.playerCount || room?.game?.players?.length || 0) === 2;
+        return getActivePlayerCount(room) === 2;
       }
 
       function getStoredSessions() {
@@ -1657,7 +1707,7 @@
         }
       }
 
-      function applyWordMarkup(container, lines, fontClass, lineMode, fontSize) {
+      function applyWordMarkup(container, lines, fontClass, lineMode, fontSize, lineGapPreset = "normal") {
         const classNames = ["word-board", fontClass];
         if (container.classList.contains("measure-word")) {
           classNames.push("measure-word");
@@ -1670,58 +1720,60 @@
         }
         container.className = classNames.join(" ");
         container.style.fontSize = `${fontSize}px`;
+        container.style.setProperty("--word-line-gap", getLineGapPreset(lineGapPreset).value);
         container.innerHTML = lines.map((line) => `<span class="word-line">${escapeHtml(line)}</span>`).join("");
       }
 
-      function doesWordFit(lines, fontClass, lineMode, fontSize, width, height) {
+      function doesWordFit(lines, fontClass, lineMode, fontSize, width, height, lineGapPreset = "normal") {
         const tolerance = 6;
         els.measureWord.dataset.variant = "";
         els.measureWord.style.width = `${width}px`;
         els.measureWord.style.height = `${height}px`;
-        applyWordMarkup(els.measureWord, lines, fontClass, lineMode, fontSize);
+        applyWordMarkup(els.measureWord, lines, fontClass, lineMode, fontSize, lineGapPreset);
         const lineEls = Array.from(els.measureWord.querySelectorAll(".word-line"));
         const tooWide = lineEls.some((line) => line.scrollWidth > width + tolerance);
         const tooTall = els.measureWord.scrollHeight > height + tolerance;
         return !(tooWide || tooTall);
       }
 
-      function getMinimumFontSize(charsLength, lineMode) {
+      function getMinimumFontSize(charsLength, lineMode, sizePresetId = "large") {
+        const preset = getSizePreset(sizePresetId);
         if (lineMode === "single") {
           if (charsLength >= 18) {
-            return 16;
+            return Math.max(14, 16 + preset.minBoost);
           }
           if (charsLength >= 14) {
-            return 18;
+            return Math.max(16, 18 + preset.minBoost);
           }
           if (charsLength >= 10) {
-            return 20;
+            return Math.max(18, 20 + preset.minBoost);
           }
-          return 24;
+          return Math.max(20, 24 + preset.minBoost);
         }
         if (charsLength >= 16) {
-          return 26;
+          return Math.max(20, 26 + preset.minBoost);
         }
         if (charsLength >= 12) {
-          return 28;
+          return Math.max(22, 28 + preset.minBoost);
         }
-        return 32;
+        return Math.max(24, 32 + preset.minBoost);
       }
 
-      function measureLineFits(text, fontClass, fontSize, width) {
+      function measureLineFits(text, fontClass, fontSize, width, lineGapPreset = "normal") {
         const tolerance = 6;
         els.measureWord.dataset.variant = "";
         els.measureWord.style.width = `${width}px`;
         els.measureWord.style.height = "120px";
-        applyWordMarkup(els.measureWord, [text || " "], fontClass, "single", fontSize);
+        applyWordMarkup(els.measureWord, [text || " "], fontClass, "single", fontSize, lineGapPreset);
         const lineEl = els.measureWord.querySelector(".word-line");
         return lineEl ? lineEl.scrollWidth <= width + tolerance : true;
       }
 
-      function getLastFittingEnd(chars, start, endLimit, fontClass, fontSize, width) {
+      function getLastFittingEnd(chars, start, endLimit, fontClass, fontSize, width, lineGapPreset = "normal") {
         let lastFit = start;
         for (let end = start + 1; end <= endLimit; end += 1) {
           const sample = chars.slice(start, end).join("");
-          if (measureLineFits(sample, fontClass, fontSize, width)) {
+          if (measureLineFits(sample, fontClass, fontSize, width, lineGapPreset)) {
             lastFit = end;
             continue;
           }
@@ -1730,37 +1782,37 @@
         return lastFit > start ? lastFit : Math.min(start + 1, endLimit);
       }
 
-      function splitForcedRange(chars, start, endLimit, fontClass, fontSize, width) {
+      function splitForcedRange(chars, start, endLimit, fontClass, fontSize, width, lineGapPreset = "normal") {
         const lines = [];
         let cursor = start;
         while (cursor < endLimit) {
-          const next = getLastFittingEnd(chars, cursor, endLimit, fontClass, fontSize, width);
+          const next = getLastFittingEnd(chars, cursor, endLimit, fontClass, fontSize, width, lineGapPreset);
           lines.push(chars.slice(cursor, next).join(""));
           cursor = next;
         }
         return lines;
       }
 
-      function buildBoundaryLines(chars, fontClass, fontSize, width) {
+      function buildBoundaryLines(chars, fontClass, fontSize, width, lineGapPreset = "normal") {
         const boundary = getBoundaryIndex();
         const breaks = normalizeBreaks([boundary], chars.length);
         if (!breaks.length) {
-          return splitForcedRange(chars, 0, chars.length, fontClass, fontSize, width);
+          return splitForcedRange(chars, 0, chars.length, fontClass, fontSize, width, lineGapPreset);
         }
         const lines = [];
         let start = 0;
         [...breaks, chars.length].forEach((end) => {
-          lines.push(...splitForcedRange(chars, start, end, fontClass, fontSize, width));
+          lines.push(...splitForcedRange(chars, start, end, fontClass, fontSize, width, lineGapPreset));
           start = end;
         });
         return lines.filter(Boolean);
       }
 
-      function buildManualLines(chars, fontClass, fontSize, width) {
+      function buildManualLines(chars, fontClass, fontSize, width, lineGapPreset = "normal") {
         sanitizeManualBreaks();
         const forcedBreaks = normalizeBreaks(state.draftManualBreaks, chars.length);
         if (!forcedBreaks.length) {
-          return splitForcedRange(chars, 0, chars.length, fontClass, fontSize, width).filter(Boolean);
+          return splitForcedRange(chars, 0, chars.length, fontClass, fontSize, width, lineGapPreset).filter(Boolean);
         }
 
         const lines = [];
@@ -1771,34 +1823,34 @@
           const forcedEnd = forcedBreaks[forcedIndex];
           if (forcedEnd) {
             const forcedText = chars.slice(start, forcedEnd).join("");
-            if (measureLineFits(forcedText, fontClass, fontSize, width)) {
+            if (measureLineFits(forcedText, fontClass, fontSize, width, lineGapPreset)) {
               lines.push(forcedText);
               start = forcedEnd;
               forcedIndex += 1;
               continue;
             }
 
-            lines.push(...splitForcedRange(chars, start, forcedEnd, fontClass, fontSize, width));
+            lines.push(...splitForcedRange(chars, start, forcedEnd, fontClass, fontSize, width, lineGapPreset));
             start = forcedEnd;
             forcedIndex += 1;
             continue;
           }
 
-          lines.push(...splitForcedRange(chars, start, chars.length, fontClass, fontSize, width));
+          lines.push(...splitForcedRange(chars, start, chars.length, fontClass, fontSize, width, lineGapPreset));
           break;
         }
 
         return lines.filter(Boolean);
       }
 
-      function buildDraftLines(chars, fontClass, fontSize, width) {
+      function buildDraftLines(chars, fontClass, fontSize, width, lineGapPreset = "normal") {
         if (state.draftLineMode === "single") {
           return [chars.join("")];
         }
         if (state.draftLineMode === "manual") {
-          return buildManualLines(chars, fontClass, fontSize, width);
+          return buildManualLines(chars, fontClass, fontSize, width, lineGapPreset);
         }
-        return buildBoundaryLines(chars, fontClass, fontSize, width);
+        return buildBoundaryLines(chars, fontClass, fontSize, width, lineGapPreset);
       }
 
       function getBreaksFromLines(lines) {
@@ -1824,12 +1876,13 @@
         const height = previewBox?.clientHeight || 148;
         const chars = Array.from(text);
         const fontClass = getFontClass(state.draftFontId);
-        const maxFontSize = state.draftLineMode === "single" ? 86 : 72;
-        const minFontSize = getMinimumFontSize(chars.length, state.draftLineMode);
+        const sizePreset = getSizePreset(state.draftSizePreset);
+        const maxFontSize = state.draftLineMode === "single" ? sizePreset.singleMax : sizePreset.multiMax;
+        const minFontSize = getMinimumFontSize(chars.length, state.draftLineMode, state.draftSizePreset);
         let fallbackLayout = null;
 
         for (let fontSize = maxFontSize; fontSize >= minFontSize; fontSize -= 1) {
-          const lines = buildDraftLines(chars, fontClass, fontSize, width);
+          const lines = buildDraftLines(chars, fontClass, fontSize, width, state.draftLineGapPreset);
           const effectiveBreaks = getBreaksFromLines(lines);
           const manualBreaks = normalizeBreaks(state.draftManualBreaks, chars.length);
           const safetyAdjusted =
@@ -1837,7 +1890,7 @@
             (state.draftLineMode === "manual" && effectiveBreaks.some((point) => !manualBreaks.includes(point))) ||
             (state.draftLineMode === "boundary" && effectiveBreaks.some((point) => point !== getBoundaryIndex()));
 
-          if (doesWordFit(lines, fontClass, state.draftLineMode, fontSize, width, height)) {
+          if (doesWordFit(lines, fontClass, state.draftLineMode, fontSize, width, height, state.draftLineGapPreset)) {
             return { lines, fontSize, effectiveBreaks, safetyAdjusted };
           }
 
@@ -1854,8 +1907,12 @@
 
       function renderWordBoard(lines, fontId, variant, options = {}) {
         const mode = options.lineMode || (lines.length <= 1 ? "single" : "manual");
-        const maxFont = options.maxFont || 46;
-        const minFont = options.minFont || 18;
+        const sizePreset = getSizePreset(options.sizePreset || "large");
+        const maxFontBase = options.maxFont || 46;
+        const minFontBase = options.minFont || 18;
+        const maxFont = Math.max(minFontBase, maxFontBase + sizePreset.minBoost * 2);
+        const minFont = Math.max(14, minFontBase + sizePreset.minBoost);
+        const lineGapPreset = options.lineGapPreset || "normal";
         return `
           <div
             class="word-board auto-fit-word ${variant} ${getFontClass(fontId)}${mode === "single" ? " is-single-line" : ""}"
@@ -1863,6 +1920,8 @@
             data-line-mode="${mode}"
             data-max-font="${maxFont}"
             data-min-font="${minFont}"
+            data-size-preset="${escapeHtml(sizePreset.id)}"
+            data-line-gap-preset="${escapeHtml(lineGapPreset)}"
           >
             ${lines.map((line) => `<span class="word-line">${escapeHtml(line)}</span>`).join("")}
           </div>
@@ -1876,19 +1935,20 @@
         const lines = Array.from(node.querySelectorAll(".word-line")).map((line) => line.textContent || "");
         const fontClass = getFontClass(node.dataset.fontId || "classic");
         const lineMode = node.dataset.lineMode || (lines.length <= 1 ? "single" : "manual");
+        const lineGapPreset = node.dataset.lineGapPreset || "normal";
         const maxFont = Number(node.dataset.maxFont || "46");
         const minFont = Number(node.dataset.minFont || "18");
         const width = node.clientWidth || 300;
         const height = node.clientHeight || 120;
         let chosen = minFont;
         for (let fontSize = maxFont; fontSize >= minFont; fontSize -= 1) {
-          if (doesWordFit(lines, fontClass, lineMode, fontSize, width, height)) {
+          if (doesWordFit(lines, fontClass, lineMode, fontSize, width, height, lineGapPreset)) {
             chosen = fontSize;
             break;
           }
         }
         node.dataset.variant = Array.from(node.classList).find((className) => className.endsWith("-word")) || node.dataset.variant || "";
-        applyWordMarkup(node, lines, fontClass, lineMode, chosen);
+        applyWordMarkup(node, lines, fontClass, lineMode, chosen, lineGapPreset);
       }
 
       function hydrateWordBoards(root = document) {
@@ -1949,6 +2009,18 @@
       function deriveView(room = state.room) {
         if (!room) {
           return "welcome";
+        }
+        if (isSpectator(room)) {
+          if (room.game.phase === "lobby") {
+            return "lobby";
+          }
+          if (room.game.phase === "round_result") {
+            return "roundResult";
+          }
+          if (room.game.phase === "final_result") {
+            return "finalResult";
+          }
+          return "wait";
         }
         const phase = room.game.phase;
         const round = getCurrentRound(room);
@@ -2077,24 +2149,7 @@
       }
 
       function getStatusContext() {
-        if (state.syncIssueMessage) {
-          return "通信が不安定なため自動で再試行中";
-        }
-        const view = deriveView();
-        const contextMap = {
-          welcome: "ルーム作成 / 参加",
-          lobby: state.room?.inviteCode ? `ROOM / ${state.room.inviteCode}` : "ルーム待機",
-          submit: "あなたの手番",
-          wait: "待機中",
-          vote: "投票",
-          revote: "再投票",
-          hostDecide: "ホスト裁定",
-          roundResult: "結果発表",
-          finalVote: state.room?.game?.phase === "final_revote" ? "最終再投票" : "最終投票",
-          finalHostDecide: "最終ホスト裁定",
-          finalResult: "結果一覧"
-        };
-        return contextMap[view] || "おもじゃん";
+        return "";
       }
 
       function renderFeedbackDock() {
@@ -2121,7 +2176,6 @@
 
       function setBanner() {
         const currentView = deriveView();
-        els.statusRow?.classList.toggle("is-hidden", currentView === "submit");
         els.pageHeader?.classList.toggle("is-hidden", !["welcome", "lobby"].includes(currentView));
         const bannerKey = [
           getStatusText(),
@@ -2135,7 +2189,7 @@
         if (state.renderCache.bannerKey !== bannerKey) {
           state.renderCache.bannerKey = bannerKey;
           els.statusLabel.textContent = getStatusText();
-          els.statusContext.textContent = getStatusContext();
+          els.statusContext.textContent = "";
           els.refreshTopBtn.disabled = state.pendingAction || state.isLoading;
           els.refreshTopBtn.textContent = state.isLoading
             ? "同期中"
@@ -2227,8 +2281,10 @@
           INVITE_NOT_FOUND: "招待コードが見つかりません。招待URLかコードをもう一度確認してください。",
           ROOM_FULL: "このルームは満員です。別のルームを使ってください。",
           ROOM_ALREADY_STARTED: "このルームはすでに始まっています。ホストに新しいルームを作ってもらってください。",
+          ROOM_ALREADY_FINISHED: "このルームはすでに終了しています。新しいルームに参加してください。",
           DECK_EMPTY: "デッキに使えるワードがありません。管理画面で有効ワードを確認してください。",
           DECK_TOO_SMALL: "デッキのワード数が足りません。重複なしで配るため、管理画面で有効ワードを増やしてください。",
+          PLAYER_COUNT_NOT_READY: "参加プレイヤーがそろってから開始してください。",
           ROOM_NOT_FOUND: context === "restore" || context === "reconnect"
             ? "このルームは見つかりませんでした。終了した可能性があります。もう一度参加してください。"
             : "このルームは見つかりませんでした。",
@@ -2344,7 +2400,7 @@
       function setRoom(room, options = {}) {
         state.room = clone(room);
         state.roomId = room.roomId;
-        state.selectedStartPlayerId = room.startPlayerId || room.me.playerId;
+        state.selectedStartPlayerId = room.startPlayerId || room.game?.activePlayerIds?.[0] || room.me.playerId;
         state.lastSyncAt = new Date().toISOString();
         clearBackgroundSyncIssue();
         if (options.playerToken) {
@@ -2506,7 +2562,6 @@
         const {
           title = "接続",
           description = "",
-          showReconnect = false,
           showRefresh = true,
           showLeave = false
         } = options;
@@ -2526,9 +2581,8 @@
             ${syncPending ? `<div class="info-box">${escapeHtml(syncCopy.detail)}</div>` : ""}
             ${state.syncIssueMessage ? `<div class="info-box">${escapeHtml(`${state.syncIssueMessage} 自動で再試行しています。`)}</div>` : ""}
             <div class="utility-actions">
-              ${showRefresh ? `<button class="btn subtle" type="button" data-action="refresh-latest" ${state.pendingAction ? "disabled" : ""}>${syncPending && state.pendingMode !== "reconnect" ? "更新中..." : "今の状態を更新"}</button>` : ""}
-              ${showReconnect ? `<button class="btn subtle" type="button" data-action="retry-room-connection" ${state.pendingAction ? "disabled" : ""}>${state.pendingMode === "reconnect" ? "再接続中..." : "再接続する"}</button>` : ""}
-              ${showLeave ? `<button class="btn subtle" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>この端末の参加情報を消す</button>` : ""}
+              ${showRefresh ? `<button class="btn subtle" type="button" data-action="refresh-latest" ${state.pendingAction ? "disabled" : ""}>${syncPending ? "更新中..." : "更新"}</button>` : ""}
+              ${showLeave ? `<button class="btn subtle" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>` : ""}
             </div>
           </section>
         `;
@@ -2561,6 +2615,12 @@
       function getWaitingMessage(room) {
         const currentRound = getCurrentRound(room);
         const currentPlayer = room.game.players.find((player) => player.playerId === room.game.currentTurnPlayerId);
+        if (isSpectator(room) && currentPlayer) {
+          return `${currentPlayer.displayName} の手番を観戦中です。`;
+        }
+        if (isSpectator(room)) {
+          return "観戦中です。";
+        }
         const cannotVoteFinal = room.game.phase === "final_vote" && !canPlayerVoteFinal(room, room.me.playerId, "vote");
         const cannotRevoteFinal = room.game.phase === "final_revote" && !canPlayerVoteFinal(room, room.me.playerId, "revote");
 
@@ -2670,7 +2730,12 @@
               .map(
                 (item) => `
                   <article class="history-dialog-item">
-                    ${renderWordBoard(item.renderedLines || [item.phrase], item.fontId || "classic", "result-word", { maxFont: 28, minFont: 16 })}
+                    ${renderWordBoard(item.renderedLines || [item.phrase], item.fontId || "classic", "result-word", {
+                      maxFont: 28,
+                      minFont: 16,
+                      lineGapPreset: item.lineGapPreset,
+                      sizePreset: item.sizePreset
+                    })}
                     <div class="history-dialog-meta">
                       <strong>${escapeHtml(item.displayName)}</strong>
                       <span>${escapeHtml(formatChampionHistoryWonAt(item.wonAt))}</span>
@@ -2764,7 +2829,12 @@
             ${label ? `<small>${escapeHtml(label)}</small>` : ""}
             ${
               entry
-                ? renderWordBoard(entry.renderedLines, entry.fontId, wordClass, { maxFont, minFont })
+                ? renderWordBoard(entry.renderedLines, entry.fontId, wordClass, {
+                    maxFont,
+                    minFont,
+                    lineGapPreset: entry.lineGapPreset,
+                    sizePreset: entry.sizePreset
+                  })
                 : `<div class="empty-state">${escapeHtml(emptyText)}</div>`
             }
             ${footerHtml}
@@ -2898,7 +2968,12 @@
                 (submission) => `
                   <article class="action-card disabled">
                     <span class="badge">${escapeHtml(submission.displayName)}</span>
-                    ${renderWordBoard(submission.renderedLines, submission.fontId, "vote-word", { maxFont: 46, minFont: 24 })}
+                    ${renderWordBoard(submission.renderedLines, submission.fontId, "vote-word", {
+                      maxFont: 46,
+                      minFont: 24,
+                      lineGapPreset: submission.lineGapPreset,
+                      sizePreset: submission.sizePreset
+                    })}
                   </article>
                 `
               )
@@ -2921,8 +2996,13 @@
                     <header>
                       <strong>${escapeHtml(round.label)}</strong>
                     </header>
-                    ${renderWordBoard(round.winner.renderedLines, round.winner.fontId, "result-word", { maxFont: 56, minFont: 28 })}
-                    <footer>${escapeHtml(resolvePlayerDisplayName(room, round.winner.playerId, round.winner.displayName))}</footer>
+                    ${renderWordBoard(round.winner.renderedLines, round.winner.fontId, "result-word", {
+                      maxFont: 56,
+                      minFont: 28,
+                      lineGapPreset: round.winner.lineGapPreset,
+                      sizePreset: round.winner.sizePreset
+                    })}
+                    <footer>${escapeHtml(round.winner.displayName || resolvePlayerDisplayName(room, round.winner.playerId, round.winner.displayName))}</footer>
                   </article>
                 `
               )
@@ -2932,7 +3012,7 @@
       }
 
       function getLobbyPlayerOrder(room) {
-        const players = [...room.game.players].sort((left, right) => left.seatOrder - right.seatOrder);
+        const players = [...room.game.players].filter((player) => player.role !== "spectator").sort((left, right) => left.seatOrder - right.seatOrder);
         const startPlayerId = state.selectedStartPlayerId || room.startPlayerId || players[0]?.playerId;
         const startIndex = players.findIndex((player) => player.playerId === startPlayerId);
         if (startIndex <= 0) {
@@ -3112,12 +3192,14 @@
       }
 
       function renderLobbyTop(room) {
-        const players = room.game.players || [];
+        const activePlayerCount = getActivePlayerCount(room);
+        const spectatorCount = Number(room.spectatorCount || room.game?.spectatorPlayerIds?.length || 0);
         return `
           ${renderSummaryPills([
             { label: "ROOM", value: room.inviteCode },
-            { label: "参加", value: `${players.length}/${room.playerCount}人` },
-            { label: "あなた", value: room.me.isHost ? "ホスト" : room.me.displayName }
+            { label: "参加", value: `${activePlayerCount}/${room.playerCount}人` },
+            ...(spectatorCount ? [{ label: "観戦", value: `${spectatorCount}人` }] : []),
+            { label: "あなた", value: room.me.isHost ? "ホスト" : room.me.role === "spectator" ? "観戦" : room.me.displayName }
           ])}
           <div class="button-row">
             <span class="room-code">${escapeHtml(room.inviteCode)}</span>
@@ -3135,9 +3217,27 @@
                   <div class="player-card">
                     <div>
                       <strong>${escapeHtml(player.displayName)}</strong>
-                      <span>${player.playerId === room.me.playerId ? "あなた" : `席順 ${player.seatOrder}`}</span>
+                      <span>${
+                        player.playerId === room.me.playerId
+                          ? "あなた"
+                          : player.role === "spectator"
+                            ? "観戦"
+                            : `席順 ${player.seatOrder}`
+                      }</span>
                     </div>
-                    <span class="badge">${player.isHost ? "ホスト" : "参加中"}</span>
+                    <div class="player-role-actions">
+                      <span class="badge">${player.isHost ? "ホスト" : player.role === "spectator" ? "観戦" : "参加"}</span>
+                      ${
+                        room.me.isHost && !player.isHost
+                          ? `
+                            <div class="chip-row compact">
+                              <button class="chip${player.role !== "spectator" ? " active" : ""}" type="button" data-action="set-player-role" data-target-player-id="${player.playerId}" data-role="player" ${state.pendingAction ? "disabled" : ""}>参加</button>
+                              <button class="chip${player.role === "spectator" ? " active" : ""}" type="button" data-action="set-player-role" data-target-player-id="${player.playerId}" data-role="spectator" ${state.pendingAction ? "disabled" : ""}>観戦</button>
+                            </div>
+                          `
+                          : ""
+                      }
+                    </div>
                   </div>
                 `
               )
@@ -3147,15 +3247,16 @@
       }
 
       function renderLobbyUtility(room) {
-        return renderSyncUtility({
-          title: "このルーム",
-          description: room.me.isHost ? "開始や更新はこの画面で進めます。" : "開始や更新は自動で反映します。",
-          showReconnect: true,
-          showLeave: true
-        });
+        return `
+          <div class="button-row">
+            <button class="btn subtle" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
+          </div>
+        `;
       }
 
       function renderLobbyOrder(room) {
+        const activePlayers = room.game.players.filter((player) => player.role !== "spectator");
+        const ready = activePlayers.length === room.playerCount;
         return `
           <section class="panel">
             <h3>開始順</h3>
@@ -3163,7 +3264,7 @@
               room.me.isHost
                 ? `
                   <div class="chip-row">
-                    ${room.game.players
+                    ${activePlayers
                       .map(
                         (player) => `
                           <button class="chip${state.selectedStartPlayerId === player.playerId ? " active" : ""}" type="button" data-start-player-id="${player.playerId}">
@@ -3175,11 +3276,12 @@
                   </div>
                   ${renderPlayerOrderPreview(room)}
                   <div class="button-row">
-                    <button class="btn primary" type="button" data-action="start-game" ${state.pendingAction ? "disabled" : ""}>この順で開始</button>
+                    <button class="btn primary" type="button" data-action="start-game" ${ready && !state.pendingAction ? "" : "disabled"}>この順で開始</button>
                   </div>
+                  ${ready ? "" : `<div class="info-box">参加プレイヤーが ${room.playerCount} 人そろうと開始できます。</div>`}
                 `
                 : `
-                    <div class="info-box">ホストの開始待ちです。</div>
+                    <div class="info-box">${room.me.role === "spectator" ? "観戦として待機中です。" : "ホストの開始待ちです。"}</div>
                     ${renderPlayerOrderPreview(room)}
                   `
             }
@@ -3192,6 +3294,10 @@
       }
 
       function updateLobbyView(room) {
+        const activePlayers = room.game.players.filter((player) => player.role !== "spectator");
+        if (activePlayers.length && !activePlayers.some((player) => player.playerId === state.selectedStartPlayerId)) {
+          state.selectedStartPlayerId = room.startPlayerId || activePlayers[0].playerId;
+        }
         const shellKey = `${room.roomId}|${room.me.playerId}`;
         if (state.renderCache.lobbyShellKey !== shellKey) {
           state.renderCache.lobbyShellKey = shellKey;
@@ -3204,10 +3310,10 @@
         }
 
         const playersKey = room.game.players
-          .map((player) => `${player.playerId}:${player.displayName}:${player.seatOrder}:${player.isHost ? 1 : 0}`)
+          .map((player) => `${player.playerId}:${player.displayName}:${player.seatOrder}:${player.isHost ? 1 : 0}:${player.role || "player"}`)
           .join("|");
-        const topKey = `${room.inviteCode}|${room.playerCount}|${room.me.playerId}|${room.me.isHost ? 1 : 0}|${room.game.players.length}`;
-        const utilityKey = `${room.me.isHost ? "host" : "guest"}|${getSyncUtilityKey()}`;
+        const topKey = `${room.inviteCode}|${room.playerCount}|${room.activePlayerCount || 0}|${room.spectatorCount || 0}|${room.me.playerId}|${room.me.isHost ? 1 : 0}|${room.me.role || "player"}`;
+        const utilityKey = `${room.me.isHost ? "host" : "guest"}|${room.me.role || "player"}|${state.pendingAction ? "pending" : "idle"}`;
         const orderKey = `${playersKey}|${state.selectedStartPlayerId}|${room.startPlayerId || ""}|${state.pendingAction ? "pending" : "idle"}|${room.me.isHost ? "host" : "guest"}`;
         const championsKey = getRecentChampionsStamp();
 
@@ -3236,7 +3342,11 @@
       function renderSubmitTop(room) {
         return `
           <section class="preview-card is-sticky">
-            <div id="previewWord" class="word-board preview-word ${getFontClass(state.draftFontId)}${state.draftLineMode === "single" ? " is-single-line" : ""}">
+            <div
+              id="previewWord"
+              class="word-board preview-word ${getFontClass(state.draftFontId)}${state.draftLineMode === "single" ? " is-single-line" : ""}"
+              data-line-gap-preset="${escapeHtml(state.draftLineGapPreset)}"
+            >
               ${computeDraftLayout().lines.map((line) => `<span class="word-line">${escapeHtml(line)}</span>`).join("")}
             </div>
           </section>
@@ -3255,7 +3365,7 @@
       function renderSubmitUtility() {
         return `
           <div class="button-row">
-            <button class="btn subtle" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>この端末の参加情報を消す</button>
+            <button class="btn subtle" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
           </div>
         `;
       }
@@ -3284,6 +3394,30 @@
                   (font) => `
                     <button class="chip${state.draftFontId === font.id ? " active" : ""}" type="button" data-font-id="${font.id}">
                       ${escapeHtml(font.label)}
+                    </button>
+                  `
+                )
+                .join("")}
+            </div>
+            <div class="section-label">文字サイズ</div>
+            <div class="chip-row">
+              ${sizePresets
+                .map(
+                  (preset) => `
+                    <button class="chip${state.draftSizePreset === preset.id ? " active" : ""}" type="button" data-size-preset="${preset.id}">
+                      ${escapeHtml(preset.label)}
+                    </button>
+                  `
+                )
+                .join("")}
+            </div>
+            <div class="section-label">句間</div>
+            <div class="chip-row">
+              ${lineGapPresets
+                .map(
+                  (preset) => `
+                    <button class="chip${state.draftLineGapPreset === preset.id ? " active" : ""}" type="button" data-line-gap-preset="${preset.id}">
+                      ${escapeHtml(preset.label)}
                     </button>
                   `
                 )
@@ -3354,15 +3488,19 @@
           room.revision,
           state.draftSelectedTileIds.join(","),
           state.draftFontId,
+          state.draftSizePreset,
+          state.draftLineGapPreset,
           state.draftLineMode,
           state.draftManualBreaks.join(",")
         ].join("|");
         const submissionsKey = submissions
-          .map((submission) => `${submission.playerId}:${submission.phrase}:${submission.fontId}:${(submission.renderedLines || []).join("/")}`)
+          .map((submission) => `${submission.playerId || submission.displayName}:${submission.phrase || ""}:${submission.fontId}:${submission.sizePreset || "large"}:${submission.lineGapPreset || "normal"}:${(submission.renderedLines || []).join("/")}`)
           .join("|");
         const lineModeKey = [
           state.draftLineMode,
           state.draftFontId,
+          state.draftSizePreset,
+          state.draftLineGapPreset,
           getDraftText(room),
           state.draftManualBreaks.join(",")
         ].join("|");
@@ -3388,10 +3526,10 @@
           <section class="card">
             <h2>待機</h2>
             <div id="waitFocusSlot"></div>
-            <div id="waitSyncSlot"></div>
           </section>
 
           <div id="waitSubmissionsSlot"></div>
+          <div id="waitActionsSlot"></div>
         `;
       }
 
@@ -3407,19 +3545,27 @@
         });
       }
 
-      function renderWaitSync(room) {
-        return renderSyncUtility({
-          title: "同期",
-          description: "この画面は自動で更新します。止まったら手動で更新できます。",
-          showReconnect: true,
-          showLeave: true
-        });
+      function renderWaitActions() {
+        return `
+          <div class="button-row">
+            <button class="btn subtle" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
+          </div>
+        `;
       }
 
       function renderWaitSubmissions(room) {
-        const submissions = getCurrentRound(room)?.submissions || [];
+        const isFinalPhase = ["final_vote", "final_revote", "final_host_decide"].includes(room.game.phase);
+        const submissions = isFinalPhase
+          ? getFinalCandidates(room, room.game.phase === "final_revote" ? "revote" : "vote").map((candidate) => ({
+              displayName: candidate.displayName,
+              fontId: candidate.fontId,
+              sizePreset: candidate.sizePreset,
+              lineGapPreset: candidate.lineGapPreset,
+              renderedLines: candidate.renderedLines
+            }))
+          : getCurrentRound(room)?.submissions || [];
         return renderSection(
-          `公開済みワード${submissions.length ? ` (${submissions.length})` : ""}`,
+          `${isFinalPhase ? "最終候補" : "公開済みワード"}${submissions.length ? ` (${submissions.length})` : ""}`,
           renderSubmissionList(submissions),
           { className: "panel" }
         );
@@ -3430,8 +3576,8 @@
         if (state.renderCache.waitShellKey !== shellKey) {
           state.renderCache.waitShellKey = shellKey;
           state.renderCache.waitFocusKey = "";
-          state.renderCache.waitSyncKey = "";
           state.renderCache.waitSubmissionsKey = "";
+          state.renderCache.waitSyncKey = "";
           els.app.innerHTML = renderWait(room);
         }
 
@@ -3443,14 +3589,13 @@
           round?.roundIndex ?? "",
           submissions.length
         ].join("|");
-        const syncKey = getSyncUtilityKey();
         const submissionsKey = submissions
           .map((submission) => `${submission.playerId}:${submission.phrase}:${submission.fontId}:${(submission.renderedLines || []).join("/")}`)
           .join("|");
 
         patchSlot(els.app, "#waitFocusSlot", "waitFocusKey", focusKey, renderWaitFocus(room));
-        patchSlot(els.app, "#waitSyncSlot", "waitSyncKey", syncKey, renderWaitSync(room));
         patchSlot(els.app, "#waitSubmissionsSlot", "waitSubmissionsKey", submissionsKey, renderWaitSubmissions(room));
+        patchSlot(els.app, "#waitActionsSlot", "waitSyncKey", state.pendingAction ? "pending" : "idle", renderWaitActions());
       }
 
       function renderPassiveSyncUi(room = state.room, view = deriveView(room)) {
@@ -3460,13 +3605,11 @@
         }
 
         if (view === "wait") {
-          patchSlot(els.app, "#waitSyncSlot", "waitSyncKey", getSyncUtilityKey(), renderWaitSync(room));
           return;
         }
 
         if (isLobbyView(view)) {
-          const utilityKey = `${room.me.isHost ? "host" : "guest"}|${getSyncUtilityKey()}`;
-          patchSlot(els.app, "#lobbyUtilitySlot", "lobbyUtilityKey", utilityKey, renderLobbyUtility(room));
+          patchSlot(els.app, "#lobbyUtilitySlot", "lobbyUtilityKey", state.pendingAction ? "pending" : "idle", renderLobbyUtility(room));
         }
       }
 
@@ -3617,7 +3760,7 @@
             <button class="btn primary" type="button" data-action="${config.action}" ${config.selectedId && !state.pendingAction ? "" : "disabled"}>
               ${escapeHtml(config.buttonLabel)}
             </button>
-            <button class="btn subtle" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>この端末の参加情報を消す</button>
+            <button class="btn subtle" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
           </div>
         `;
       }
@@ -3690,13 +3833,13 @@
                     <button class="btn primary" type="button" data-action="proceed-round" ${state.pendingAction ? "disabled" : ""}>
                       ${room.game.roundIndex === room.game.rounds.length - 1 ? "最終投票へ進む" : "次のラウンドへ"}
                     </button>
-                    <button class="btn subtle" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>この端末の参加情報を消す</button>
+                    <button class="btn subtle" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
                   </div>
                 `
               : `
                   <div class="button-row">
                     <div class="info-box">ホストの進行待ちです。</div>
-                    <button class="btn subtle" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>この端末の参加情報を消す</button>
+                    <button class="btn subtle" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
                   </div>
                 `
           };
@@ -3723,13 +3866,13 @@
             ? `
                 <div class="button-row">
                   <button class="btn primary" type="button" data-action="restart-game" ${state.pendingAction ? "disabled" : ""}>もう一度最初から</button>
-                  <button class="btn subtle" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>この端末の参加情報を消す</button>
+                  <button class="btn subtle" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
                 </div>
               `
             : `
                 <div class="button-row">
                   <div class="info-box">ホストの再開待ちです。</div>
-                  <button class="btn subtle" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>この端末の参加情報を消す</button>
+                  <button class="btn subtle" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
                 </div>
               `
         };
@@ -3774,7 +3917,12 @@
                     ${disabled ? "disabled" : ""}
                   >
                     <span class="badge">${escapeHtml(candidate.displayName)}</span>
-                    ${renderWordBoard(candidate.renderedLines, candidate.fontId, "vote-word", { maxFont: 58, minFont: 28 })}
+                    ${renderWordBoard(candidate.renderedLines, candidate.fontId, "vote-word", {
+                      maxFont: 64,
+                      minFont: 30,
+                      lineGapPreset: candidate.lineGapPreset,
+                      sizePreset: candidate.sizePreset
+                    })}
                   </button>
                 `;
               })
@@ -3868,13 +4016,13 @@
                     <button class="btn primary" type="button" data-action="proceed-round" ${state.pendingAction ? "disabled" : ""}>
                       ${room.game.roundIndex === room.game.rounds.length - 1 ? "最終投票へ進む" : "次のラウンドへ"}
                     </button>
-                    <button class="btn subtle" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>この端末の参加情報を消す</button>
+                    <button class="btn subtle" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
                   </div>
                 `
                 : `
                   <div class="button-row">
                     <div class="info-box">ホストの進行待ちです。</div>
-                    <button class="btn subtle" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>この端末の参加情報を消す</button>
+                    <button class="btn subtle" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
                   </div>
                 `
             }
@@ -3943,13 +4091,13 @@
                 ? `
                   <div class="button-row">
                     <button class="btn primary" type="button" data-action="restart-game" ${state.pendingAction ? "disabled" : ""}>もう一度最初から</button>
-                    <button class="btn subtle" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>この端末の参加情報を消す</button>
+                    <button class="btn subtle" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
                   </div>
                 `
                 : `
                   <div class="button-row">
                     <div class="info-box">ホストの再開待ちです。</div>
-                    <button class="btn subtle" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>この端末の参加情報を消す</button>
+                    <button class="btn subtle" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
                   </div>
                 `
             }
@@ -4063,6 +4211,7 @@
           state.renderCache.resultCountsKey = "";
           state.renderCache.resultActionsKey = "";
           updateSubmitView(room);
+          updateSubmitPreview(room);
         } else if (view === "wait") {
           state.renderCache.appKey = appKey;
           state.renderCache.landingShellKey = "";
@@ -4170,7 +4319,8 @@
         }
         const layout = computeDraftLayout();
         previewWord.dataset.variant = "preview-word";
-        applyWordMarkup(previewWord, layout.lines, getFontClass(state.draftFontId), state.draftLineMode, layout.fontSize);
+        previewWord.dataset.lineGapPreset = state.draftLineGapPreset;
+        applyWordMarkup(previewWord, layout.lines, getFontClass(state.draftFontId), state.draftLineMode, layout.fontSize, state.draftLineGapPreset);
         window.requestAnimationFrame(() => syncSubmitPreviewFloating(room));
         window.setTimeout(() => syncSubmitPreviewFloating(room), 120);
       }
@@ -4192,16 +4342,20 @@
         }
 
         const slotRect = submitTopSlot.getBoundingClientRect();
+        const statusRect = document.querySelector(".status-row")?.getBoundingClientRect();
         const isMobile = window.matchMedia("(max-width: 520px)").matches;
-        const floatTop = isMobile ? 12 : 8;
+        const floatTop = isMobile
+          ? Math.max(12, Math.round((statusRect?.bottom || 0) + 8))
+          : 8;
         const cardHeight = previewCard.offsetHeight;
         const revealOpen = !els.revealOverlay.hidden;
         const hasScrolled = window.scrollY > 1;
-        const canFloat = !revealOpen && (isMobile || hasScrolled || slotRect.top < floatTop);
+        const canFloat = !revealOpen && (isMobile ? window.scrollY > 12 || slotRect.top < floatTop + 8 : hasScrolled || slotRect.top < floatTop);
 
         if (!canFloat) {
           submitTopSlot.style.minHeight = "";
           previewCard.classList.remove("is-floating");
+          previewCard.style.removeProperty("--preview-floating-top");
           previewCard.style.removeProperty("--preview-floating-left");
           previewCard.style.removeProperty("--preview-floating-width");
           return;
@@ -4209,6 +4363,7 @@
 
         submitTopSlot.style.minHeight = `${cardHeight}px`;
         previewCard.classList.add("is-floating");
+        previewCard.style.setProperty("--preview-floating-top", `${floatTop}px`);
         previewCard.style.setProperty("--preview-floating-left", `${Math.max(0, slotRect.left)}px`);
         previewCard.style.setProperty("--preview-floating-width", `${slotRect.width}px`);
       }
@@ -4304,12 +4459,14 @@
             badge: "総合優勝",
             lines: clone(reveal.renderedLines || [reveal.phrase]),
             fontId: reveal.fontId || "classic",
+            sizePreset: reveal.sizePreset || "large",
+            lineGapPreset: reveal.lineGapPreset || "normal",
             meta: resolvePlayerDisplayName(room, reveal.playerId, reveal.displayName),
             buttonLabel: meAcknowledged ? "ほかの人を待っています" : "結果一覧を見る",
             acknowledged: meAcknowledged,
             kind: "champion",
             variant: "champion-word",
-            maxFont: 68,
+            maxFont: 64,
             minFont: 28
           };
         }
@@ -4318,6 +4475,8 @@
             badge: round?.label || "ラウンド勝利",
             lines: clone(reveal.renderedLines || [reveal.phrase]),
             fontId: reveal.fontId || "classic",
+            sizePreset: reveal.sizePreset || "large",
+            lineGapPreset: reveal.lineGapPreset || "normal",
             meta: resolvePlayerDisplayName(room, reveal.playerId, reveal.displayName),
             buttonLabel: meAcknowledged ? "ほかの人を待っています" : "閉じる",
             acknowledged: meAcknowledged,
@@ -4331,12 +4490,14 @@
           badge: round?.label || "ラウンド公開",
           lines: clone(reveal.renderedLines || [reveal.phrase]),
           fontId: reveal.fontId || "broadcast",
+          sizePreset: reveal.sizePreset || "xl",
+          lineGapPreset: reveal.lineGapPreset || "normal",
           meta: resolvePlayerDisplayName(room, reveal.playerId, reveal.displayName),
           buttonLabel: meAcknowledged ? "ほかの人を待っています" : "閉じる",
           acknowledged: meAcknowledged,
           kind: "submission",
           variant: "preview-word",
-          maxFont: 90,
+          maxFont: 84,
           minFont: 32
         };
       }
@@ -4369,6 +4530,9 @@
         state.renderCache.revealKey = revealKey;
 
         els.revealOverlay.hidden = false;
+        const sizePreset = getSizePreset(presentation.sizePreset || "large");
+        const revealMaxFontBase = presentation.maxFont || (presentation.kind === "champion" ? 56 : 50);
+        const revealMinFontBase = presentation.minFont || (presentation.kind === "champion" ? 24 : 22);
         els.revealCard.classList.toggle("is-champion", presentation.kind === "champion");
         els.revealCard.classList.toggle("is-submission", presentation.kind === "submission");
         els.revealCard.classList.toggle("is-round-winner", presentation.kind === "round_winner");
@@ -4379,8 +4543,10 @@
         els.revealWord.dataset.variant = presentation.variant || (presentation.kind === "champion" ? "champion-word" : "result-word");
         els.revealWord.dataset.fontId = presentation.fontId || "classic";
         els.revealWord.dataset.lineMode = presentation.lines.length <= 1 ? "single" : "manual";
-        els.revealWord.dataset.maxFont = String(presentation.maxFont || (presentation.kind === "champion" ? 56 : 50));
-        els.revealWord.dataset.minFont = String(presentation.minFont || (presentation.kind === "champion" ? 24 : 22));
+        els.revealWord.dataset.maxFont = String(Math.max(revealMinFontBase, revealMaxFontBase + sizePreset.minBoost * 2));
+        els.revealWord.dataset.minFont = String(Math.max(14, revealMinFontBase + sizePreset.minBoost));
+        els.revealWord.dataset.sizePreset = sizePreset.id;
+        els.revealWord.dataset.lineGapPreset = presentation.lineGapPreset || "normal";
         els.revealWord.className = `word-board auto-fit-word ${els.revealWord.dataset.variant}`;
         els.revealWord.innerHTML = presentation.lines.map((line) => `<span class="word-line">${escapeHtml(line)}</span>`).join("");
         hydrateWordBoard(els.revealWord);
@@ -4435,6 +4601,8 @@
           tileOrder: [0, 1],
           phrase: selectedTiles.map((tile) => tile.text).join(""),
           fontId: state.draftFontId,
+          sizePreset: state.draftSizePreset,
+          lineGapPreset: state.draftLineGapPreset,
           lineMode: state.draftLineMode,
           manualBreaks: clone(state.draftManualBreaks),
           renderedLines: clone(layout.lines)
@@ -4454,18 +4622,12 @@
       }
 
       function isSyncPending() {
-        return state.pendingAction && ["sync", "refresh", "reconnect"].includes(state.pendingMode);
+        return state.pendingAction && ["sync", "refresh"].includes(state.pendingMode);
       }
 
       function getSyncPendingCopy() {
-        if (state.pendingMode === "reconnect") {
-          return {
-            short: "再接続中",
-            detail: "もう一度つなぎ直しています。"
-          };
-        }
         return {
-          short: "同期中",
+          short: "更新中",
           detail: "最新状態を確認しています。"
         };
       }
@@ -4567,6 +4729,20 @@
           }
         },
         {
+          selector: "[data-size-preset]",
+          handle: (button) => {
+            state.draftSizePreset = button.dataset.sizePreset;
+            renderCurrentView({ includeReveal: false });
+          }
+        },
+        {
+          selector: "[data-line-gap-preset]",
+          handle: (button) => {
+            state.draftLineGapPreset = button.dataset.lineGapPreset;
+            renderCurrentView({ includeReveal: false });
+          }
+        },
+        {
           selector: "[data-break]",
           handle: (button) => {
             toggleManualBreak(Number(button.dataset.break));
@@ -4613,16 +4789,18 @@
         "refresh-latest": async () => {
           await runAction(async () => {
             if (state.roomId && state.playerToken) {
-              await refreshRoom();
+              try {
+                await refreshRoom();
+              } catch (error) {
+                if (isLostSessionError(error)) {
+                  throw error;
+                }
+                await reconnectRoom();
+              }
               return;
             }
             await loadRecentChampions();
           }, { pendingMode: "refresh" });
-        },
-        "retry-room-connection": async () => {
-          await runAction(async () => {
-            await reconnectRoom();
-          }, { pendingMode: "reconnect" });
         },
         "clear-messages": async () => {
           setFeedback("");
@@ -4644,14 +4822,14 @@
           const isHost = Boolean(state.room?.me?.isHost);
           const confirmed = window.confirm(
             isHost
-              ? "この端末の参加情報を消します。ホストとしては入り直せない可能性があります。続けますか？"
-              : "この端末の参加情報を消して、参加し直せる状態に戻します。続けますか？"
+              ? "退出します。ホストとしては入り直せない可能性があります。続けますか？"
+              : "退出します。必要ならあとで入り直せます。続けますか？"
           );
           if (!confirmed) {
             return;
           }
           exitToWelcome({
-            copyMessage: "この端末の参加情報を消しました。必要なら招待コードですぐ入り直せます。"
+            copyMessage: "退出しました。必要なら招待コードですぐ入り直せます。"
           });
           render();
         },
@@ -4679,6 +4857,18 @@
               })
             });
             setRoom(payload.data.room, { playerToken: payload.data.playerToken, skipReveal: true });
+            if (payload.data.room.me.role === "spectator") {
+              setFeedback("観戦として参加しました。", false, 2600);
+            }
+          });
+        },
+        "set-player-role": async (button) => {
+          await runAction(async () => {
+            const payload = await postApi(`/rooms/${encodeURIComponent(state.roomId)}/player-role`, {
+              targetPlayerId: button.dataset.targetPlayerId,
+              role: button.dataset.role
+            });
+            setRoom(payload.data.room);
           });
         },
         "copy-invite-url": async () => {
@@ -4812,7 +5002,7 @@
         }
         const actionHandler = actionHandlers[actionButton.dataset.action];
         if (actionHandler) {
-          await actionHandler();
+          await actionHandler(actionButton);
         }
       });
 
@@ -4855,12 +5045,20 @@
         syncSubmitPreviewFloating();
       }, { passive: true });
 
+      document.addEventListener("touchmove", () => {
+        syncSubmitPreviewFloating();
+      }, { passive: true });
+
       window.addEventListener("resize", () => {
         renderCurrentView({ includeReveal: false });
         window.requestAnimationFrame(() => syncSubmitPreviewFloating());
       });
 
       window.visualViewport?.addEventListener("resize", () => {
+        window.requestAnimationFrame(() => syncSubmitPreviewFloating());
+      });
+
+      window.visualViewport?.addEventListener("scroll", () => {
         window.requestAnimationFrame(() => syncSubmitPreviewFloating());
       });
 

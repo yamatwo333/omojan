@@ -8,6 +8,7 @@ const MOCK_DIR = fs.existsSync(LOCAL_DATA_DIR) ? LOCAL_DATA_DIR : path.join(ROOT
 const ROOM_TTL_SECONDS = 60 * 60 * 24 * 3;
 const STARTING_HAND_SIZE = 10;
 const ADMIN_PASSCODE_HEADER = "X-Omojan-Admin-Passcode";
+const MAX_ROOM_MEMBERS = 12;
 
 const defaultDeck = readJson("deck_default.json").data;
 const recentChampions = readJson("champions_recent.json").data.items;
@@ -94,6 +95,7 @@ function parseRoute(method, pathname) {
     { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/reconnect$/, route: "reconnectRoom" },
     { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/reveal-close$/, route: "closeReveal" },
     { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/start-player$/, route: "startPlayer" },
+    { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/player-role$/, route: "setPlayerRole" },
     { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/start$/, route: "startGame" },
     { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/rounds\/(\d+)\/submit$/, route: "submitWord" },
     { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/rounds\/(\d+)\/vote$/, route: "submitVote" },
@@ -154,6 +156,7 @@ function handleHealth() {
       "rooms:reconnect",
       "rooms:reveal-close",
       "rooms:start-player",
+      "rooms:player-role",
       "rooms:start",
       "rounds:submit",
       "rounds:vote",
@@ -218,6 +221,18 @@ function normalizePlayerCount(value) {
   return [2, 3, 4].includes(count) ? count : 4;
 }
 
+function normalizePlayerRole(value) {
+  return value === "spectator" ? "spectator" : "player";
+}
+
+function normalizeSizePreset(value) {
+  return ["xl", "large", "medium", "small"].includes(value) ? value : "large";
+}
+
+function normalizeLineGapPreset(value) {
+  return ["normal", "wide"].includes(value) ? value : "normal";
+}
+
 function normalizeKnownRevision(value) {
   const revision = Number(value);
   return Number.isInteger(revision) && revision >= 1 ? revision : null;
@@ -238,6 +253,18 @@ function makeInviteCode() {
 function makeTileId(index = 0) {
   const seed = crypto.randomUUID().replace(/-/g, "").slice(0, 8);
   return `tile_${String(index + 1).padStart(3, "0")}_${seed}`;
+}
+
+function getActivePlayers(room) {
+  return (room.players || []).filter((player) => normalizePlayerRole(player.role) === "player");
+}
+
+function getSpectatorPlayers(room) {
+  return (room.players || []).filter((player) => normalizePlayerRole(player.role) === "spectator");
+}
+
+function getGamePlayerCount(room) {
+  return getActivePlayers(room).length;
 }
 
 function safeSecretEqual(expected, provided) {
@@ -408,7 +435,10 @@ function dealInitialHands(players, deck) {
 function buildStartedRoom(room, deck) {
   const playableDeck = getPlayableDeck(deck);
   const updatedRoom = clone(room);
-  const playersInSeatOrder = updatedRoom.players.slice().sort((left, right) => left.seatOrder - right.seatOrder);
+  const playersInSeatOrder = getActivePlayers(updatedRoom).slice().sort((left, right) => left.seatOrder - right.seatOrder);
+  if (playersInSeatOrder.length !== updatedRoom.playerCount) {
+    throw domainError(409, "PLAYER_COUNT_NOT_READY", "参加人数がそろってから開始してください。");
+  }
   const fallbackStartPlayerId = updatedRoom.hostPlayerId;
   const playerOrder =
     Array.isArray(updatedRoom.playerOrder) && updatedRoom.playerOrder.length
@@ -430,10 +460,11 @@ function buildStartedRoom(room, deck) {
   updatedRoom.game.champion = null;
   updatedRoom.game.reveal = null;
 
-  updatedRoom.players = playersInSeatOrder.map((player) => ({
+  updatedRoom.players = updatedRoom.players.map((player) => ({
     ...player,
+    role: normalizePlayerRole(player.role),
     usedTileIds: [],
-    handCount: STARTING_HAND_SIZE
+    handCount: normalizePlayerRole(player.role) === "player" ? STARTING_HAND_SIZE : 0
   }));
   updatedRoom.updatedAt = nowIso();
   updatedRoom.expiresAt = Math.floor(Date.now() / 1000) + ROOM_TTL_SECONDS;
@@ -518,6 +549,9 @@ function buildRenderedLines(payload, selectedTiles) {
 
 function buildSubmittedRoom(room, mePlayer, roundIndex, payload) {
   requireNoActiveReveal(room);
+  if (normalizePlayerRole(mePlayer.role) !== "player") {
+    throw domainError(403, "SPECTATOR_FORBIDDEN", "観戦中は提出できません。");
+  }
   if (room.game?.phase !== "round_submit") {
     throw domainError(409, "INVALID_PHASE", "round_submit ではないため実行できません。");
   }
@@ -567,6 +601,8 @@ function buildSubmittedRoom(room, mePlayer, roundIndex, payload) {
     displayName: updatedPlayer.displayName,
     phrase,
     fontId: String(payload.fontId || "broadcast"),
+    sizePreset: normalizeSizePreset(payload.sizePreset),
+    lineGapPreset: normalizeLineGapPreset(payload.lineGapPreset),
     renderedLines,
     submittedAt: nowIso()
   });
@@ -635,6 +671,8 @@ function setRoundWinner(updatedRoom, round, winnerPlayerId, source, counts) {
     displayName: submission.displayName,
     phrase: submission.phrase,
     fontId: submission.fontId,
+    sizePreset: submission.sizePreset,
+    lineGapPreset: submission.lineGapPreset,
     renderedLines: submission.renderedLines,
     voteCount: countRow?.count || 0,
     source
@@ -653,6 +691,8 @@ function setRoundWinner(updatedRoom, round, winnerPlayerId, source, counts) {
     playerId: winnerPlayerId,
     phrase: submission.phrase,
     fontId: submission.fontId,
+    sizePreset: submission.sizePreset,
+    lineGapPreset: submission.lineGapPreset,
     renderedLines: submission.renderedLines
   });
 }
@@ -689,6 +729,8 @@ function setFinalWinner(updatedRoom, finalVote, winnerCandidateId, source, count
     displayName: candidate.displayName,
     phrase: candidate.phrase,
     fontId: candidate.fontId,
+    sizePreset: candidate.sizePreset,
+    lineGapPreset: candidate.lineGapPreset,
     renderedLines: candidate.renderedLines,
     voteCount: countRow?.count || 0,
     source
@@ -705,6 +747,8 @@ function setFinalWinner(updatedRoom, finalVote, winnerCandidateId, source, count
     playerId: candidate.playerId,
     phrase: candidate.phrase,
     fontId: candidate.fontId,
+    sizePreset: candidate.sizePreset,
+    lineGapPreset: candidate.lineGapPreset,
     renderedLines: candidate.renderedLines
   });
 }
@@ -728,6 +772,8 @@ function buildChampionHistoryEntry(room) {
     displayName: champion.displayName,
     phrase: champion.phrase,
     fontId: champion.fontId,
+    sizePreset: champion.sizePreset,
+    lineGapPreset: champion.lineGapPreset,
     renderedLines: clone(champion.renderedLines || []),
     wonAt,
     createdAt: wonAt
@@ -741,6 +787,8 @@ function toChampionHistoryView(item) {
     displayName: item.displayName,
     wonAt: item.wonAt,
     fontId: item.fontId || "classic",
+    sizePreset: normalizeSizePreset(item.sizePreset),
+    lineGapPreset: normalizeLineGapPreset(item.lineGapPreset),
     renderedLines: clone(item.renderedLines || [item.phrase]),
     roomId: item.roomId || "",
     inviteCode: item.inviteCode || ""
@@ -781,6 +829,22 @@ function buildChampionHistoryViews(historyItems, limit) {
   return historyItems.slice(0, Math.max(limit, 1)).map((item) => toChampionHistoryView(item));
 }
 
+function createRoomMember(params) {
+  return {
+    playerId: params.playerId,
+    displayName: params.displayName,
+    isHost: Boolean(params.isHost),
+    role: normalizePlayerRole(params.role),
+    seatOrder: params.seatOrder,
+    joinedAt: params.joinedAt,
+    isConnected: true,
+    playerTokenHash: params.playerTokenHash,
+    lastSeenAt: params.joinedAt,
+    usedTileIds: [],
+    handCount: 0
+  };
+}
+
 function buildVotedRoom(room, mePlayer, roundIndex, targetPlayerId, mode = "vote") {
   requireNoActiveReveal(room);
   const expectedPhase = mode === "revote" ? "round_revote" : "round_vote";
@@ -808,7 +872,7 @@ function buildVotedRoom(room, mePlayer, roundIndex, targetPlayerId, mode = "vote
   if (!validTargetIds.includes(targetPlayerId)) {
     throw domainError(400, "INVALID_TARGET", "投票先が不正です。");
   }
-  if (targetPlayerId === mePlayer.playerId && room.playerCount !== 2) {
+  if (targetPlayerId === mePlayer.playerId && getGamePlayerCount(room) !== 2) {
     throw domainError(409, "SELF_VOTE_FORBIDDEN", "自分のワードには投票できません。");
   }
 
@@ -817,7 +881,7 @@ function buildVotedRoom(room, mePlayer, roundIndex, targetPlayerId, mode = "vote
     [mePlayer.playerId]: targetPlayerId
   };
 
-  const expectedVoterCount = updatedRoom.players.length;
+  const expectedVoterCount = getGamePlayerCount(updatedRoom);
   if (Object.keys(round[ballotKey]).length < expectedVoterCount) {
     updatedRoom.updatedAt = nowIso();
     updatedRoom.expiresAt = Math.floor(Date.now() / 1000) + ROOM_TTL_SECONDS;
@@ -850,6 +914,9 @@ function buildVotedRoom(room, mePlayer, roundIndex, targetPlayerId, mode = "vote
 
 function buildHostDecisionRoom(room, mePlayer, roundIndex, winnerPlayerId) {
   requireNoActiveReveal(room);
+  if (normalizePlayerRole(mePlayer.role) !== "player") {
+    throw domainError(403, "SPECTATOR_FORBIDDEN", "観戦中は裁定できません。");
+  }
   if (room.game?.phase !== "round_host_decide") {
     throw domainError(409, "INVALID_PHASE", "round_host_decide ではないため実行できません。");
   }
@@ -891,6 +958,8 @@ function beginFinalVote(updatedRoom) {
       displayName: round.winner.displayName,
       phrase: round.winner.phrase,
       fontId: round.winner.fontId,
+      sizePreset: round.winner.sizePreset,
+      lineGapPreset: round.winner.lineGapPreset,
       renderedLines: round.winner.renderedLines
     })),
     votes: {},
@@ -902,19 +971,23 @@ function beginFinalVote(updatedRoom) {
 }
 
 function getEligibleFinalVoterIds(finalVote, players, mode = "vote") {
-  if (players.length === 2) {
-    return players.map((player) => player.playerId);
+  const activePlayers = players.filter((player) => normalizePlayerRole(player.role) === "player");
+  if (activePlayers.length === 2) {
+    return activePlayers.map((player) => player.playerId);
   }
   const validTargetIds =
     mode === "revote" ? finalVote.voteSummary?.tiedCandidateIds || [] : finalVote.candidates.map((candidate) => candidate.candidateId);
   const validCandidates = finalVote.candidates.filter((candidate) => validTargetIds.includes(candidate.candidateId));
-  return players
+  return activePlayers
     .filter((player) => validCandidates.some((candidate) => candidate.playerId !== player.playerId))
     .map((player) => player.playerId);
 }
 
 function buildFinalVotedRoom(room, mePlayer, candidateId, mode = "vote") {
   requireNoActiveReveal(room);
+  if (normalizePlayerRole(mePlayer.role) !== "player") {
+    throw domainError(403, "SPECTATOR_FORBIDDEN", "観戦中は投票できません。");
+  }
   const expectedPhase = mode === "revote" ? "final_revote" : "final_vote";
   if (room.game?.phase !== expectedPhase) {
     throw domainError(409, "INVALID_PHASE", `${expectedPhase} ではないため実行できません。`);
@@ -938,7 +1011,7 @@ function buildFinalVotedRoom(room, mePlayer, candidateId, mode = "vote") {
   if (!validTargetIds.includes(candidateId) || !selectedCandidate) {
     throw domainError(400, "INVALID_TARGET", "投票先が不正です。");
   }
-  if (selectedCandidate.playerId === mePlayer.playerId && updatedRoom.players.length !== 2) {
+  if (selectedCandidate.playerId === mePlayer.playerId && getGamePlayerCount(updatedRoom) !== 2) {
     throw domainError(409, "SELF_VOTE_FORBIDDEN", "自分のワードには投票できません。");
   }
 
@@ -980,6 +1053,9 @@ function buildFinalVotedRoom(room, mePlayer, candidateId, mode = "vote") {
 
 function buildFinalHostDecisionRoom(room, mePlayer, candidateId) {
   requireNoActiveReveal(room);
+  if (normalizePlayerRole(mePlayer.role) !== "player") {
+    throw domainError(403, "SPECTATOR_FORBIDDEN", "観戦中は裁定できません。");
+  }
   if (room.game?.phase !== "final_host_decide") {
     throw domainError(409, "INVALID_PHASE", "final_host_decide ではないため実行できません。");
   }
@@ -1007,6 +1083,9 @@ function buildFinalHostDecisionRoom(room, mePlayer, candidateId) {
 
 function buildRestartedRoom(room, mePlayer) {
   requireNoActiveReveal(room);
+  if (normalizePlayerRole(mePlayer.role) !== "player") {
+    throw domainError(403, "SPECTATOR_FORBIDDEN", "観戦中は再開できません。");
+  }
   if (!mePlayer.isHost) {
     throw domainError(403, "NOT_HOST", "ホストのみ実行できます。");
   }
@@ -1017,7 +1096,7 @@ function buildRestartedRoom(room, mePlayer) {
   const updatedRoom = clone(room);
   updatedRoom.status = "lobby";
   updatedRoom.startPlayerId = null;
-  updatedRoom.playerOrder = updatedRoom.players
+  updatedRoom.playerOrder = getActivePlayers(updatedRoom)
     .slice()
     .sort((left, right) => left.seatOrder - right.seatOrder)
     .map((player) => player.playerId);
@@ -1046,6 +1125,9 @@ function buildRestartedRoom(room, mePlayer) {
 
 function buildProceedRoom(room, mePlayer, roundIndex) {
   requireNoActiveReveal(room);
+  if (normalizePlayerRole(mePlayer.role) !== "player") {
+    throw domainError(403, "SPECTATOR_FORBIDDEN", "観戦中は進行できません。");
+  }
   if (room.game?.phase !== "round_result") {
     throw domainError(409, "INVALID_PHASE", "round_result ではないため実行できません。");
   }
@@ -1085,7 +1167,7 @@ function buildClosedRevealRoom(room, mePlayer, revealId = "") {
   }
   acknowledgedPlayerIds.add(mePlayer.playerId);
 
-  const requiredPlayerIds = updatedRoom.players.map((player) => player.playerId);
+  const requiredPlayerIds = getActivePlayers(updatedRoom).map((player) => player.playerId);
   if (requiredPlayerIds.every((playerId) => acknowledgedPlayerIds.has(playerId))) {
     clearReveal(updatedRoom);
   } else {
@@ -1114,20 +1196,7 @@ function createRoomState(params) {
     playerCount,
     startPlayerId: null,
     playerOrder: [playerId],
-    players: [
-      {
-        playerId,
-        displayName,
-        isHost: true,
-        seatOrder: 1,
-        joinedAt: issuedAt,
-        isConnected: true,
-        playerTokenHash,
-        lastSeenAt: issuedAt,
-        usedTileIds: [],
-        handCount: 0
-      }
-    ],
+    players: [createRoomMember({ playerId, displayName, isHost: true, role: "player", seatOrder: 1, joinedAt: issuedAt, playerTokenHash })],
     game: {
       phase: "lobby",
       roundIndex: null,
@@ -1178,7 +1247,7 @@ function rotatePlayerOrder(playerIds, startPlayerId) {
 }
 
 function derivePlayerOrder(room) {
-  const playerIds = [...room.players]
+  const playerIds = getActivePlayers(room)
     .sort((left, right) => left.seatOrder - right.seatOrder)
     .map((player) => player.playerId);
 
@@ -1193,6 +1262,7 @@ function toPlayerView(player) {
     playerId: player.playerId,
     displayName: player.displayName,
     isHost: player.isHost,
+    role: normalizePlayerRole(player.role),
     seatOrder: player.seatOrder,
     isConnected: Boolean(player.isConnected),
     handCount: Number(player.handCount || 0),
@@ -1201,6 +1271,9 @@ function toPlayerView(player) {
 }
 
 function buildMyHand(room, mePlayer) {
+  if (normalizePlayerRole(mePlayer.role) !== "player") {
+    return [];
+  }
   const initialHands = room.game?.initialHands?.[mePlayer.playerId] || [];
   const usedTileIds = new Set(mePlayer.usedTileIds || []);
   return initialHands.map((tile) => ({
@@ -1256,7 +1329,11 @@ function toRevealView(reveal) {
 }
 
 function mapRoomResponse(room, mePlayer) {
-  const players = [...room.players].sort((left, right) => left.seatOrder - right.seatOrder);
+  const players = [...room.players]
+    .map((player) => ({ ...player, role: normalizePlayerRole(player.role) }))
+    .sort((left, right) => left.seatOrder - right.seatOrder);
+  const activePlayers = players.filter((player) => player.role === "player");
+  const spectatorPlayers = players.filter((player) => player.role === "spectator");
   return {
     roomId: room.roomId,
     inviteCode: room.inviteCode,
@@ -1264,6 +1341,8 @@ function mapRoomResponse(room, mePlayer) {
     status: room.status,
     hostPlayerId: room.hostPlayerId,
     playerCount: room.playerCount,
+    activePlayerCount: activePlayers.length,
+    spectatorCount: spectatorPlayers.length,
     startPlayerId: room.startPlayerId,
     playerOrder: Array.isArray(room.playerOrder) && room.playerOrder.length ? room.playerOrder : derivePlayerOrder(room),
     game: {
@@ -1271,6 +1350,8 @@ function mapRoomResponse(room, mePlayer) {
       roundIndex: room.game?.roundIndex ?? null,
       currentTurnPlayerId: room.game?.currentTurnPlayerId ?? null,
       players: players.map(toPlayerView),
+      activePlayerIds: activePlayers.map((player) => player.playerId),
+      spectatorPlayerIds: spectatorPlayers.map((player) => player.playerId),
       rounds: Array.isArray(room.game?.rounds) ? room.game.rounds.map(toRoundView) : createEmptyRounds(room.playerCount).map(toRoundView),
       finalVote: toFinalVoteView(room.game?.finalVote),
       champion: room.game?.champion ? clone(room.game.champion) : null,
@@ -1280,6 +1361,8 @@ function mapRoomResponse(room, mePlayer) {
       playerId: mePlayer.playerId,
       displayName: mePlayer.displayName,
       isHost: mePlayer.isHost,
+      role: normalizePlayerRole(mePlayer.role),
+      isSpectator: normalizePlayerRole(mePlayer.role) === "spectator",
       reconnectTokenIssued: true
     },
     myHand: buildMyHand(room, mePlayer)
@@ -1590,10 +1673,10 @@ async function createDynamoRoomRepository(options = {}) {
         if (!room) {
           throw domainError(404, "ROOM_NOT_FOUND", "指定された room は存在しません。");
         }
-        if (room.status !== "lobby" || room.game?.phase !== "lobby") {
-          throw domainError(409, "ROOM_ALREADY_STARTED", "すでにゲームが始まっています。");
+        if (room.status === "finished" && room.game?.phase === "final_result") {
+          throw domainError(409, "ROOM_ALREADY_FINISHED", "このルームは終了しています。");
         }
-        if (room.players.length >= room.playerCount) {
+        if (room.players.length >= MAX_ROOM_MEMBERS) {
           throw domainError(409, "ROOM_FULL", "このルームは満員です。");
         }
 
@@ -1601,18 +1684,18 @@ async function createDynamoRoomRepository(options = {}) {
         const playerId = makeId("player");
         const playerToken = makeId("pt");
         const updatedRoom = clone(room);
-        updatedRoom.players.push({
-          playerId,
-          displayName,
-          isHost: false,
-          seatOrder: updatedRoom.players.length + 1,
-          joinedAt: issuedAt,
-          isConnected: true,
-          playerTokenHash: hashPlayerToken(playerToken),
-          lastSeenAt: issuedAt,
-          usedTileIds: [],
-          handCount: 0
-        });
+        const role = room.status === "lobby" && room.game?.phase === "lobby" && getGamePlayerCount(room) < room.playerCount ? "player" : "spectator";
+        updatedRoom.players.push(
+          createRoomMember({
+            playerId,
+            displayName,
+            isHost: false,
+            role,
+            seatOrder: updatedRoom.players.length + 1,
+            joinedAt: issuedAt,
+            playerTokenHash: hashPlayerToken(playerToken)
+          })
+        );
         updatedRoom.playerOrder = derivePlayerOrder(updatedRoom);
         updatedRoom.updatedAt = issuedAt;
         updatedRoom.expiresAt = Math.floor(Date.now() / 1000) + ROOM_TTL_SECONDS;
@@ -1728,7 +1811,7 @@ async function createDynamoRoomRepository(options = {}) {
         if (room.game?.phase !== "lobby") {
           throw domainError(409, "INVALID_PHASE", "lobby ではないため実行できません。");
         }
-        if (!room.players.some((player) => player.playerId === startPlayerId)) {
+        if (!getActivePlayers(room).some((player) => player.playerId === startPlayerId)) {
           throw domainError(400, "INVALID_TARGET", "開始プレイヤーが不正です。");
         }
 
@@ -1757,6 +1840,65 @@ async function createDynamoRoomRepository(options = {}) {
       }
 
       throw domainError(409, "CONFLICT_RETRY", "開始順の更新が競合しました。もう一度お試しください。", true);
+    },
+
+    async setPlayerRole(roomId, playerToken, targetPlayerId, nextRole) {
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        const room = await getRoomItem(roomId);
+        if (!room) {
+          throw domainError(404, "ROOM_NOT_FOUND", "指定された room は存在しません。");
+        }
+        const mePlayer = getPlayerByToken(room, playerToken);
+        if (!mePlayer) {
+          throw domainError(401, "PLAYER_TOKEN_INVALID", "playerToken が必要です。");
+        }
+        if (!mePlayer.isHost) {
+          throw domainError(403, "NOT_HOST", "ホストのみ実行できます。");
+        }
+        if (room.game?.phase !== "lobby") {
+          throw domainError(409, "INVALID_PHASE", "lobby でのみ観戦設定を変更できます。");
+        }
+
+        const normalizedRole = normalizePlayerRole(nextRole);
+        const updatedRoom = clone(room);
+        const targetPlayer = updatedRoom.players.find((player) => player.playerId === targetPlayerId);
+        if (!targetPlayer) {
+          throw domainError(404, "PLAYER_NOT_FOUND", "対象プレイヤーが見つかりません。");
+        }
+        if (targetPlayer.isHost) {
+          throw domainError(409, "HOST_ROLE_FIXED", "ホストは観戦に変更できません。");
+        }
+        if (normalizePlayerRole(targetPlayer.role) === normalizedRole) {
+          return { room: updatedRoom, mePlayer: updatedRoom.players.find((player) => player.playerId === mePlayer.playerId) };
+        }
+        if (normalizedRole === "player" && getGamePlayerCount(updatedRoom) >= updatedRoom.playerCount) {
+          throw domainError(409, "ROOM_FULL", "参加枠が埋まっているため観戦のままです。");
+        }
+
+        targetPlayer.role = normalizedRole;
+        targetPlayer.usedTileIds = [];
+        targetPlayer.handCount = 0;
+        updatedRoom.playerOrder = derivePlayerOrder(updatedRoom);
+        if (!updatedRoom.playerOrder.includes(updatedRoom.startPlayerId)) {
+          updatedRoom.startPlayerId = updatedRoom.playerOrder[0] || updatedRoom.hostPlayerId;
+        }
+        updatedRoom.updatedAt = nowIso();
+        updatedRoom.expiresAt = Math.floor(Date.now() / 1000) + ROOM_TTL_SECONDS;
+        updatedRoom.revision += 1;
+
+        try {
+          await putRoomItem(updatedRoom, room.revision);
+          const updatedMePlayer = updatedRoom.players.find((player) => player.playerId === mePlayer.playerId);
+          return { room: updatedRoom, mePlayer: updatedMePlayer };
+        } catch (error) {
+          if (toConditionalFailure(error)) {
+            continue;
+          }
+          throw error;
+        }
+      }
+
+      throw domainError(409, "CONFLICT_RETRY", "観戦設定の更新が競合しました。もう一度お試しください。", true);
     },
 
     async startGame(roomId, playerToken, deckId) {
@@ -2154,10 +2296,10 @@ function createMemoryRoomRepository() {
       if (!room) {
         throw domainError(404, "ROOM_NOT_FOUND", "指定された room は存在しません。");
       }
-      if (room.status !== "lobby" || room.game?.phase !== "lobby") {
-        throw domainError(409, "ROOM_ALREADY_STARTED", "すでにゲームが始まっています。");
+      if (room.status === "finished" && room.game?.phase === "final_result") {
+        throw domainError(409, "ROOM_ALREADY_FINISHED", "このルームは終了しています。");
       }
-      if (room.players.length >= room.playerCount) {
+      if (room.players.length >= MAX_ROOM_MEMBERS) {
         throw domainError(409, "ROOM_FULL", "このルームは満員です。");
       }
 
@@ -2165,18 +2307,18 @@ function createMemoryRoomRepository() {
       const playerId = makeId("player");
       const playerToken = makeId("pt");
       const updatedRoom = clone(room);
-      updatedRoom.players.push({
-        playerId,
-        displayName,
-        isHost: false,
-        seatOrder: updatedRoom.players.length + 1,
-        joinedAt: issuedAt,
-        isConnected: true,
-        playerTokenHash: hashPlayerToken(playerToken),
-        lastSeenAt: issuedAt,
-        usedTileIds: [],
-        handCount: 0
-      });
+      const role = room.status === "lobby" && room.game?.phase === "lobby" && getGamePlayerCount(room) < room.playerCount ? "player" : "spectator";
+      updatedRoom.players.push(
+        createRoomMember({
+          playerId,
+          displayName,
+          isHost: false,
+          role,
+          seatOrder: updatedRoom.players.length + 1,
+          joinedAt: issuedAt,
+          playerTokenHash: hashPlayerToken(playerToken)
+        })
+      );
       updatedRoom.playerOrder = derivePlayerOrder(updatedRoom);
       updatedRoom.updatedAt = issuedAt;
       updatedRoom.revision += 1;
@@ -2254,7 +2396,7 @@ function createMemoryRoomRepository() {
       if (room.game?.phase !== "lobby") {
         throw domainError(409, "INVALID_PHASE", "lobby ではないため実行できません。");
       }
-      if (!room.players.some((player) => player.playerId === startPlayerId)) {
+      if (!getActivePlayers(room).some((player) => player.playerId === startPlayerId)) {
         throw domainError(400, "INVALID_TARGET", "開始プレイヤーが不正です。");
       }
 
@@ -2272,6 +2414,55 @@ function createMemoryRoomRepository() {
       saveRoom(updatedRoom);
       const updatedMePlayer = updatedRoom.players.find((player) => player.playerId === mePlayer.playerId);
       return { room: clone(updatedRoom), mePlayer: clone(updatedMePlayer) };
+    },
+
+    async setPlayerRole(roomId, playerToken, targetPlayerId, nextRole) {
+      const room = rooms.get(roomId);
+      if (!room) {
+        throw domainError(404, "ROOM_NOT_FOUND", "指定された room は存在しません。");
+      }
+      const mePlayer = getPlayerByToken(room, playerToken);
+      if (!mePlayer) {
+        throw domainError(401, "PLAYER_TOKEN_INVALID", "playerToken が必要です。");
+      }
+      if (!mePlayer.isHost) {
+        throw domainError(403, "NOT_HOST", "ホストのみ実行できます。");
+      }
+      if (room.game?.phase !== "lobby") {
+        throw domainError(409, "INVALID_PHASE", "lobby でのみ観戦設定を変更できます。");
+      }
+
+      const updatedRoom = clone(room);
+      const targetPlayer = updatedRoom.players.find((player) => player.playerId === targetPlayerId);
+      if (!targetPlayer) {
+        throw domainError(404, "PLAYER_NOT_FOUND", "対象プレイヤーが見つかりません。");
+      }
+      if (targetPlayer.isHost) {
+        throw domainError(409, "HOST_ROLE_FIXED", "ホストは観戦に変更できません。");
+      }
+
+      const normalizedRole = normalizePlayerRole(nextRole);
+      if (normalizePlayerRole(targetPlayer.role) === normalizedRole) {
+        return { room: clone(updatedRoom), mePlayer: clone(updatedRoom.players.find((player) => player.playerId === mePlayer.playerId)) };
+      }
+      if (normalizedRole === "player" && getGamePlayerCount(updatedRoom) >= updatedRoom.playerCount) {
+        throw domainError(409, "ROOM_FULL", "参加枠が埋まっているため観戦のままです。");
+      }
+
+      targetPlayer.role = normalizedRole;
+      targetPlayer.usedTileIds = [];
+      targetPlayer.handCount = 0;
+      updatedRoom.playerOrder = derivePlayerOrder(updatedRoom);
+      if (!updatedRoom.playerOrder.includes(updatedRoom.startPlayerId)) {
+        updatedRoom.startPlayerId = updatedRoom.playerOrder[0] || updatedRoom.hostPlayerId;
+      }
+      updatedRoom.updatedAt = nowIso();
+      updatedRoom.revision += 1;
+      saveRoom(updatedRoom);
+      return {
+        room: clone(updatedRoom),
+        mePlayer: clone(updatedRoom.players.find((player) => player.playerId === mePlayer.playerId))
+      };
     },
 
     async startGame(roomId, playerToken, deckId) {
@@ -2598,6 +2789,24 @@ function createHandler(options = {}) {
           }
           const repository = await roomRepositoryPromise;
           const result = await repository.setStartPlayer(matched.params[0], playerToken, startPlayerId);
+          return ok(toRoomPayload(result.room, result.mePlayer));
+        }
+        case "setPlayerRole": {
+          const body = parseBody(event);
+          if (!body) {
+            return fail(400, "INVALID_JSON", "JSON の形式が不正です。");
+          }
+          const playerToken = getHeader(event, "X-Omojan-Player-Token");
+          if (!playerToken) {
+            return fail(401, "PLAYER_TOKEN_INVALID", "playerToken が必要です。");
+          }
+          const targetPlayerId = String(body.targetPlayerId || "").trim();
+          if (!targetPlayerId) {
+            return fail(400, "INVALID_TARGET", "対象プレイヤーが不正です。");
+          }
+          const role = normalizePlayerRole(body.role);
+          const repository = await roomRepositoryPromise;
+          const result = await repository.setPlayerRole(matched.params[0], playerToken, targetPlayerId, role);
           return ok(toRoomPayload(result.room, result.mePlayer));
         }
         case "startGame": {

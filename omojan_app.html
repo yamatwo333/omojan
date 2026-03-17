@@ -1003,6 +1003,10 @@
           feedbackKey: "",
           bannerKey: "",
           revealKey: "",
+          landingShellKey: "",
+          landingCreateKey: "",
+          landingJoinKey: "",
+          landingChampionsKey: "",
           lobbyShellKey: "",
           lobbyTopKey: "",
           lobbyPlayersKey: "",
@@ -1633,11 +1637,7 @@
         const base = [view, state.pendingAction ? "pending" : "idle"];
         if (!room) {
           return base.concat([
-            state.createDisplayName,
-            state.joinDisplayName,
-            state.inviteCode,
-            String(state.playerCount),
-            getRecentChampionsStamp()
+            "landing"
           ]).join("|");
         }
 
@@ -1647,11 +1647,7 @@
         switch (view) {
           case "welcome":
             return base.concat([
-              state.createDisplayName,
-              state.joinDisplayName,
-              state.inviteCode,
-              String(state.playerCount),
-              getRecentChampionsStamp()
+              "landing"
             ]).join("|");
           case "lobby":
             return base.concat([
@@ -2448,9 +2444,20 @@
       }
 
       function renderLanding() {
+        return renderLandingShell();
+      }
+
+      function renderLandingShell() {
         return `
           ${renderScreenAlerts({ includeCopy: true })}
+          <div id="landingCreateSlot"></div>
+          <div id="landingJoinSlot"></div>
+          <div id="landingChampionsSlot"></div>
+        `;
+      }
 
+      function renderLandingCreate() {
+        return `
           <section class="card">
             <h2>ルームを作る</h2>
             <div class="field-stack">
@@ -2475,7 +2482,11 @@
               <button class="btn primary" type="button" data-action="create-room" ${state.pendingAction ? "disabled" : ""}>ルームを作る</button>
             </div>
           </section>
+        `;
+      }
 
+      function renderLandingJoin() {
+        return `
           <section class="card">
             <h2>招待 URL から参加</h2>
             ${
@@ -2501,12 +2512,34 @@
               <button class="btn primary" type="button" data-action="join-room" ${state.pendingAction ? "disabled" : ""}>参加する</button>
             </div>
           </section>
+        `;
+      }
 
+      function renderLandingChampions() {
+        return `
           <section class="panel">
             <h3>最近の総合優勝ワード</h3>
             ${renderRecentChampions()}
           </section>
         `;
+      }
+
+      function updateLandingView() {
+        if (state.renderCache.landingShellKey !== "landing") {
+          state.renderCache.landingShellKey = "landing";
+          state.renderCache.landingCreateKey = "";
+          state.renderCache.landingJoinKey = "";
+          state.renderCache.landingChampionsKey = "";
+          els.app.innerHTML = renderLandingShell();
+        }
+
+        const createKey = [state.createDisplayName, state.playerCount, state.pendingAction ? "pending" : "idle"].join("|");
+        const joinKey = [state.inviteCode, state.joinDisplayName, state.pendingAction ? "pending" : "idle"].join("|");
+        const championsKey = getRecentChampionsStamp();
+
+        patchSlot(els.app, "#landingCreateSlot", "landingCreateKey", createKey, renderLandingCreate());
+        patchSlot(els.app, "#landingJoinSlot", "landingJoinKey", joinKey, renderLandingJoin());
+        patchSlot(els.app, "#landingChampionsSlot", "landingChampionsKey", championsKey, renderLandingChampions());
       }
 
       function renderLobby(room) {
@@ -2903,7 +2936,15 @@
         return view === "lobby";
       }
 
+      function isLandingView(view) {
+        return view === "welcome";
+      }
+
       function resetIncrementalViewCaches() {
+        state.renderCache.landingShellKey = "";
+        state.renderCache.landingCreateKey = "";
+        state.renderCache.landingJoinKey = "";
+        state.renderCache.landingChampionsKey = "";
         state.renderCache.lobbyShellKey = "";
         state.renderCache.lobbyTopKey = "";
         state.renderCache.lobbyPlayersKey = "";
@@ -3417,8 +3458,40 @@
         };
         const appKey = getAppRenderKey(room, view);
         const shouldUpdateApp = state.renderCache.appKey !== appKey;
-        if (isLobbyView(view)) {
+        if (isLandingView(view)) {
           state.renderCache.appKey = appKey;
+          state.renderCache.lobbyShellKey = "";
+          state.renderCache.lobbyTopKey = "";
+          state.renderCache.lobbyPlayersKey = "";
+          state.renderCache.lobbyOrderKey = "";
+          state.renderCache.lobbyChampionsKey = "";
+          state.renderCache.submitShellKey = "";
+          state.renderCache.submitTopKey = "";
+          state.renderCache.submitSubmissionsKey = "";
+          state.renderCache.submitLineModeKey = "";
+          state.renderCache.submitFontKey = "";
+          state.renderCache.submitHandKey = "";
+          state.renderCache.waitShellKey = "";
+          state.renderCache.waitFocusKey = "";
+          state.renderCache.waitSyncKey = "";
+          state.renderCache.waitSubmissionsKey = "";
+          state.renderCache.decisionShellKey = "";
+          state.renderCache.decisionFocusKey = "";
+          state.renderCache.decisionSummaryKey = "";
+          state.renderCache.decisionCardsKey = "";
+          state.renderCache.decisionActionsKey = "";
+          state.renderCache.resultShellKey = "";
+          state.renderCache.resultHeroKey = "";
+          state.renderCache.resultExtraKey = "";
+          state.renderCache.resultCountsKey = "";
+          state.renderCache.resultActionsKey = "";
+          updateLandingView();
+        } else if (isLobbyView(view)) {
+          state.renderCache.appKey = appKey;
+          state.renderCache.landingShellKey = "";
+          state.renderCache.landingCreateKey = "";
+          state.renderCache.landingJoinKey = "";
+          state.renderCache.landingChampionsKey = "";
           state.renderCache.submitShellKey = "";
           state.renderCache.submitTopKey = "";
           state.renderCache.submitSubmissionsKey = "";
@@ -3442,6 +3515,10 @@
           updateLobbyView(room);
         } else if (isSubmitView(view)) {
           state.renderCache.appKey = appKey;
+          state.renderCache.landingShellKey = "";
+          state.renderCache.landingCreateKey = "";
+          state.renderCache.landingJoinKey = "";
+          state.renderCache.landingChampionsKey = "";
           state.renderCache.lobbyShellKey = "";
           state.renderCache.lobbyTopKey = "";
           state.renderCache.lobbyPlayersKey = "";
@@ -3464,9 +3541,38 @@
           updateSubmitView(room);
         } else if (view === "wait") {
           state.renderCache.appKey = appKey;
+          state.renderCache.landingShellKey = "";
+          state.renderCache.landingCreateKey = "";
+          state.renderCache.landingJoinKey = "";
+          state.renderCache.landingChampionsKey = "";
+          state.renderCache.lobbyShellKey = "";
+          state.renderCache.lobbyTopKey = "";
+          state.renderCache.lobbyPlayersKey = "";
+          state.renderCache.lobbyOrderKey = "";
+          state.renderCache.lobbyChampionsKey = "";
+          state.renderCache.submitShellKey = "";
+          state.renderCache.submitTopKey = "";
+          state.renderCache.submitSubmissionsKey = "";
+          state.renderCache.submitLineModeKey = "";
+          state.renderCache.submitFontKey = "";
+          state.renderCache.submitHandKey = "";
+          state.renderCache.decisionShellKey = "";
+          state.renderCache.decisionFocusKey = "";
+          state.renderCache.decisionSummaryKey = "";
+          state.renderCache.decisionCardsKey = "";
+          state.renderCache.decisionActionsKey = "";
+          state.renderCache.resultShellKey = "";
+          state.renderCache.resultHeroKey = "";
+          state.renderCache.resultExtraKey = "";
+          state.renderCache.resultCountsKey = "";
+          state.renderCache.resultActionsKey = "";
           updateWaitView(room);
         } else if (isDecisionView(view)) {
           state.renderCache.appKey = appKey;
+          state.renderCache.landingShellKey = "";
+          state.renderCache.landingCreateKey = "";
+          state.renderCache.landingJoinKey = "";
+          state.renderCache.landingChampionsKey = "";
           state.renderCache.lobbyShellKey = "";
           state.renderCache.lobbyTopKey = "";
           state.renderCache.lobbyPlayersKey = "";
@@ -3490,6 +3596,10 @@
           updateDecisionView(room, view);
         } else if (isResultView(view)) {
           state.renderCache.appKey = appKey;
+          state.renderCache.landingShellKey = "";
+          state.renderCache.landingCreateKey = "";
+          state.renderCache.landingJoinKey = "";
+          state.renderCache.landingChampionsKey = "";
           state.renderCache.lobbyShellKey = "";
           state.renderCache.lobbyTopKey = "";
           state.renderCache.lobbyPlayersKey = "";

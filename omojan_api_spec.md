@@ -686,6 +686,37 @@ sinceRevision=12
 }
 ```
 
+### 8-2. 過去の総合優勝ワード一覧取得
+
+`GET /v1/champions/history?limit=50`
+
+- 呼び出し者
+  - 誰でも
+- 用途
+  - ゲーム本体の「一覧を見る」で、過去の総合優勝ワードをまとめて表示する
+
+#### Response
+
+```json
+{
+  "ok": true,
+  "data": {
+    "items": [
+      {
+        "championId": "ch_20260315_001",
+        "phrase": "現場大洪水",
+        "displayName": "やまだ",
+        "wonAt": "2026-03-15T10:59:00Z",
+        "fontId": "classic",
+        "renderedLines": ["現場", "大洪水"],
+        "roomId": "room_abcd1234",
+        "inviteCode": "OMO-1234"
+      }
+    ]
+  }
+}
+```
+
 ## 9. 運営用 API
 
 初版ではプレイヤー向けのデッキ編集 UI は作りません。  
@@ -727,6 +758,22 @@ Header:
 
 - 初版では `default` デッキを削除不可にしてもよい
 - 実運用では `enabled=false` で無効化する方が安全
+
+### 9-4. 総合優勝ワード履歴一覧
+
+`GET /v1/admin/champions?limit=100`
+
+Header:
+
+`X-Omojan-Admin-Passcode: <shared-passcode>`
+
+### 9-5. 総合優勝ワード履歴削除
+
+`DELETE /v1/admin/champions/{championId}`
+
+Header:
+
+`X-Omojan-Admin-Passcode: <shared-passcode>`
 
 ## 10. ポーリング方針
 

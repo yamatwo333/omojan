@@ -399,6 +399,9 @@ test("GET /v1/health returns lambda scaffold metadata", async () => {
   assert.deepEqual(body.data.implementedRoutes, [
     "admin:decks:get",
     "admin:decks:put",
+    "admin:champions:get",
+    "admin:champions:delete",
+    "champions:history:get",
     "rooms:create",
     "rooms:join",
     "rooms:get",
@@ -443,6 +446,60 @@ test("GET /v1/champions/recent returns recent items", async () => {
   assert.equal(response.statusCode, 200);
   assert.equal(body.ok, true);
   assert.equal(body.data.items.length, 2);
+});
+
+test("GET /v1/champions/history returns champion history items", async () => {
+  const handler = createTestHandler();
+  const response = await handler(createEvent("GET", "/v1/champions/history", { query: { limit: "4" } }));
+  const body = await parseResponse(response);
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(body.ok, true);
+  assert.equal(body.data.items.length, 4);
+  assert.ok(body.data.items[0].championId);
+  assert.ok(Array.isArray(body.data.items[0].renderedLines));
+});
+
+test("admin champion history API can list and delete items", async () => {
+  const adminPasscode = "test-admin-passcode";
+  const handler = createTestHandler({ adminSharedPasscode: adminPasscode });
+
+  let response = await handler(createEvent("GET", "/v1/admin/champions"));
+  let body = await parseResponse(response);
+  assert.equal(response.statusCode, 401);
+  assert.equal(body.error.code, "ADMIN_PASSCODE_REQUIRED");
+
+  response = await handler(
+    createEvent("GET", "/v1/admin/champions", {
+      headers: createAdminHeaders(adminPasscode),
+      query: { limit: "3" }
+    })
+  );
+  body = await parseResponse(response);
+  assert.equal(response.statusCode, 200);
+  assert.equal(body.ok, true);
+  assert.equal(body.data.items.length, 3);
+  const championId = body.data.items[0].championId;
+
+  response = await handler(
+    createEvent("DELETE", `/v1/admin/champions/${championId}`, {
+      headers: createAdminHeaders(adminPasscode)
+    })
+  );
+  body = await parseResponse(response);
+  assert.equal(response.statusCode, 200);
+  assert.equal(body.ok, true);
+  assert.equal(body.data.removed.championId, championId);
+
+  response = await handler(
+    createEvent("GET", "/v1/admin/champions", {
+      headers: createAdminHeaders(adminPasscode),
+      query: { limit: "10" }
+    })
+  );
+  body = await parseResponse(response);
+  assert.equal(response.statusCode, 200);
+  assert.equal(body.data.items.some((item) => item.championId === championId), false);
 });
 
 test("admin deck API requires passcode and updated deck is used on next game start", async () => {

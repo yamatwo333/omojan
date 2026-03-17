@@ -27,7 +27,7 @@ function buildHeaders() {
     "content-type": "application/json; charset=utf-8",
     "cache-control": "no-store",
     "access-control-allow-origin": "*",
-    "access-control-allow-methods": "GET,POST,PUT,OPTIONS",
+    "access-control-allow-methods": "GET,POST,PUT,DELETE,OPTIONS",
     "access-control-allow-headers": "content-type,x-omojan-player-token,x-omojan-admin-passcode"
   };
 }
@@ -83,6 +83,9 @@ function parseRoute(method, pathname) {
   const routes = [
     { method: "GET", pattern: /^\/v1\/health$/, route: "health" },
     { method: "GET", pattern: /^\/v1\/champions\/recent$/, route: "getChampionsRecent" },
+    { method: "GET", pattern: /^\/v1\/champions\/history$/, route: "getChampionsHistory" },
+    { method: "GET", pattern: /^\/v1\/admin\/champions$/, route: "getAdminChampions" },
+    { method: "DELETE", pattern: /^\/v1\/admin\/champions\/([^/]+)$/, route: "deleteAdminChampion" },
     { method: "GET", pattern: /^\/v1\/admin\/decks\/([^/]+)$/, route: "getDeck" },
     { method: "PUT", pattern: /^\/v1\/admin\/decks\/([^/]+)$/, route: "putDeck" },
     { method: "POST", pattern: /^\/v1\/rooms$/, route: "createRoom" },
@@ -142,6 +145,9 @@ function handleHealth() {
     implementedRoutes: [
       "admin:decks:get",
       "admin:decks:put",
+      "admin:champions:get",
+      "admin:champions:delete",
+      "champions:history:get",
       "rooms:create",
       "rooms:join",
       "rooms:get",
@@ -165,6 +171,14 @@ function handleHealth() {
 function handleGetChampionsRecent(event) {
   const requestedLimit = Number(event.queryStringParameters?.limit || "5");
   const limit = Number.isFinite(requestedLimit) && requestedLimit > 0 ? requestedLimit : 5;
+  return ok({
+    items: recentChampions.slice(0, limit)
+  });
+}
+
+function handleGetChampionsHistory(event) {
+  const requestedLimit = Number(event.queryStringParameters?.limit || "50");
+  const limit = Number.isFinite(requestedLimit) && requestedLimit > 0 ? requestedLimit : 50;
   return ok({
     items: recentChampions.slice(0, limit)
   });
@@ -726,7 +740,11 @@ function toChampionHistoryView(item) {
     championId: item.championId,
     phrase: item.phrase,
     displayName: item.displayName,
-    wonAt: item.wonAt
+    wonAt: item.wonAt,
+    fontId: item.fontId || "classic",
+    renderedLines: clone(item.renderedLines || [item.phrase]),
+    roomId: item.roomId || "",
+    inviteCode: item.inviteCode || ""
   };
 }
 
@@ -758,6 +776,10 @@ function buildRecentChampionItems(historyItems, limit) {
   }
 
   return merged;
+}
+
+function buildChampionHistoryViews(historyItems, limit) {
+  return historyItems.slice(0, Math.max(limit, 1)).map((item) => toChampionHistoryView(item));
 }
 
 function buildVotedRoom(room, mePlayer, roundIndex, targetPlayerId, mode = "vote") {
@@ -1292,6 +1314,7 @@ async function loadAwsSdkModules() {
     awsSdkModules = {
       DynamoDBClient: dynamodb.DynamoDBClient,
       DynamoDBDocumentClient: dynamodbDocument.DynamoDBDocumentClient,
+      DeleteCommand: dynamodbDocument.DeleteCommand,
       GetCommand: dynamodbDocument.GetCommand,
       PutCommand: dynamodbDocument.PutCommand,
       QueryCommand: dynamodbDocument.QueryCommand,
@@ -1365,6 +1388,34 @@ async function createDynamoRoomRepository(options = {}) {
       })
     );
     return response.Items || [];
+  }
+
+  async function findChampionHistoryItemById(championId) {
+    let exclusiveStartKey;
+
+    do {
+      const response = await documentClient.send(
+        new modules.QueryCommand({
+          TableName: tableName,
+          KeyConditionExpression: "PK = :pk",
+          FilterExpression: "championId = :championId",
+          ExpressionAttributeValues: {
+            ":pk": "CHAMPIONS",
+            ":championId": championId
+          },
+          ScanIndexForward: false,
+          Limit: 50,
+          ExclusiveStartKey: exclusiveStartKey
+        })
+      );
+
+      if (response.Items?.[0]) {
+        return response.Items[0];
+      }
+      exclusiveStartKey = response.LastEvaluatedKey;
+    } while (exclusiveStartKey);
+
+    return null;
   }
 
   async function getPersistedDeckItem(deckId) {
@@ -1452,7 +1503,31 @@ async function createDynamoRoomRepository(options = {}) {
 
     async getRecentChampions(limit) {
       const items = await queryChampionHistory(limit);
-      return buildRecentChampionItems(items, limit);
+      return buildChampionHistoryViews(items, limit);
+    },
+
+    async getChampionHistory(limit) {
+      const items = await queryChampionHistory(limit);
+      return buildChampionHistoryViews(items, limit);
+    },
+
+    async deleteChampion(championId) {
+      const item = await findChampionHistoryItemById(championId);
+      if (!item) {
+        throw domainError(404, "CHAMPION_NOT_FOUND", "指定された総合優勝ワード履歴は存在しません。");
+      }
+
+      await documentClient.send(
+        new modules.DeleteCommand({
+          TableName: tableName,
+          Key: {
+            PK: item.PK,
+            SK: item.SK
+          }
+        })
+      );
+
+      return toChampionHistoryView(item);
     },
 
     async createRoom({ displayName, playerCount }) {
@@ -2035,7 +2110,20 @@ function createMemoryRoomRepository() {
     },
 
     async getRecentChampions(limit) {
-      return buildRecentChampionItems(championHistory, limit);
+      return buildChampionHistoryViews(championHistory, limit);
+    },
+
+    async getChampionHistory(limit) {
+      return buildChampionHistoryViews(championHistory, limit);
+    },
+
+    async deleteChampion(championId) {
+      const index = championHistory.findIndex((item) => item.championId === championId);
+      if (index === -1) {
+        throw domainError(404, "CHAMPION_NOT_FOUND", "指定された総合優勝ワード履歴は存在しません。");
+      }
+      const [removed] = championHistory.splice(index, 1);
+      return toChampionHistoryView(removed);
     },
 
     async createRoom({ displayName, playerCount }) {
@@ -2377,6 +2465,41 @@ function createHandler(options = {}) {
             }
             return handleGetChampionsRecent(event);
           }
+        case "getChampionsHistory":
+          {
+            const repository = await roomRepositoryPromise;
+            if (typeof repository.getChampionHistory === "function") {
+              const requestedLimit = Number(event.queryStringParameters?.limit || "50");
+              const limit = Number.isFinite(requestedLimit) && requestedLimit > 0 ? requestedLimit : 50;
+              return ok({
+                items: await repository.getChampionHistory(limit)
+              });
+            }
+            return handleGetChampionsHistory(event);
+          }
+        case "getAdminChampions": {
+          requireAdminPasscode(event, adminSharedPasscode);
+          const repository = await roomRepositoryPromise;
+          const requestedLimit = Number(event.queryStringParameters?.limit || "100");
+          const limit = Number.isFinite(requestedLimit) && requestedLimit > 0 ? requestedLimit : 100;
+          if (typeof repository.getChampionHistory === "function") {
+            return ok({
+              items: await repository.getChampionHistory(limit)
+            });
+          }
+          return handleGetChampionsHistory({
+            queryStringParameters: { limit: String(limit) }
+          });
+        }
+        case "deleteAdminChampion": {
+          requireAdminPasscode(event, adminSharedPasscode);
+          const repository = await roomRepositoryPromise;
+          if (typeof repository.deleteChampion !== "function") {
+            return fail(501, "NOT_IMPLEMENTED", "優勝ワード履歴の削除は未対応です。");
+          }
+          const removed = await repository.deleteChampion(matched.params[0]);
+          return ok({ removed });
+        }
         case "getDeck":
           {
             requireAdminPasscode(event, adminSharedPasscode);

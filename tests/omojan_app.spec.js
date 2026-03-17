@@ -467,3 +467,14 @@ test("app can clear the local room session and return to the welcome screen", as
 
   await context.close();
 });
+
+test("app can open and close champion history from the landing screen", async ({ page }) => {
+  await page.goto(STATIC_URL);
+
+  await page.getByRole("button", { name: "一覧を見る" }).click();
+  await expect(page.locator("#historyOverlay")).toBeVisible();
+  await expect(page.locator("#historyDialogBody")).toContainText("現場大洪水");
+
+  await page.getByRole("button", { name: "閉じる" }).click();
+  await expect(page.locator("#historyOverlay")).toBeHidden();
+});

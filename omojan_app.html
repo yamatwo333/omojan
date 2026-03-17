@@ -671,6 +671,85 @@
         display: none;
       }
 
+      .history-overlay {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 18px;
+        background: rgba(28, 21, 14, 0.24);
+        backdrop-filter: blur(3px);
+        z-index: 18;
+      }
+
+      .history-overlay[hidden] {
+        display: none;
+      }
+
+      .history-dialog {
+        width: min(100%, 460px);
+        max-height: min(88vh, 760px);
+        padding: 18px 16px 16px;
+        border-radius: 28px;
+        border: 2px solid rgba(35, 68, 47, 0.22);
+        background:
+          linear-gradient(180deg, rgba(255, 250, 241, 0.99), rgba(251, 244, 227, 0.98)),
+          #fff9ef;
+        box-shadow: 0 22px 36px rgba(29, 22, 15, 0.22);
+      }
+
+      .history-dialog-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .history-dialog-header h2 {
+        margin: 0;
+        color: var(--green);
+        font-size: 20px;
+      }
+
+      .history-dialog-body {
+        display: grid;
+        gap: 10px;
+        margin-top: 14px;
+        max-height: min(64vh, 520px);
+        overflow: auto;
+        padding-right: 2px;
+      }
+
+      .history-dialog-item {
+        padding: 14px;
+        border-radius: 18px;
+        border: 1px solid rgba(118, 89, 63, 0.16);
+        background: rgba(255, 255, 255, 0.74);
+      }
+
+      .history-dialog-item .word-board {
+        min-height: 96px;
+      }
+
+      .history-dialog-meta {
+        margin-top: 10px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.6;
+      }
+
+      .section-heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .section-heading h3 {
+        margin: 0;
+      }
+
       .reveal-card {
         position: relative;
         overflow: hidden;
@@ -934,6 +1013,16 @@
       </div>
     </div>
 
+    <div id="historyOverlay" class="history-overlay" hidden>
+      <div class="history-dialog">
+        <div class="history-dialog-header">
+          <h2>過去の総合優勝ワード</h2>
+          <button id="closeHistoryBtn" class="mini-btn" type="button">閉じる</button>
+        </div>
+        <div id="historyDialogBody" class="history-dialog-body"></div>
+      </div>
+    </div>
+
     <div id="measureWord" class="word-board measure-word" aria-hidden="true"></div>
 
     <script>
@@ -977,6 +1066,10 @@
         roomId: "",
         playerToken: "",
         recentChampions: [],
+        championHistoryItems: [],
+        championHistoryOpen: false,
+        championHistoryPending: false,
+        championHistoryError: "",
         isLoading: true,
         pendingAction: false,
         pendingMode: "",
@@ -1008,6 +1101,7 @@
           feedbackKey: "",
           bannerKey: "",
           revealKey: "",
+          championHistoryKey: "",
           landingShellKey: "",
           landingCreateKey: "",
           landingJoinKey: "",
@@ -1068,6 +1162,9 @@
         revealWord: document.getElementById("revealWord"),
         revealMeta: document.getElementById("revealMeta"),
         closeRevealBtn: document.getElementById("closeRevealBtn"),
+        historyOverlay: document.getElementById("historyOverlay"),
+        historyDialogBody: document.getElementById("historyDialogBody"),
+        closeHistoryBtn: document.getElementById("closeHistoryBtn"),
         measureWord: document.getElementById("measureWord")
       };
 
@@ -1967,6 +2064,20 @@
         }
       }
 
+      async function loadChampionHistory(limit = 50) {
+        try {
+          const payload = await fetchJson(`${state.apiBaseUrl}/champions/history?limit=${limit}`);
+          state.championHistoryItems = payload.data.items || [];
+          state.championHistoryError = "";
+        } catch (error) {
+          state.championHistoryError = error instanceof Error ? error.message : "履歴の取得に失敗しました。";
+          if (!state.championHistoryItems.length) {
+            const payload = await fetchJson(FIXTURE_CHAMPIONS_URL);
+            state.championHistoryItems = payload.data.items || [];
+          }
+        }
+      }
+
       function syncDraftWithRoom(room = state.room) {
         if (!room || deriveView(room) !== "submit") {
           state.draftSelectedTileIds = [];
@@ -2243,6 +2354,78 @@
           `,
           "最近の総合優勝ワードはまだありません。"
         );
+      }
+
+      function renderChampionHistoryTrigger(title = "最近の総合優勝ワード") {
+        return `
+          <section class="panel">
+            <div class="section-heading">
+              <h3>${escapeHtml(title)}</h3>
+              <button class="mini-btn" type="button" data-action="open-champion-history">一覧を見る</button>
+            </div>
+            ${renderRecentChampions()}
+          </section>
+        `;
+      }
+
+      function formatChampionHistoryWonAt(value) {
+        if (!value) {
+          return "日時不明";
+        }
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) {
+          return value;
+        }
+        return date.toLocaleString("ja-JP", {
+          month: "numeric",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit"
+        });
+      }
+
+      function renderChampionHistoryOverlay() {
+        if (!state.championHistoryOpen) {
+          state.renderCache.championHistoryKey = "";
+          els.historyOverlay.hidden = true;
+          return;
+        }
+
+        const historyKey = [
+          state.championHistoryOpen ? "open" : "closed",
+          state.championHistoryPending ? "pending" : "idle",
+          state.championHistoryError,
+          state.championHistoryItems
+            .map((item) => `${item.championId}:${item.phrase}:${item.displayName}:${item.wonAt}`)
+            .join("|")
+        ].join("|");
+
+        if (state.renderCache.championHistoryKey === historyKey) {
+          els.historyOverlay.hidden = false;
+          return;
+        }
+        state.renderCache.championHistoryKey = historyKey;
+
+        const listHtml = state.championHistoryItems.length
+          ? state.championHistoryItems
+              .map(
+                (item) => `
+                  <article class="history-dialog-item">
+                    ${renderWordBoard(item.renderedLines || [item.phrase], item.fontId || "classic", "result-word", { maxFont: 28, minFont: 16 })}
+                    <div class="history-dialog-meta">${escapeHtml(item.displayName)} / ${escapeHtml(formatChampionHistoryWonAt(item.wonAt))}</div>
+                  </article>
+                `
+              )
+              .join("")
+          : `<div class="empty-state">総合優勝ワード履歴はまだありません。</div>`;
+
+        els.historyDialogBody.innerHTML = `
+          ${state.championHistoryPending ? `<div class="info-box">履歴を読み込んでいます。</div>` : ""}
+          ${state.championHistoryError ? `<div class="info-box">${escapeHtml(state.championHistoryError)}</div>` : ""}
+          ${listHtml}
+        `;
+        hydrateWordBoards(els.historyDialogBody);
+        els.historyOverlay.hidden = false;
       }
 
       function renderScreenAlerts(options = {}) {
@@ -2605,12 +2788,7 @@
       }
 
       function renderLandingChampions() {
-        return `
-          <section class="panel">
-            <h3>最近の総合優勝ワード</h3>
-            ${renderRecentChampions()}
-          </section>
-        `;
+        return renderChampionHistoryTrigger("最近の総合優勝ワード");
       }
 
       function updateLandingView() {
@@ -2727,12 +2905,7 @@
       }
 
       function renderLobbyChampions() {
-        return `
-          <section class="panel">
-            <h3>最近の総合優勝ワード</h3>
-            ${renderRecentChampions()}
-          </section>
-        `;
+        return renderChampionHistoryTrigger("最近の総合優勝ワード");
       }
 
       function updateLobbyView(room) {
@@ -3812,6 +3985,7 @@
         if (options.includeReveal !== false) {
           renderReveal();
         }
+        renderChampionHistoryOverlay();
       }
 
       function getActiveReveal() {
@@ -3988,6 +4162,30 @@
       function setBackgroundSyncIssue(error) {
         state.pollFailureCount += 1;
         state.syncIssueMessage = describeAppError(error, "refresh");
+      }
+
+      async function openChampionHistory() {
+        state.championHistoryOpen = true;
+        state.championHistoryPending = true;
+        state.championHistoryError = "";
+        if (!state.championHistoryItems.length && state.recentChampions.length) {
+          state.championHistoryItems = clone(state.recentChampions);
+        }
+        renderCurrentView({ includeReveal: false });
+
+        try {
+          await loadChampionHistory(80);
+        } finally {
+          state.championHistoryPending = false;
+          renderCurrentView({ includeReveal: false });
+        }
+      }
+
+      function closeChampionHistory() {
+        state.championHistoryOpen = false;
+        state.championHistoryPending = false;
+        state.championHistoryError = "";
+        renderCurrentView({ includeReveal: false });
       }
 
       function toggleDraftTile(tileId) {
@@ -4172,6 +4370,12 @@
             await copyText(getInviteUrl(state.room.inviteCode), "招待URLをコピーしました。");
           }
         },
+        "open-champion-history": async () => {
+          await openChampionHistory();
+        },
+        "close-champion-history": async () => {
+          closeChampionHistory();
+        },
         "start-game": async () => {
           await runAction(async () => {
             let payload = await postApi(`/rooms/${encodeURIComponent(state.roomId)}/start-player`, {
@@ -4300,6 +4504,22 @@
         actionHandlers["close-reveal"]();
       });
 
+      els.closeHistoryBtn.addEventListener("click", () => {
+        actionHandlers["close-champion-history"]();
+      });
+
+      els.historyOverlay.addEventListener("click", (event) => {
+        if (event.target === els.historyOverlay) {
+          actionHandlers["close-champion-history"]();
+        }
+      });
+
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && state.championHistoryOpen) {
+          actionHandlers["close-champion-history"]();
+        }
+      });
+
       async function initializeApp() {
         const params = new URLSearchParams(window.location.search);
         const apiBaseUrl = params.get("apiBaseUrl");
@@ -4365,15 +4585,17 @@
           if (state.renderCache.loadingKey !== loadingKey) {
             state.renderCache.loadingKey = loadingKey;
             state.renderCache.appKey = "";
-            els.app.innerHTML = `<div class="card"><h2>読み込み中</h2><p>ルーム情報と最近の優勝ワードを確認しています。</p></div>`;
+          els.app.innerHTML = `<div class="card"><h2>読み込み中</h2><p>ルーム情報と最近の優勝ワードを確認しています。</p></div>`;
           }
           renderReveal();
+          renderChampionHistoryOverlay();
           return;
         }
 
         state.renderCache.loadingKey = "";
         renderApp();
         renderReveal();
+        renderChampionHistoryOverlay();
       }
 
       function render(options = {}) {

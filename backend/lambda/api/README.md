@@ -6,6 +6,9 @@
 
 - `GET /v1/health`
 - `GET /v1/champions/recent`
+- `GET /v1/champions/history`
+- `GET /v1/admin/champions`
+- `DELETE /v1/admin/champions/{championId}`
 - `GET /v1/admin/decks/default`
 - `PUT /v1/admin/decks/default`
 - `POST /v1/rooms`
@@ -27,9 +30,9 @@
 は実装済みです。
 
 このうちゲーム進行 API は、初版の 1 試合ループを最後まで通せる状態です。  
-`GET /v1/champions/recent` も、総合優勝が確定したワードを DynamoDB / memory に追加して返せます。  
+`GET /v1/champions/recent` と `GET /v1/champions/history` は、総合優勝が確定したワードを DynamoDB / memory に追加して返せます。  
 管理用デッキ API は `X-Omojan-Admin-Passcode` ヘッダ必須です。  
-`ADMIN_SHARED_PASSCODE` を設定すると、`default` デッキの取得と更新が使えます。  
+`ADMIN_SHARED_PASSCODE` を設定すると、`default` デッキの取得と更新、総合優勝ワード履歴の一覧と削除が使えます。  
 現在 `501 NOT_IMPLEMENTED` を返すのは、今後の拡張 API です。
 
 補足:

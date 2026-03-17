@@ -270,6 +270,43 @@
         margin-top: 16px;
       }
 
+      .history-list {
+        display: grid;
+        gap: 8px;
+        margin-top: 16px;
+      }
+
+      .history-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 12px;
+        align-items: center;
+        padding: 12px 14px;
+        border-radius: 16px;
+        border: 1px solid rgba(100, 73, 47, 0.14);
+        background: rgba(255, 252, 246, 0.92);
+      }
+
+      .history-main {
+        display: grid;
+        gap: 6px;
+        min-width: 0;
+      }
+
+      .history-phrase {
+        color: var(--ink);
+        font-size: 18px;
+        font-weight: 800;
+        line-height: 1.4;
+        word-break: break-word;
+      }
+
+      .history-meta-line {
+        color: rgba(31, 24, 18, 0.62);
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
       .tile-row {
         display: grid;
         grid-template-columns: 42px minmax(0, 1fr) auto auto;
@@ -383,12 +420,20 @@
           grid-template-columns: 42px minmax(0, 1fr);
         }
 
+        .history-row {
+          grid-template-columns: minmax(0, 1fr);
+        }
+
         .tile-meta {
           grid-column: 1 / 2;
         }
 
         .tile-remove {
           grid-column: 2 / 3;
+          justify-self: end;
+        }
+
+        .history-row .tile-remove {
           justify-self: end;
         }
       }
@@ -464,6 +509,15 @@
           </section>
           <div class="tile-list" id="tileList"></div>
         </section>
+
+        <section class="card" id="historyCard" hidden>
+          <h2>総合優勝ワード履歴</h2>
+          <div class="summary-pills" id="historySummaryPills"></div>
+          <div class="button-row">
+            <button class="btn secondary" id="reloadHistoryBtn" type="button">履歴を読み直す</button>
+          </div>
+          <div class="history-list" id="historyList"></div>
+        </section>
       </section>
     </main>
 
@@ -479,6 +533,7 @@
         searchQuery: "",
         filterMode: "all",
         importMode: "append",
+        championHistory: [],
         pending: false,
         feedback: "",
         error: ""
@@ -497,6 +552,10 @@
         summaryPills: document.getElementById("summaryPills"),
         saveDeckBtn: document.getElementById("saveDeckBtn"),
         reloadDeckBtn: document.getElementById("reloadDeckBtn"),
+        historyCard: document.getElementById("historyCard"),
+        historySummaryPills: document.getElementById("historySummaryPills"),
+        reloadHistoryBtn: document.getElementById("reloadHistoryBtn"),
+        historyList: document.getElementById("historyList"),
         addTileBtn: document.getElementById("addTileBtn"),
         appendCsvBtn: document.getElementById("appendCsvBtn"),
         replaceCsvBtn: document.getElementById("replaceCsvBtn"),
@@ -548,6 +607,12 @@
           <span class="summary-pill">総数<strong>${escapeHtml(state.deck.tiles.length)}</strong></span>
           <span class="summary-pill">有効<strong>${escapeHtml(enabledCount)}</strong></span>
           <span class="summary-pill">表示<strong>${escapeHtml(visibleCount)}</strong></span>
+        `;
+      }
+
+      function buildHistorySummaryPills() {
+        return `
+          <span class="summary-pill">履歴<strong>${escapeHtml(state.championHistory.length)}</strong></span>
         `;
       }
 
@@ -624,6 +689,44 @@
           .join("");
       }
 
+      function formatWonAt(value) {
+        if (!value) {
+          return "日時不明";
+        }
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) {
+          return value;
+        }
+        return date.toLocaleString("ja-JP", {
+          month: "numeric",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit"
+        });
+      }
+
+      function renderChampionHistory() {
+        if (!state.championHistory.length) {
+          els.historyList.innerHTML = `<div class="empty-state">総合優勝ワード履歴はまだありません。</div>`;
+          return;
+        }
+
+        els.historyList.innerHTML = state.championHistory
+          .map(
+            (item) => `
+              <article class="history-row">
+                <div class="history-main">
+                  <div class="history-phrase">${escapeHtml(item.phrase)}</div>
+                  <div class="history-meta-line">${escapeHtml(item.displayName)} / ${escapeHtml(formatWonAt(item.wonAt))}</div>
+                  <div class="tile-id">${escapeHtml(item.championId)}</div>
+                </div>
+                <button class="tile-remove" type="button" data-remove-champion-id="${escapeHtml(item.championId)}">削除</button>
+              </article>
+            `
+          )
+          .join("");
+      }
+
       function render() {
         els.apiBaseUrl.value = state.apiBaseUrl;
         els.apiMeta.textContent = `API: ${state.apiBaseUrl}`;
@@ -632,6 +735,7 @@
         els.clearPasscodeBtn.disabled = state.pending;
         els.saveDeckBtn.disabled = state.pending || !state.deck;
         els.reloadDeckBtn.disabled = state.pending || !state.deck;
+        els.reloadHistoryBtn.disabled = state.pending || !state.deck;
         els.addTileBtn.disabled = state.pending || !state.deck;
         els.appendCsvBtn.disabled = state.pending || !state.deck;
         els.replaceCsvBtn.disabled = state.pending || !state.deck;
@@ -639,17 +743,21 @@
 
         if (!state.deck) {
           els.deckCard.hidden = true;
+          els.historyCard.hidden = true;
           return;
         }
 
         els.deckCard.hidden = false;
+        els.historyCard.hidden = false;
         els.deckName.value = state.deck.deckName || "";
         els.searchInput.value = state.searchQuery;
         els.summaryPills.innerHTML = buildSummaryPills();
+        els.historySummaryPills.innerHTML = buildHistorySummaryPills();
         document.querySelectorAll("[data-filter-mode]").forEach((button) => {
           button.classList.toggle("active", button.dataset.filterMode === state.filterMode);
         });
         renderTiles();
+        renderChampionHistory();
       }
 
       async function fetchJson(pathname, options = {}) {
@@ -667,6 +775,11 @@
           throw new Error(payload?.error?.message || "通信に失敗しました。");
         }
         return payload.data;
+      }
+
+      async function loadChampionHistory() {
+        const data = await fetchJson("/admin/champions?limit=100");
+        state.championHistory = data.items || [];
       }
 
       function validateDeckBeforeSave() {
@@ -810,7 +923,10 @@
         setFeedback("");
         render();
         try {
-          const data = await fetchJson("/admin/decks/default");
+          const [data] = await Promise.all([
+            fetchJson("/admin/decks/default"),
+            loadChampionHistory()
+          ]);
           state.deck = {
             deckId: data.deckId,
             deckName: data.deckName,
@@ -942,6 +1058,31 @@
       });
 
       document.addEventListener("click", async (event) => {
+        const removeChampionButton = event.target.closest("[data-remove-champion-id]");
+        if (removeChampionButton) {
+          const championId = removeChampionButton.dataset.removeChampionId;
+          const confirmed = window.confirm("この総合優勝ワード履歴を削除します。続けますか？");
+          if (!confirmed) {
+            return;
+          }
+          state.pending = true;
+          setFeedback("");
+          render();
+          try {
+            await fetchJson(`/admin/champions/${encodeURIComponent(championId)}`, {
+              method: "DELETE"
+            });
+            state.championHistory = state.championHistory.filter((item) => item.championId !== championId);
+            setFeedback("総合優勝ワード履歴を削除しました。");
+          } catch (error) {
+            setFeedback(error instanceof Error ? error.message : "履歴の削除に失敗しました。", true);
+          } finally {
+            state.pending = false;
+            render();
+          }
+          return;
+        }
+
         const removeButton = event.target.closest("[data-remove-index]");
         if (removeButton && state.deck) {
           const index = Number(removeButton.dataset.removeIndex);
@@ -962,6 +1103,22 @@
 
         if (event.target.id === "reloadDeckBtn") {
           await loadDeck();
+          return;
+        }
+
+        if (event.target.id === "reloadHistoryBtn") {
+          state.pending = true;
+          setFeedback("");
+          render();
+          try {
+            await loadChampionHistory();
+            setFeedback("総合優勝ワード履歴を読み込みました。");
+          } catch (error) {
+            setFeedback(error instanceof Error ? error.message : "履歴の取得に失敗しました。", true);
+          } finally {
+            state.pending = false;
+            render();
+          }
           return;
         }
 

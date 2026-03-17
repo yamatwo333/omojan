@@ -194,3 +194,20 @@ test("admin page adds a new word at the top", async ({ page }) => {
   await expect(page.locator('[data-tile-text-index="0"]')).toHaveValue("先頭追加ワード");
   await expect(page.locator('[data-tile-text-index="1"]')).toHaveValue("現場猫");
 });
+
+test("admin page can review and delete champion history", async ({ page }) => {
+  await page.goto(STATIC_URL);
+  await page.fill("#adminPasscode", ADMIN_PASSCODE);
+  await page.getByRole("button", { name: "デッキを読む" }).click();
+
+  await expect(page.locator("#historyCard")).toBeVisible();
+  await expect(page.locator("#historyList .history-row")).toHaveCount(5);
+  await expect(page.locator("#historyList")).toContainText("現場大洪水");
+
+  page.once("dialog", (dialog) => dialog.accept());
+  await page.locator("[data-remove-champion-id]").first().click();
+
+  await expect(page.locator("#feedback")).toContainText("総合優勝ワード履歴を削除しました。");
+  await expect(page.locator("#historyList .history-row")).toHaveCount(4);
+  await expect(page.locator("#historyList")).not.toContainText("現場大洪水");
+});

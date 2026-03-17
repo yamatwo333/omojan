@@ -359,9 +359,17 @@
       }
 
       .history-meta-line {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 10px;
         color: rgba(31, 24, 18, 0.62);
         font-size: 13px;
         line-height: 1.5;
+      }
+
+      .history-meta-line strong {
+        color: var(--green);
+        font-weight: 800;
       }
 
       .tile-row {
@@ -817,6 +825,7 @@
           return value;
         }
         return date.toLocaleString("ja-JP", {
+          year: "numeric",
           month: "numeric",
           day: "numeric",
           hour: "2-digit",
@@ -842,7 +851,10 @@
               <article class="history-row">
                 <div class="history-main">
                   <div class="history-phrase">${escapeHtml(item.phrase)}</div>
-                  <div class="history-meta-line">${escapeHtml(item.displayName)} / ${escapeHtml(formatWonAt(item.wonAt))}</div>
+                  <div class="history-meta-line">
+                    <strong>${escapeHtml(item.displayName)}</strong>
+                    <span>${escapeHtml(formatWonAt(item.wonAt))}</span>
+                  </div>
                   <div class="tile-id">${escapeHtml(item.championId)}</div>
                 </div>
                 <button class="tile-remove" type="button" data-remove-champion-id="${escapeHtml(item.championId)}">削除</button>

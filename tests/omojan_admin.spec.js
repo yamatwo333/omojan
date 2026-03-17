@@ -200,6 +200,7 @@ test("admin page can review and delete champion history", async ({ page }) => {
   await page.fill("#adminPasscode", ADMIN_PASSCODE);
   await page.getByRole("button", { name: "デッキを読む" }).click();
 
+  await page.getByRole("button", { name: "総合優勝ワード履歴" }).click();
   await expect(page.locator("#historyCard")).toBeVisible();
   await expect(page.locator("#historyList .history-row")).toHaveCount(5);
   await expect(page.locator("#historyList")).toContainText("現場大洪水");
@@ -210,4 +211,30 @@ test("admin page can review and delete champion history", async ({ page }) => {
   await expect(page.locator("#feedback")).toContainText("総合優勝ワード履歴を削除しました。");
   await expect(page.locator("#historyList .history-row")).toHaveCount(4);
   await expect(page.locator("#historyList")).not.toContainText("現場大洪水");
+});
+
+test("admin page paginates a long word list", async ({ page }) => {
+  await page.goto(STATIC_URL);
+  await page.fill("#adminPasscode", ADMIN_PASSCODE);
+  await page.getByRole("button", { name: "デッキを読む" }).click();
+
+  const rows = ["text"];
+  for (let index = 1; index <= 23; index += 1) {
+    rows.push(`ページ確認ワード${index}`);
+  }
+
+  await page.getByRole("button", { name: "CSVで置換" }).click();
+  await page.locator("#csvFileInput").setInputFiles({
+    name: "paging.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(`${rows.join("\n")}\n`, "utf8")
+  });
+
+  await expect(page.locator('[data-tile-text-index]')).toHaveCount(20);
+  await expect(page.locator("#tilePagination")).toContainText("1 / 2 ページ");
+
+  await page.locator('[data-page-target="tiles"][data-page-direction="next"]').click();
+  await expect(page.locator('[data-tile-text-index]')).toHaveCount(3);
+  await expect(page.locator("#tilePagination")).toContainText("2 / 2 ページ");
+  await expect(page.locator('[data-tile-text-index="20"]')).toHaveValue("ページ確認ワード21");
 });

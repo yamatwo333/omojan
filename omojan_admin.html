@@ -80,6 +80,29 @@
         margin-top: 22px;
       }
 
+      .admin-tabs {
+        display: flex;
+        gap: 10px;
+      }
+
+      .admin-tab {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 12px 16px;
+        border-radius: 999px;
+        border: 1px solid rgba(184, 138, 50, 0.32);
+        background: rgba(255, 250, 238, 0.94);
+        color: var(--green);
+        font-weight: 800;
+      }
+
+      .admin-tab.active {
+        background: linear-gradient(180deg, rgba(47, 106, 66, 0.98), rgba(36, 79, 49, 0.98));
+        color: #f7f1df;
+        border-color: rgba(24, 53, 33, 0.24);
+      }
+
       .card {
         padding: 18px;
         border-radius: 22px;
@@ -276,6 +299,40 @@
         margin-top: 16px;
       }
 
+      .pagination {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-top: 16px;
+      }
+
+      .pagination-label {
+        color: rgba(31, 24, 18, 0.68);
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .pagination-actions {
+        display: flex;
+        gap: 8px;
+      }
+
+      .page-btn {
+        min-width: 88px;
+        padding: 10px 12px;
+        border-radius: 12px;
+        border: 1px solid rgba(184, 138, 50, 0.28);
+        background: rgba(255, 250, 238, 0.96);
+        color: var(--green);
+        font-weight: 800;
+      }
+
+      .page-btn:disabled {
+        cursor: default;
+        opacity: 0.45;
+      }
+
       .history-row {
         display: grid;
         grid-template-columns: minmax(0, 1fr) auto;
@@ -468,6 +525,11 @@
           </div>
         </section>
 
+        <div class="admin-tabs" id="adminTabs" hidden>
+          <button class="admin-tab active" id="deckTabBtn" type="button" data-admin-tab="deck">ワード一覧</button>
+          <button class="admin-tab" id="historyTabBtn" type="button" data-admin-tab="history">総合優勝ワード履歴</button>
+        </div>
+
         <section class="card" id="deckCard" hidden>
           <h2>default デッキ</h2>
           <div class="field-grid">
@@ -508,6 +570,7 @@
             </div>
           </section>
           <div class="tile-list" id="tileList"></div>
+          <div class="pagination" id="tilePagination"></div>
         </section>
 
         <section class="card" id="historyCard" hidden>
@@ -517,6 +580,7 @@
             <button class="btn secondary" id="reloadHistoryBtn" type="button">履歴を読み直す</button>
           </div>
           <div class="history-list" id="historyList"></div>
+          <div class="pagination" id="historyPagination"></div>
         </section>
       </section>
     </main>
@@ -525,6 +589,8 @@
       const LOCAL_API_BASE_URL = "http://127.0.0.1:8788/v1";
       const PUBLIC_DEV_API_BASE_URL = "https://nglzfg3co5.execute-api.ap-northeast-1.amazonaws.com/dev/v1";
       const PASSCODE_KEY = "omojan-admin-passcode";
+      const TILE_PAGE_SIZE = 20;
+      const HISTORY_PAGE_SIZE = 12;
 
       const state = {
         apiBaseUrl: "",
@@ -532,6 +598,9 @@
         deck: null,
         searchQuery: "",
         filterMode: "all",
+        activeTab: "deck",
+        tilePage: 1,
+        historyPage: 1,
         importMode: "append",
         championHistory: [],
         pending: false,
@@ -546,6 +615,9 @@
         loadDeckBtn: document.getElementById("loadDeckBtn"),
         clearPasscodeBtn: document.getElementById("clearPasscodeBtn"),
         feedback: document.getElementById("feedback"),
+        adminTabs: document.getElementById("adminTabs"),
+        deckTabBtn: document.getElementById("deckTabBtn"),
+        historyTabBtn: document.getElementById("historyTabBtn"),
         deckCard: document.getElementById("deckCard"),
         deckName: document.getElementById("deckName"),
         searchInput: document.getElementById("searchInput"),
@@ -556,11 +628,13 @@
         historySummaryPills: document.getElementById("historySummaryPills"),
         reloadHistoryBtn: document.getElementById("reloadHistoryBtn"),
         historyList: document.getElementById("historyList"),
+        historyPagination: document.getElementById("historyPagination"),
         addTileBtn: document.getElementById("addTileBtn"),
         appendCsvBtn: document.getElementById("appendCsvBtn"),
         replaceCsvBtn: document.getElementById("replaceCsvBtn"),
         csvFileInput: document.getElementById("csvFileInput"),
-        tileList: document.getElementById("tileList")
+        tileList: document.getElementById("tileList"),
+        tilePagination: document.getElementById("tilePagination")
       };
 
       function escapeHtml(value) {
@@ -602,17 +676,21 @@
         }
         const enabledCount = state.deck.tiles.filter((tile) => tile.enabled !== false).length;
         const visibleCount = getFilteredTiles().length;
+        const totalPages = Math.max(1, Math.ceil(visibleCount / TILE_PAGE_SIZE));
         return `
           <span class="summary-pill">version<strong>${escapeHtml(state.deck.version)}</strong></span>
           <span class="summary-pill">総数<strong>${escapeHtml(state.deck.tiles.length)}</strong></span>
           <span class="summary-pill">有効<strong>${escapeHtml(enabledCount)}</strong></span>
           <span class="summary-pill">表示<strong>${escapeHtml(visibleCount)}</strong></span>
+          <span class="summary-pill">ページ<strong>${escapeHtml(totalPages)}</strong></span>
         `;
       }
 
       function buildHistorySummaryPills() {
+        const totalPages = Math.max(1, Math.ceil(state.championHistory.length / HISTORY_PAGE_SIZE));
         return `
           <span class="summary-pill">履歴<strong>${escapeHtml(state.championHistory.length)}</strong></span>
+          <span class="summary-pill">ページ<strong>${escapeHtml(totalPages)}</strong></span>
         `;
       }
 
@@ -649,17 +727,57 @@
           });
       }
 
+      function buildPaginationMarkup({ page, totalPages, target }) {
+        if (totalPages <= 1) {
+          return "";
+        }
+        return `
+          <div class="pagination-label">${escapeHtml(page)} / ${escapeHtml(totalPages)} ページ</div>
+          <div class="pagination-actions">
+            <button
+              class="page-btn"
+              type="button"
+              data-page-target="${escapeHtml(target)}"
+              data-page-direction="prev"
+              ${page <= 1 ? "disabled" : ""}
+            >前へ</button>
+            <button
+              class="page-btn"
+              type="button"
+              data-page-target="${escapeHtml(target)}"
+              data-page-direction="next"
+              ${page >= totalPages ? "disabled" : ""}
+            >次へ</button>
+          </div>
+        `;
+      }
+
+      function getTilePaginationState() {
+        const filteredTiles = getFilteredTiles();
+        const totalPages = Math.max(1, Math.ceil(filteredTiles.length / TILE_PAGE_SIZE));
+        state.tilePage = Math.min(Math.max(state.tilePage, 1), totalPages);
+        const startIndex = (state.tilePage - 1) * TILE_PAGE_SIZE;
+        return {
+          filteredTiles,
+          totalPages,
+          page: state.tilePage,
+          pageItems: filteredTiles.slice(startIndex, startIndex + TILE_PAGE_SIZE)
+        };
+      }
+
       function renderTiles() {
         if (!state.deck) {
           els.tileList.innerHTML = "";
+          els.tilePagination.innerHTML = "";
           return;
         }
-        const filteredTiles = getFilteredTiles();
+        const { filteredTiles, pageItems, totalPages, page } = getTilePaginationState();
         if (!filteredTiles.length) {
           els.tileList.innerHTML = `<div class="empty-state">一致するワードはありません。</div>`;
+          els.tilePagination.innerHTML = "";
           return;
         }
-        els.tileList.innerHTML = filteredTiles
+        els.tileList.innerHTML = pageItems
           .map(
             ({ tile, index }) => `
               <article class="tile-row">
@@ -687,6 +805,7 @@
             `
           )
           .join("");
+        els.tilePagination.innerHTML = buildPaginationMarkup({ page, totalPages, target: "tiles" });
       }
 
       function formatWonAt(value) {
@@ -708,10 +827,16 @@
       function renderChampionHistory() {
         if (!state.championHistory.length) {
           els.historyList.innerHTML = `<div class="empty-state">総合優勝ワード履歴はまだありません。</div>`;
+          els.historyPagination.innerHTML = "";
           return;
         }
 
-        els.historyList.innerHTML = state.championHistory
+        const totalPages = Math.max(1, Math.ceil(state.championHistory.length / HISTORY_PAGE_SIZE));
+        state.historyPage = Math.min(Math.max(state.historyPage, 1), totalPages);
+        const startIndex = (state.historyPage - 1) * HISTORY_PAGE_SIZE;
+        const pageItems = state.championHistory.slice(startIndex, startIndex + HISTORY_PAGE_SIZE);
+
+        els.historyList.innerHTML = pageItems
           .map(
             (item) => `
               <article class="history-row">
@@ -725,6 +850,11 @@
             `
           )
           .join("");
+        els.historyPagination.innerHTML = buildPaginationMarkup({
+          page: state.historyPage,
+          totalPages,
+          target: "history"
+        });
       }
 
       function render() {
@@ -742,13 +872,17 @@
         renderFeedback();
 
         if (!state.deck) {
+          els.adminTabs.hidden = true;
           els.deckCard.hidden = true;
           els.historyCard.hidden = true;
           return;
         }
 
-        els.deckCard.hidden = false;
-        els.historyCard.hidden = false;
+        els.adminTabs.hidden = false;
+        els.deckTabBtn.classList.toggle("active", state.activeTab === "deck");
+        els.historyTabBtn.classList.toggle("active", state.activeTab === "history");
+        els.deckCard.hidden = state.activeTab !== "deck";
+        els.historyCard.hidden = state.activeTab !== "history";
         els.deckName.value = state.deck.deckName || "";
         els.searchInput.value = state.searchQuery;
         els.summaryPills.innerHTML = buildSummaryPills();
@@ -778,7 +912,7 @@
       }
 
       async function loadChampionHistory() {
-        const data = await fetchJson("/admin/champions?limit=100");
+        const data = await fetchJson("/admin/champions?limit=300");
         state.championHistory = data.items || [];
       }
 
@@ -937,6 +1071,9 @@
               enabled: tile.enabled !== false
             }))
           };
+          state.tilePage = 1;
+          state.historyPage = 1;
+          state.activeTab = "deck";
           window.localStorage.setItem(PASSCODE_KEY, state.passcode);
           setFeedback("デッキを読み込みました。");
         } catch (error) {
@@ -983,6 +1120,7 @@
               enabled: tile.enabled !== false
             }))
           };
+          state.tilePage = 1;
           window.localStorage.setItem(PASSCODE_KEY, state.passcode);
           setFeedback(
             deduped.removedCount
@@ -1018,6 +1156,7 @@
           state.deck.tiles = deduped.tiles;
           state.searchQuery = "";
           state.filterMode = "all";
+          state.tilePage = 1;
           setFeedback(
             state.importMode === "replace"
               ? `${state.deck.tiles.length}件で置き換えました${deduped.removedCount ? `。重複ワードを${deduped.removedCount}件自動削除しました` : ""}。`
@@ -1043,6 +1182,7 @@
         }
         if (target.id === "searchInput") {
           state.searchQuery = target.value;
+          state.tilePage = 1;
           render();
           return;
         }
@@ -1073,6 +1213,7 @@
               method: "DELETE"
             });
             state.championHistory = state.championHistory.filter((item) => item.championId !== championId);
+            state.historyPage = Math.max(1, state.historyPage);
             setFeedback("総合優勝ワード履歴を削除しました。");
           } catch (error) {
             setFeedback(error instanceof Error ? error.message : "履歴の削除に失敗しました。", true);
@@ -1087,6 +1228,26 @@
         if (removeButton && state.deck) {
           const index = Number(removeButton.dataset.removeIndex);
           state.deck.tiles.splice(index, 1);
+          render();
+          return;
+        }
+
+        const pageButton = event.target.closest("[data-page-target]");
+        if (pageButton) {
+          const { pageTarget, pageDirection } = pageButton.dataset;
+          if (pageTarget === "tiles") {
+            state.tilePage = Math.max(1, state.tilePage + (pageDirection === "next" ? 1 : -1));
+          }
+          if (pageTarget === "history") {
+            state.historyPage = Math.max(1, state.historyPage + (pageDirection === "next" ? 1 : -1));
+          }
+          render();
+          return;
+        }
+
+        const tabButton = event.target.closest("[data-admin-tab]");
+        if (tabButton && state.deck) {
+          state.activeTab = tabButton.dataset.adminTab === "history" ? "history" : "deck";
           render();
           return;
         }
@@ -1124,6 +1285,7 @@
 
         if (event.target.id === "addTileBtn" && state.deck) {
           state.deck.tiles.unshift(createLocalTile());
+          state.tilePage = 1;
           render();
           return;
         }
@@ -1131,6 +1293,7 @@
         const filterButton = event.target.closest("[data-filter-mode]");
         if (filterButton) {
           state.filterMode = filterButton.dataset.filterMode;
+          state.tilePage = 1;
           render();
           return;
         }

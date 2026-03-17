@@ -1604,7 +1604,7 @@
 
       function getStatusText() {
         if (state.pendingAction) {
-          return state.pendingMode === "sync" ? "同期中" : "送信中";
+          return isSyncPending() ? getSyncPendingCopy().short : "送信中";
         }
         if (state.isLoading) {
           return "同期中";
@@ -1736,6 +1736,7 @@
           getStatusText(),
           getStatusContext(),
           state.pendingAction ? "pending" : "idle",
+          state.pendingMode,
           state.isLoading ? "loading" : "ready",
           state.roomId ? "room" : "welcome"
         ].join("|");
@@ -1744,7 +1745,13 @@
           els.statusLabel.textContent = getStatusText();
           els.statusContext.textContent = getStatusContext();
           els.refreshTopBtn.disabled = state.pendingAction || state.isLoading;
-          els.refreshTopBtn.textContent = state.roomId ? "更新" : "再読込";
+          els.refreshTopBtn.textContent = state.isLoading
+            ? "同期中"
+            : isSyncPending()
+              ? getSyncPendingCopy().short
+              : state.roomId
+                ? "更新"
+                : "再読込";
         }
         renderFeedbackDock();
       }
@@ -2097,6 +2104,8 @@
           showRefresh = true,
           showLeave = false
         } = options;
+        const syncPending = isSyncPending();
+        const syncCopy = getSyncPendingCopy();
         const pills = [
           { label: "状態", value: getStatusText() },
           { label: "最終同期", value: formatLastSyncValue() },
@@ -2108,10 +2117,11 @@
             <h3>${escapeHtml(title)}</h3>
             ${description ? `<p>${escapeHtml(description)}</p>` : ""}
             ${renderSummaryPills(pills)}
+            ${syncPending ? `<div class="info-box">${escapeHtml(syncCopy.detail)}</div>` : ""}
             ${state.syncIssueMessage ? `<div class="info-box">${escapeHtml(`${state.syncIssueMessage} 自動で再試行しています。`)}</div>` : ""}
             <div class="utility-actions">
-              ${showRefresh ? `<button class="btn subtle" type="button" data-action="refresh-latest" ${state.pendingAction ? "disabled" : ""}>今の状態を更新</button>` : ""}
-              ${showReconnect ? `<button class="btn subtle" type="button" data-action="retry-room-connection" ${state.pendingAction ? "disabled" : ""}>再接続する</button>` : ""}
+              ${showRefresh ? `<button class="btn subtle" type="button" data-action="refresh-latest" ${state.pendingAction ? "disabled" : ""}>${syncPending && state.pendingMode !== "reconnect" ? "更新中..." : "今の状態を更新"}</button>` : ""}
+              ${showReconnect ? `<button class="btn subtle" type="button" data-action="retry-room-connection" ${state.pendingAction ? "disabled" : ""}>${state.pendingMode === "reconnect" ? "再接続中..." : "再接続する"}</button>` : ""}
               ${showLeave ? `<button class="btn subtle" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>この端末の参加情報を消す</button>` : ""}
             </div>
           </section>
@@ -3828,7 +3838,7 @@
         } finally {
           state.pendingAction = false;
           state.pendingMode = "";
-          render();
+          renderCurrentView();
         }
       }
 
@@ -3864,6 +3874,23 @@
         state.selectedVoteTarget = "";
         state.selectedHostTarget = "";
         state.selectedFinalTarget = "";
+      }
+
+      function isSyncPending() {
+        return state.pendingAction && ["sync", "refresh", "reconnect"].includes(state.pendingMode);
+      }
+
+      function getSyncPendingCopy() {
+        if (state.pendingMode === "reconnect") {
+          return {
+            short: "再接続中",
+            detail: "もう一度つなぎ直しています。"
+          };
+        }
+        return {
+          short: "同期中",
+          detail: "最新状態を確認しています。"
+        };
       }
 
       function clearBackgroundSyncIssue() {
@@ -3989,12 +4016,12 @@
               return;
             }
             await loadRecentChampions();
-          }, { pendingMode: "sync" });
+          }, { pendingMode: "refresh" });
         },
         "retry-room-connection": async () => {
           await runAction(async () => {
             await reconnectRoom();
-          }, { pendingMode: "sync" });
+          }, { pendingMode: "reconnect" });
         },
         "clear-messages": async () => {
           setFeedback("");

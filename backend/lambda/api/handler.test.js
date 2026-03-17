@@ -153,6 +153,8 @@ function buildSubmitPayload(room) {
     tileOrder: [0, 1],
     phrase: availableTiles.map((tile) => tile.text).join(""),
     fontId: "broadcast",
+    sizePreset: "large",
+    lineGapPreset: "none",
     lineMode: "boundary",
     manualBreaks: [],
     renderedLines: availableTiles.map((tile) => tile.text)

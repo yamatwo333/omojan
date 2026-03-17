@@ -423,6 +423,8 @@ test("mobile submit view keeps a floating preview and uses unified reveal labels
 
   await host.getByRole("button", { name: "この順で開始" }).click();
   await expect(host.locator(".page-header")).toHaveClass(/is-hidden/);
+  await expect(host.locator("body")).toContainText("ワードの間");
+  await expect(host.locator("body")).not.toContainText("句間");
 
   await host.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
   await host.waitForTimeout(900);
@@ -433,6 +435,13 @@ test("mobile submit view keeps a floating preview and uses unified reveal labels
   }));
   expect(previewState.className).toContain("is-floating");
   expect(previewState.top).toBeLessThanOrEqual(statusBottom + 12);
+  const initialFontSize = await host.locator("#previewWord .word-line").first().evaluate((node) => Number.parseFloat(getComputedStyle(node).fontSize));
+  await host.getByRole("button", { name: "小" }).click();
+  await host.waitForTimeout(200);
+  const reducedFontSize = await host.locator("#previewWord .word-line").first().evaluate((node) => Number.parseFloat(getComputedStyle(node).fontSize));
+  expect(initialFontSize - reducedFontSize).toBeGreaterThanOrEqual(8);
+  const noOverflow = await host.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1);
+  expect(noOverflow).toBeTruthy();
 
   await submitCurrentDraft(host);
   await expect(host.locator("#revealBadge")).toHaveText("ラウンド1");

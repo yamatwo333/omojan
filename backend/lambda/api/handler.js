@@ -230,7 +230,7 @@ function normalizeSizePreset(value) {
 }
 
 function normalizeLineGapPreset(value) {
-  return ["normal", "wide"].includes(value) ? value : "normal";
+  return ["none", "normal", "wide"].includes(value) ? value : "none";
 }
 
 function normalizeKnownRevision(value) {

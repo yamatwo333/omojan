@@ -462,6 +462,62 @@
         background: rgba(255, 255, 255, 0.72);
       }
 
+      .appearance-panel {
+        display: grid;
+        gap: 14px;
+      }
+
+      .appearance-panel h3 {
+        margin-bottom: 2px;
+      }
+
+      .settings-grid {
+        display: grid;
+        gap: 12px;
+      }
+
+      .setting-group {
+        display: grid;
+        gap: 8px;
+        padding: 12px 12px 10px;
+        border-radius: 18px;
+        border: 1px solid rgba(118, 89, 63, 0.14);
+        background: rgba(255, 255, 255, 0.58);
+      }
+
+      .setting-group-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .setting-group-title {
+        color: var(--green);
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      .setting-group-value {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .setting-group .chip-row {
+        margin-top: 0;
+      }
+
+      @media (min-width: 720px) {
+        .settings-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .settings-grid .setting-group.is-wide {
+          grid-column: 1 / -1;
+        }
+      }
+
       .break-panel p {
         margin: 0 0 10px;
         color: var(--muted);
@@ -1189,15 +1245,23 @@
           padding: 16px;
         }
 
+        .settings-grid {
+          gap: 10px;
+        }
+
+        .setting-group {
+          padding: 12px;
+        }
+
         .card h2,
         .panel h3 {
-          font-size: 22px;
+          font-size: 24px;
         }
 
         .card p,
         .panel p,
         .section-note {
-          font-size: 16px;
+          font-size: 17px;
         }
 
         .field label,
@@ -1208,17 +1272,17 @@
         .player-card span,
         .history-card span,
         .muted {
-          font-size: 14px;
+          font-size: 15px;
         }
 
         .btn {
-          min-height: 54px;
-          font-size: 17px;
+          min-height: 56px;
+          font-size: 18px;
         }
 
         .tile {
-          min-height: 82px;
-          font-size: 16px;
+          min-height: 88px;
+          font-size: 17px;
         }
 
         .summary-pill,
@@ -1226,6 +1290,18 @@
         .mini-btn,
         .status-row {
           font-size: 14px;
+        }
+
+        .tile-grid {
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+
+        .preview-card {
+          padding: 18px 14px;
+        }
+
+        .preview-card .word-board {
+          min-height: 150px;
         }
       }
     </style>
@@ -1310,15 +1386,16 @@
       ];
 
       const sizePresets = [
-        { id: "xl", label: "特大", singleMax: 92, multiMax: 78, minBoost: 6 },
-        { id: "large", label: "大", singleMax: 86, multiMax: 72, minBoost: 2 },
-        { id: "medium", label: "中", singleMax: 78, multiMax: 66, minBoost: -2 },
-        { id: "small", label: "小", singleMax: 70, multiMax: 58, minBoost: -6 }
+        { id: "xl", label: "特大", singleMax: 126, multiMax: 108, singleMin: 34, multiMin: 28, renderScale: 1.22 },
+        { id: "large", label: "大", singleMax: 104, multiMax: 88, singleMin: 24, multiMin: 22, renderScale: 1.06 },
+        { id: "medium", label: "中", singleMax: 84, multiMax: 70, singleMin: 18, multiMin: 18, renderScale: 0.9 },
+        { id: "small", label: "小", singleMax: 66, multiMax: 54, singleMin: 13, multiMin: 13, renderScale: 0.74 }
       ];
 
       const lineGapPresets = [
-        { id: "normal", label: "通常", value: "0.02em" },
-        { id: "wide", label: "広め", value: "0.24em" }
+        { id: "none", label: "なし", value: "0.02em", spaces: "" },
+        { id: "normal", label: "1マス", value: "0.52em", spaces: "　" },
+        { id: "wide", label: "2マス", value: "0.94em", spaces: "　　" }
       ];
 
       const state = {
@@ -1345,7 +1422,7 @@
         draftSelectedTileIds: [],
         draftFontId: "broadcast",
         draftSizePreset: "large",
-        draftLineGapPreset: "normal",
+        draftLineGapPreset: "none",
         draftLineMode: "boundary",
         draftManualBreaks: [],
         selectedVoteTarget: "",
@@ -1610,6 +1687,17 @@
         return getSelectedTiles(room).map((tile) => tile.text).join("");
       }
 
+      function getDraftDisplayText(room = state.room) {
+        const tiles = getSelectedTiles(room);
+        if (!tiles.length) {
+          return "";
+        }
+        if (tiles.length === 1) {
+          return tiles[0].text;
+        }
+        return `${tiles[0].text}${getWordGapSpaces(state.draftLineGapPreset)}${tiles[1].text}`;
+      }
+
       function getBoundaryIndex(room = state.room) {
         const [first] = getSelectedTiles(room);
         return Array.from(first?.text || "").length || 0;
@@ -1640,6 +1728,10 @@
 
       function getLineGapPreset(lineGapPresetId) {
         return lineGapPresets.find((preset) => preset.id === lineGapPresetId) || lineGapPresets[0];
+      }
+
+      function getWordGapSpaces(lineGapPresetId) {
+        return getLineGapPreset(lineGapPresetId).spaces || "";
       }
 
       function getActivePlayerCount(room = state.room) {
@@ -1707,7 +1799,7 @@
         }
       }
 
-      function applyWordMarkup(container, lines, fontClass, lineMode, fontSize, lineGapPreset = "normal") {
+      function applyWordMarkup(container, lines, fontClass, lineMode, fontSize, lineGapPreset = "none") {
         const classNames = ["word-board", fontClass];
         if (container.classList.contains("measure-word")) {
           classNames.push("measure-word");
@@ -1724,7 +1816,7 @@
         container.innerHTML = lines.map((line) => `<span class="word-line">${escapeHtml(line)}</span>`).join("");
       }
 
-      function doesWordFit(lines, fontClass, lineMode, fontSize, width, height, lineGapPreset = "normal") {
+      function doesWordFit(lines, fontClass, lineMode, fontSize, width, height, lineGapPreset = "none") {
         const tolerance = 6;
         els.measureWord.dataset.variant = "";
         els.measureWord.style.width = `${width}px`;
@@ -1738,28 +1830,32 @@
 
       function getMinimumFontSize(charsLength, lineMode, sizePresetId = "large") {
         const preset = getSizePreset(sizePresetId);
+        const baseMin = lineMode === "single" ? preset.singleMin : preset.multiMin;
         if (lineMode === "single") {
           if (charsLength >= 18) {
-            return Math.max(14, 16 + preset.minBoost);
+            return Math.max(12, baseMin - 10);
           }
           if (charsLength >= 14) {
-            return Math.max(16, 18 + preset.minBoost);
+            return Math.max(12, baseMin - 6);
           }
           if (charsLength >= 10) {
-            return Math.max(18, 20 + preset.minBoost);
+            return Math.max(12, baseMin - 3);
           }
-          return Math.max(20, 24 + preset.minBoost);
+          return baseMin;
         }
-        if (charsLength >= 16) {
-          return Math.max(20, 26 + preset.minBoost);
+        if (charsLength >= 18) {
+          return Math.max(12, baseMin - 10);
         }
-        if (charsLength >= 12) {
-          return Math.max(22, 28 + preset.minBoost);
+        if (charsLength >= 14) {
+          return Math.max(12, baseMin - 6);
         }
-        return Math.max(24, 32 + preset.minBoost);
+        if (charsLength >= 10) {
+          return Math.max(12, baseMin - 3);
+        }
+        return baseMin;
       }
 
-      function measureLineFits(text, fontClass, fontSize, width, lineGapPreset = "normal") {
+      function measureLineFits(text, fontClass, fontSize, width, lineGapPreset = "none") {
         const tolerance = 6;
         els.measureWord.dataset.variant = "";
         els.measureWord.style.width = `${width}px`;
@@ -1769,7 +1865,7 @@
         return lineEl ? lineEl.scrollWidth <= width + tolerance : true;
       }
 
-      function getLastFittingEnd(chars, start, endLimit, fontClass, fontSize, width, lineGapPreset = "normal") {
+      function getLastFittingEnd(chars, start, endLimit, fontClass, fontSize, width, lineGapPreset = "none") {
         let lastFit = start;
         for (let end = start + 1; end <= endLimit; end += 1) {
           const sample = chars.slice(start, end).join("");
@@ -1782,7 +1878,7 @@
         return lastFit > start ? lastFit : Math.min(start + 1, endLimit);
       }
 
-      function splitForcedRange(chars, start, endLimit, fontClass, fontSize, width, lineGapPreset = "normal") {
+      function splitForcedRange(chars, start, endLimit, fontClass, fontSize, width, lineGapPreset = "none") {
         const lines = [];
         let cursor = start;
         while (cursor < endLimit) {
@@ -1793,7 +1889,7 @@
         return lines;
       }
 
-      function buildBoundaryLines(chars, fontClass, fontSize, width, lineGapPreset = "normal") {
+      function buildBoundaryLines(chars, fontClass, fontSize, width, lineGapPreset = "none") {
         const boundary = getBoundaryIndex();
         const breaks = normalizeBreaks([boundary], chars.length);
         if (!breaks.length) {
@@ -1808,7 +1904,7 @@
         return lines.filter(Boolean);
       }
 
-      function buildManualLines(chars, fontClass, fontSize, width, lineGapPreset = "normal") {
+      function buildManualLines(chars, fontClass, fontSize, width, lineGapPreset = "none") {
         sanitizeManualBreaks();
         const forcedBreaks = normalizeBreaks(state.draftManualBreaks, chars.length);
         if (!forcedBreaks.length) {
@@ -1843,7 +1939,7 @@
         return lines.filter(Boolean);
       }
 
-      function buildDraftLines(chars, fontClass, fontSize, width, lineGapPreset = "normal") {
+      function buildDraftLines(chars, fontClass, fontSize, width, lineGapPreset = "none") {
         if (state.draftLineMode === "single") {
           return [chars.join("")];
         }
@@ -1866,7 +1962,7 @@
       }
 
       function computeDraftLayout() {
-        const text = getDraftText();
+        const text = state.draftLineMode === "single" ? getDraftDisplayText() : getDraftText();
         if (!text) {
           return { lines: ["牌を2つ選ぶ"], fontSize: 36, effectiveBreaks: [], safetyAdjusted: false };
         }
@@ -1910,9 +2006,9 @@
         const sizePreset = getSizePreset(options.sizePreset || "large");
         const maxFontBase = options.maxFont || 46;
         const minFontBase = options.minFont || 18;
-        const maxFont = Math.max(minFontBase, maxFontBase + sizePreset.minBoost * 2);
-        const minFont = Math.max(14, minFontBase + sizePreset.minBoost);
-        const lineGapPreset = options.lineGapPreset || "normal";
+        const maxFont = Math.max(minFontBase, Math.round(maxFontBase * sizePreset.renderScale));
+        const minFont = Math.max(12, Math.round(minFontBase * Math.max(0.68, sizePreset.renderScale - 0.08)));
+        const lineGapPreset = options.lineGapPreset || "none";
         return `
           <div
             class="word-board auto-fit-word ${variant} ${getFontClass(fontId)}${mode === "single" ? " is-single-line" : ""}"
@@ -1935,7 +2031,7 @@
         const lines = Array.from(node.querySelectorAll(".word-line")).map((line) => line.textContent || "");
         const fontClass = getFontClass(node.dataset.fontId || "classic");
         const lineMode = node.dataset.lineMode || (lines.length <= 1 ? "single" : "manual");
-        const lineGapPreset = node.dataset.lineGapPreset || "normal";
+        const lineGapPreset = node.dataset.lineGapPreset || "none";
         const maxFont = Number(node.dataset.maxFont || "46");
         const minFont = Number(node.dataset.minFont || "18");
         const width = node.clientWidth || 300;
@@ -3372,56 +3468,82 @@
 
       function renderSubmitLineMode(room) {
         const chars = Array.from(getDraftText(room));
+        const activeLineMode = lineModes.find((mode) => mode.id === state.draftLineMode)?.label || "";
+        const activeFont = fonts.find((font) => font.id === state.draftFontId)?.label || "";
+        const activeSize = sizePresets.find((preset) => preset.id === state.draftSizePreset)?.label || "";
+        const activeGap = lineGapPresets.find((preset) => preset.id === state.draftLineGapPreset)?.label || "";
         return `
-          <section class="panel">
+          <section class="panel appearance-panel">
             <h3>見た目</h3>
-            <div class="section-label">改行</div>
-            <div class="chip-row">
-              ${lineModes
-                .map(
-                  (mode) => `
-                    <button class="chip${state.draftLineMode === mode.id ? " active" : ""}" type="button" data-line-mode="${mode.id}">
-                      ${escapeHtml(mode.label)}
-                    </button>
-                  `
-                )
-                .join("")}
-            </div>
-            <div class="section-label">書体</div>
-            <div class="chip-row">
-              ${fonts
-                .map(
-                  (font) => `
-                    <button class="chip${state.draftFontId === font.id ? " active" : ""}" type="button" data-font-id="${font.id}">
-                      ${escapeHtml(font.label)}
-                    </button>
-                  `
-                )
-                .join("")}
-            </div>
-            <div class="section-label">文字サイズ</div>
-            <div class="chip-row">
-              ${sizePresets
-                .map(
-                  (preset) => `
-                    <button class="chip${state.draftSizePreset === preset.id ? " active" : ""}" type="button" data-size-preset="${preset.id}">
-                      ${escapeHtml(preset.label)}
-                    </button>
-                  `
-                )
-                .join("")}
-            </div>
-            <div class="section-label">句間</div>
-            <div class="chip-row">
-              ${lineGapPresets
-                .map(
-                  (preset) => `
-                    <button class="chip${state.draftLineGapPreset === preset.id ? " active" : ""}" type="button" data-line-gap-preset="${preset.id}">
-                      ${escapeHtml(preset.label)}
-                    </button>
-                  `
-                )
-                .join("")}
+            <div class="settings-grid">
+              <section class="setting-group">
+                <div class="setting-group-header">
+                  <span class="setting-group-title">改行</span>
+                  <span class="setting-group-value">${escapeHtml(activeLineMode)}</span>
+                </div>
+                <div class="chip-row">
+                  ${lineModes
+                    .map(
+                      (mode) => `
+                        <button class="chip${state.draftLineMode === mode.id ? " active" : ""}" type="button" data-line-mode="${mode.id}">
+                          ${escapeHtml(mode.label)}
+                        </button>
+                      `
+                    )
+                    .join("")}
+                </div>
+              </section>
+              <section class="setting-group">
+                <div class="setting-group-header">
+                  <span class="setting-group-title">文字サイズ</span>
+                  <span class="setting-group-value">${escapeHtml(activeSize)}</span>
+                </div>
+                <div class="chip-row">
+                  ${sizePresets
+                    .map(
+                      (preset) => `
+                        <button class="chip${state.draftSizePreset === preset.id ? " active" : ""}" type="button" data-size-preset="${preset.id}">
+                          ${escapeHtml(preset.label)}
+                        </button>
+                      `
+                    )
+                    .join("")}
+                </div>
+              </section>
+              <section class="setting-group is-wide">
+                <div class="setting-group-header">
+                  <span class="setting-group-title">書体</span>
+                  <span class="setting-group-value">${escapeHtml(activeFont)}</span>
+                </div>
+                <div class="chip-row">
+                  ${fonts
+                    .map(
+                      (font) => `
+                        <button class="chip${state.draftFontId === font.id ? " active" : ""}" type="button" data-font-id="${font.id}">
+                          ${escapeHtml(font.label)}
+                        </button>
+                      `
+                    )
+                    .join("")}
+                </div>
+              </section>
+              <section class="setting-group">
+                <div class="setting-group-header">
+                  <span class="setting-group-title">ワードの間</span>
+                  <span class="setting-group-value">${escapeHtml(activeGap)}</span>
+                </div>
+                <div class="chip-row">
+                  ${lineGapPresets
+                    .map(
+                      (preset) => `
+                        <button class="chip${state.draftLineGapPreset === preset.id ? " active" : ""}" type="button" data-line-gap-preset="${preset.id}">
+                          ${escapeHtml(preset.label)}
+                        </button>
+                      `
+                    )
+                    .join("")}
+                </div>
+              </section>
             </div>
             ${state.draftLineMode === "manual" && chars.length > 1
               ? `
@@ -3494,7 +3616,7 @@
           state.draftManualBreaks.join(",")
         ].join("|");
         const submissionsKey = submissions
-          .map((submission) => `${submission.playerId || submission.displayName}:${submission.phrase || ""}:${submission.fontId}:${submission.sizePreset || "large"}:${submission.lineGapPreset || "normal"}:${(submission.renderedLines || []).join("/")}`)
+          .map((submission) => `${submission.playerId || submission.displayName}:${submission.phrase || ""}:${submission.fontId}:${submission.sizePreset || "large"}:${submission.lineGapPreset || "none"}:${(submission.renderedLines || []).join("/")}`)
           .join("|");
         const lineModeKey = [
           state.draftLineMode,
@@ -4460,7 +4582,7 @@
             lines: clone(reveal.renderedLines || [reveal.phrase]),
             fontId: reveal.fontId || "classic",
             sizePreset: reveal.sizePreset || "large",
-            lineGapPreset: reveal.lineGapPreset || "normal",
+            lineGapPreset: reveal.lineGapPreset || "none",
             meta: resolvePlayerDisplayName(room, reveal.playerId, reveal.displayName),
             buttonLabel: meAcknowledged ? "ほかの人を待っています" : "結果一覧を見る",
             acknowledged: meAcknowledged,
@@ -4476,7 +4598,7 @@
             lines: clone(reveal.renderedLines || [reveal.phrase]),
             fontId: reveal.fontId || "classic",
             sizePreset: reveal.sizePreset || "large",
-            lineGapPreset: reveal.lineGapPreset || "normal",
+            lineGapPreset: reveal.lineGapPreset || "none",
             meta: resolvePlayerDisplayName(room, reveal.playerId, reveal.displayName),
             buttonLabel: meAcknowledged ? "ほかの人を待っています" : "閉じる",
             acknowledged: meAcknowledged,
@@ -4491,7 +4613,7 @@
           lines: clone(reveal.renderedLines || [reveal.phrase]),
           fontId: reveal.fontId || "broadcast",
           sizePreset: reveal.sizePreset || "xl",
-          lineGapPreset: reveal.lineGapPreset || "normal",
+          lineGapPreset: reveal.lineGapPreset || "none",
           meta: resolvePlayerDisplayName(room, reveal.playerId, reveal.displayName),
           buttonLabel: meAcknowledged ? "ほかの人を待っています" : "閉じる",
           acknowledged: meAcknowledged,
@@ -4543,10 +4665,10 @@
         els.revealWord.dataset.variant = presentation.variant || (presentation.kind === "champion" ? "champion-word" : "result-word");
         els.revealWord.dataset.fontId = presentation.fontId || "classic";
         els.revealWord.dataset.lineMode = presentation.lines.length <= 1 ? "single" : "manual";
-        els.revealWord.dataset.maxFont = String(Math.max(revealMinFontBase, revealMaxFontBase + sizePreset.minBoost * 2));
-        els.revealWord.dataset.minFont = String(Math.max(14, revealMinFontBase + sizePreset.minBoost));
+        els.revealWord.dataset.maxFont = String(Math.max(revealMinFontBase, Math.round(revealMaxFontBase * sizePreset.renderScale)));
+        els.revealWord.dataset.minFont = String(Math.max(12, Math.round(revealMinFontBase * Math.max(0.68, sizePreset.renderScale - 0.08))));
         els.revealWord.dataset.sizePreset = sizePreset.id;
-        els.revealWord.dataset.lineGapPreset = presentation.lineGapPreset || "normal";
+        els.revealWord.dataset.lineGapPreset = presentation.lineGapPreset || "none";
         els.revealWord.className = `word-board auto-fit-word ${els.revealWord.dataset.variant}`;
         els.revealWord.innerHTML = presentation.lines.map((line) => `<span class="word-line">${escapeHtml(line)}</span>`).join("");
         hydrateWordBoard(els.revealWord);
@@ -4596,10 +4718,11 @@
       function buildSubmitPayload(room) {
         const layout = computeDraftLayout();
         const selectedTiles = getSelectedTiles(room);
+        const phrase = state.draftLineMode === "single" ? getDraftDisplayText(room) : selectedTiles.map((tile) => tile.text).join("");
         return {
           tileIds: selectedTiles.map((tile) => tile.tileId),
           tileOrder: [0, 1],
-          phrase: selectedTiles.map((tile) => tile.text).join(""),
+          phrase,
           fontId: state.draftFontId,
           sizePreset: state.draftSizePreset,
           lineGapPreset: state.draftLineGapPreset,

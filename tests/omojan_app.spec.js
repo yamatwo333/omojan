@@ -425,6 +425,7 @@ test("mobile submit view keeps a floating preview and uses unified reveal labels
   await expect(host.locator(".page-header")).toHaveClass(/is-hidden/);
   await expect(host.locator("body")).toContainText("ワードの間");
   await expect(host.locator("body")).not.toContainText("句間");
+  await expect(host.locator(".setting-group", { hasText: "ワードの間" }).locator(".setting-group-value")).toHaveText("なし");
 
   await host.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
   await host.waitForTimeout(900);

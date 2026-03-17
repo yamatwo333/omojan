@@ -1003,6 +1003,12 @@
           feedbackKey: "",
           bannerKey: "",
           revealKey: "",
+          submitShellKey: "",
+          submitTopKey: "",
+          submitSubmissionsKey: "",
+          submitLineModeKey: "",
+          submitFontKey: "",
+          submitHandKey: "",
           waitShellKey: "",
           waitFocusKey: "",
           waitSyncKey: "",
@@ -1122,10 +1128,7 @@
             link.media = "all";
             state.googleFonts.loaded = true;
             state.renderCache.appKey = "";
-            state.renderCache.waitShellKey = "";
-            state.renderCache.waitFocusKey = "";
-            state.renderCache.waitSyncKey = "";
-            state.renderCache.waitSubmissionsKey = "";
+            resetIncrementalViewCaches();
             state.renderCache.revealKey = "";
             render();
           };
@@ -1653,10 +1656,8 @@
             ]).join("|");
           case "submit":
             return base.concat([
-              state.draftSelectedTileIds.join(","),
-              state.draftFontId,
-              state.draftLineMode,
-              state.draftManualBreaks.join(",")
+              room.roomId || "",
+              room.me?.playerId || ""
             ]).join("|");
           case "wait":
             return base.concat([
@@ -2579,39 +2580,59 @@
       }
 
       function renderSubmit(room) {
-        const layout = computeDraftLayout();
-        const selectedTiles = getSelectedTiles(room);
-        const chars = Array.from(getDraftText(room));
+        return renderSubmitShell(room);
+      }
 
+      function renderSubmitShell(room) {
         return `
           ${renderScreenAlerts()}
 
           <section class="card">
             <h2>${escapeHtml(getCurrentRound(room)?.wind || "提出")} / ${escapeHtml(room.me.displayName)} の手番</h2>
-            ${renderSubmitHero(room, layout)}
-            <section class="preview-card">
-              <small>提出前プレビュー</small>
-              <div id="previewWord" class="word-board preview-word ${getFontClass(state.draftFontId)}${state.draftLineMode === "single" ? " is-single-line" : ""}">
-                ${layout.lines.map((line) => `<span class="word-line">${escapeHtml(line)}</span>`).join("")}
-              </div>
-              <p class="preview-caption">
-                ${
-                  getDraftText(room)
-                    ? layout.safetyAdjusted
-                      ? "提出時に自動で整えます。"
-                      : ""
-                    : ""
-                }
-              </p>
-            </section>
+            <div id="submitTopSlot"></div>
           </section>
 
-          ${renderSection(
-            `すでに公開されたワード${getCurrentRound(room)?.submissions?.length ? ` (${getCurrentRound(room).submissions.length})` : ""}`,
-            renderSubmissionList(getCurrentRound(room)?.submissions || [], "まだ公開されたワードはありません。"),
-            { className: "panel" }
-          )}
+          <div id="submitSubmissionsSlot"></div>
+          <div id="submitLineModeSlot"></div>
+          <div id="submitFontSlot"></div>
+          <div id="submitHandSlot"></div>
+        `;
+      }
 
+      function renderSubmitTop(room) {
+        const layout = computeDraftLayout();
+        return `
+          ${renderSubmitHero(room, layout)}
+          <section class="preview-card">
+            <small>提出前プレビュー</small>
+            <div id="previewWord" class="word-board preview-word ${getFontClass(state.draftFontId)}${state.draftLineMode === "single" ? " is-single-line" : ""}">
+              ${layout.lines.map((line) => `<span class="word-line">${escapeHtml(line)}</span>`).join("")}
+            </div>
+            <p class="preview-caption">
+              ${
+                getDraftText(room)
+                  ? layout.safetyAdjusted
+                    ? "提出時に自動で整えます。"
+                    : ""
+                  : ""
+              }
+            </p>
+          </section>
+        `;
+      }
+
+      function renderSubmitSubmissions(room) {
+        const submissions = getCurrentRound(room)?.submissions || [];
+        return renderSection(
+          `すでに公開されたワード${submissions.length ? ` (${submissions.length})` : ""}`,
+          renderSubmissionList(submissions, "まだ公開されたワードはありません。"),
+          { className: "panel" }
+        );
+      }
+
+      function renderSubmitLineMode(room) {
+        const chars = Array.from(getDraftText(room));
+        return `
           <section class="panel">
             <h3>改行モード</h3>
             <div class="chip-row">
@@ -2644,7 +2665,11 @@
               `
               : ""}
           </section>
+        `;
+      }
 
+      function renderSubmitFonts() {
+        return `
           <section class="panel">
             <h3>書体</h3>
             <div class="chip-row">
@@ -2659,7 +2684,12 @@
                 .join("")}
             </div>
           </section>
+        `;
+      }
 
+      function renderSubmitHand(room) {
+        const selectedTiles = getSelectedTiles(room);
+        return `
           <section class="panel">
             <h3>手札</h3>
             <div class="tile-grid">
@@ -2680,6 +2710,50 @@
             </div>
           </section>
         `;
+      }
+
+      function updateSubmitView(room) {
+        const shellKey = `${room.roomId}|${room.me.playerId}`;
+        if (state.renderCache.submitShellKey !== shellKey) {
+          state.renderCache.submitShellKey = shellKey;
+          state.renderCache.submitTopKey = "";
+          state.renderCache.submitSubmissionsKey = "";
+          state.renderCache.submitLineModeKey = "";
+          state.renderCache.submitFontKey = "";
+          state.renderCache.submitHandKey = "";
+          els.app.innerHTML = renderSubmitShell(room);
+        }
+
+        const round = getCurrentRound(room);
+        const submissions = round?.submissions || [];
+        const topKey = [
+          room.revision,
+          state.draftSelectedTileIds.join(","),
+          state.draftFontId,
+          state.draftLineMode,
+          state.draftManualBreaks.join(",")
+        ].join("|");
+        const submissionsKey = submissions
+          .map((submission) => `${submission.playerId}:${submission.phrase}:${submission.fontId}:${(submission.renderedLines || []).join("/")}`)
+          .join("|");
+        const lineModeKey = [
+          state.draftLineMode,
+          getDraftText(room),
+          state.draftManualBreaks.join(",")
+        ].join("|");
+        const fontKey = state.draftFontId;
+        const handKey = [
+          room.revision,
+          state.draftSelectedTileIds.join(","),
+          state.pendingAction ? "pending" : "idle",
+          room.myHand.map((tile) => `${tile.tileId}:${tile.isUsed ? 1 : 0}`).join("|")
+        ].join("|");
+
+        patchSlot(els.app, "#submitTopSlot", "submitTopKey", topKey, renderSubmitTop(room));
+        patchSlot(els.app, "#submitSubmissionsSlot", "submitSubmissionsKey", submissionsKey, renderSubmitSubmissions(room));
+        patchSlot(els.app, "#submitLineModeSlot", "submitLineModeKey", lineModeKey, renderSubmitLineMode(room));
+        patchSlot(els.app, "#submitFontSlot", "submitFontKey", fontKey, renderSubmitFonts());
+        patchSlot(els.app, "#submitHandSlot", "submitHandKey", handKey, renderSubmitHand(room));
       }
 
       function renderWait(room) {
@@ -2767,7 +2841,17 @@
         return ["roundResult", "finalResult"].includes(view);
       }
 
+      function isSubmitView(view) {
+        return view === "submit";
+      }
+
       function resetIncrementalViewCaches() {
+        state.renderCache.submitShellKey = "";
+        state.renderCache.submitTopKey = "";
+        state.renderCache.submitSubmissionsKey = "";
+        state.renderCache.submitLineModeKey = "";
+        state.renderCache.submitFontKey = "";
+        state.renderCache.submitHandKey = "";
         state.renderCache.waitShellKey = "";
         state.renderCache.waitFocusKey = "";
         state.renderCache.waitSyncKey = "";
@@ -3270,11 +3354,34 @@
         };
         const appKey = getAppRenderKey(room, view);
         const shouldUpdateApp = state.renderCache.appKey !== appKey;
-        if (view === "wait") {
+        if (isSubmitView(view)) {
+          state.renderCache.appKey = appKey;
+          state.renderCache.waitShellKey = "";
+          state.renderCache.waitFocusKey = "";
+          state.renderCache.waitSyncKey = "";
+          state.renderCache.waitSubmissionsKey = "";
+          state.renderCache.decisionShellKey = "";
+          state.renderCache.decisionFocusKey = "";
+          state.renderCache.decisionSummaryKey = "";
+          state.renderCache.decisionCardsKey = "";
+          state.renderCache.decisionActionsKey = "";
+          state.renderCache.resultShellKey = "";
+          state.renderCache.resultHeroKey = "";
+          state.renderCache.resultExtraKey = "";
+          state.renderCache.resultCountsKey = "";
+          state.renderCache.resultActionsKey = "";
+          updateSubmitView(room);
+        } else if (view === "wait") {
           state.renderCache.appKey = appKey;
           updateWaitView(room);
         } else if (isDecisionView(view)) {
           state.renderCache.appKey = appKey;
+          state.renderCache.submitShellKey = "";
+          state.renderCache.submitTopKey = "";
+          state.renderCache.submitSubmissionsKey = "";
+          state.renderCache.submitLineModeKey = "";
+          state.renderCache.submitFontKey = "";
+          state.renderCache.submitHandKey = "";
           state.renderCache.waitShellKey = "";
           state.renderCache.waitFocusKey = "";
           state.renderCache.waitSyncKey = "";
@@ -3287,6 +3394,12 @@
           updateDecisionView(room, view);
         } else if (isResultView(view)) {
           state.renderCache.appKey = appKey;
+          state.renderCache.submitShellKey = "";
+          state.renderCache.submitTopKey = "";
+          state.renderCache.submitSubmissionsKey = "";
+          state.renderCache.submitLineModeKey = "";
+          state.renderCache.submitFontKey = "";
+          state.renderCache.submitHandKey = "";
           state.renderCache.waitShellKey = "";
           state.renderCache.waitFocusKey = "";
           state.renderCache.waitSyncKey = "";

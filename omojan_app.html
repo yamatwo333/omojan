@@ -2593,7 +2593,7 @@
                 <strong>${escapeHtml(item.phrase)}</strong>
                 <span>${escapeHtml(item.displayName)}</span>
               </div>
-              <span>${new Date(item.wonAt).toLocaleDateString("ja-JP", { month: "numeric", day: "numeric" })}</span>
+              <span>${escapeHtml(formatChampionHistoryWonAtCompact(item.wonAt))}</span>
             </div>
           `,
           "最近の総合優勝ワードはまだありません。"
@@ -2610,6 +2610,20 @@
             ${renderRecentChampions()}
           </section>
         `;
+      }
+
+      function formatChampionHistoryWonAtCompact(value) {
+        if (!value) {
+          return "日時不明";
+        }
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) {
+          return value;
+        }
+        return date.toLocaleDateString("ja-JP", {
+          month: "numeric",
+          day: "numeric"
+        });
       }
 
       function formatChampionHistoryWonAt(value) {

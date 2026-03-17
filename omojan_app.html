@@ -329,9 +329,19 @@
         position: sticky;
         top: 8px;
         z-index: 8;
+        padding: 12px 10px;
         box-shadow:
           inset 0 1px 0 rgba(255, 255, 255, 0.78),
           0 10px 24px rgba(29, 22, 15, 0.08);
+      }
+
+      .preview-card.is-floating {
+        position: fixed;
+        top: 8px;
+        left: var(--preview-floating-left, 0);
+        width: var(--preview-floating-width, 100%);
+        margin-top: 0;
+        z-index: 11;
       }
 
       .preview-card small,
@@ -351,6 +361,12 @@
         text-align: center;
         line-height: 1.06;
         word-break: keep-all;
+      }
+
+      .preview-word,
+      .result-word,
+      .champion-word {
+        line-height: 0.96;
       }
 
       .word-board.is-single-line {
@@ -393,7 +409,7 @@
       }
 
       .preview-word {
-        min-height: 162px;
+        min-height: 206px;
       }
 
       .vote-word {
@@ -827,7 +843,7 @@
 
       .reveal-card.is-submission {
         width: min(94vw, 560px);
-        padding: 14px 14px 20px;
+        padding: 12px 12px 18px;
       }
 
       .reveal-card.is-champion::before,
@@ -920,12 +936,22 @@
       }
 
       .reveal-card.is-submission .word-board {
-        min-height: min(48vh, 320px);
+        min-height: min(60vh, 430px);
         margin-top: 0;
       }
 
       .reveal-card.is-submission .reveal-actions {
         margin-top: 10px;
+      }
+
+      .reveal-card.is-submission .reveal-badge {
+        position: absolute;
+        top: 12px;
+        left: 12px;
+        z-index: 2;
+        min-height: 30px;
+        padding: 0 10px;
+        font-size: 11px;
       }
 
       #revealCard,
@@ -1542,13 +1568,14 @@
         }
         state.copyMessage = isError ? "" : message;
         state.errorMessage = isError ? message : "";
-        if (message && autoHideMs > 0) {
+        const duration = message ? (autoHideMs || (isError ? 4200 : 2600)) : 0;
+        if (duration > 0) {
           state.feedbackTimer = window.setTimeout(() => {
             state.copyMessage = "";
             state.errorMessage = "";
             state.feedbackTimer = 0;
             renderCurrentView({ includeReveal: false });
-          }, autoHideMs);
+          }, duration);
         }
       }
 
@@ -1569,13 +1596,14 @@
       }
 
       function doesWordFit(lines, fontClass, lineMode, fontSize, width, height) {
+        const tolerance = 6;
         els.measureWord.dataset.variant = "";
         els.measureWord.style.width = `${width}px`;
         els.measureWord.style.height = `${height}px`;
         applyWordMarkup(els.measureWord, lines, fontClass, lineMode, fontSize);
         const lineEls = Array.from(els.measureWord.querySelectorAll(".word-line"));
-        const tooWide = lineEls.some((line) => line.scrollWidth > width - 1);
-        const tooTall = els.measureWord.scrollHeight > height - 1;
+        const tooWide = lineEls.some((line) => line.scrollWidth > width + tolerance);
+        const tooTall = els.measureWord.scrollHeight > height + tolerance;
         return !(tooWide || tooTall);
       }
 
@@ -1602,12 +1630,13 @@
       }
 
       function measureLineFits(text, fontClass, fontSize, width) {
+        const tolerance = 6;
         els.measureWord.dataset.variant = "";
         els.measureWord.style.width = `${width}px`;
         els.measureWord.style.height = "120px";
         applyWordMarkup(els.measureWord, [text || " "], fontClass, "single", fontSize);
         const lineEl = els.measureWord.querySelector(".word-line");
-        return lineEl ? lineEl.scrollWidth <= width - 1 : true;
+        return lineEl ? lineEl.scrollWidth <= width + tolerance : true;
       }
 
       function getLastFittingEnd(chars, start, endLimit, fontClass, fontSize, width) {
@@ -1717,7 +1746,7 @@
         const height = previewBox?.clientHeight || 148;
         const chars = Array.from(text);
         const fontClass = getFontClass(state.draftFontId);
-        const maxFontSize = state.draftLineMode === "single" ? 72 : 60;
+        const maxFontSize = state.draftLineMode === "single" ? 86 : 72;
         const minFontSize = getMinimumFontSize(chars.length, state.draftLineMode);
         let fallbackLayout = null;
 
@@ -4049,11 +4078,48 @@
       function updateSubmitPreview(room) {
         const previewWord = document.getElementById("previewWord");
         if (!previewWord || deriveView(room) !== "submit") {
+          syncSubmitPreviewFloating(null);
           return;
         }
         const layout = computeDraftLayout();
         previewWord.dataset.variant = "preview-word";
         applyWordMarkup(previewWord, layout.lines, getFontClass(state.draftFontId), state.draftLineMode, layout.fontSize);
+        window.requestAnimationFrame(() => syncSubmitPreviewFloating(room));
+      }
+
+      function syncSubmitPreviewFloating(room = state.room) {
+        const submitTopSlot = document.getElementById("submitTopSlot");
+        const previewCard = submitTopSlot?.querySelector(".preview-card");
+        const currentView = deriveView(room);
+        if (!submitTopSlot || !previewCard || currentView !== "submit") {
+          if (submitTopSlot) {
+            submitTopSlot.style.minHeight = "";
+          }
+          if (previewCard) {
+            previewCard.classList.remove("is-floating");
+            previewCard.style.removeProperty("--preview-floating-left");
+            previewCard.style.removeProperty("--preview-floating-width");
+          }
+          return;
+        }
+
+        const slotRect = submitTopSlot.getBoundingClientRect();
+        const floatTop = 8;
+        const cardHeight = previewCard.offsetHeight;
+        const canFloat = slotRect.top < floatTop && slotRect.bottom > cardHeight + floatTop + 8;
+
+        if (!canFloat) {
+          submitTopSlot.style.minHeight = "";
+          previewCard.classList.remove("is-floating");
+          previewCard.style.removeProperty("--preview-floating-left");
+          previewCard.style.removeProperty("--preview-floating-width");
+          return;
+        }
+
+        submitTopSlot.style.minHeight = `${cardHeight}px`;
+        previewCard.classList.add("is-floating");
+        previewCard.style.setProperty("--preview-floating-left", `${Math.max(0, slotRect.left)}px`);
+        previewCard.style.setProperty("--preview-floating-width", `${slotRect.width}px`);
       }
 
       function updateCurrentViewOnly(room = state.room, view = deriveView(room)) {
@@ -4155,12 +4221,12 @@
           badge: reveal.displayName,
           lines: clone(reveal.renderedLines || [reveal.phrase]),
           fontId: reveal.fontId || "broadcast",
-          meta: round?.wind || "場に公開",
+          meta: "",
           buttonLabel: meAcknowledged ? "ほかの人を待っています" : "閉じる",
           acknowledged: meAcknowledged,
           kind: "submission",
           variant: "preview-word",
-          maxFont: 112,
+          maxFont: 126,
           minFont: 40
         };
       }
@@ -4672,6 +4738,19 @@
         if (event.key === "Escape" && state.championHistoryOpen) {
           actionHandlers["close-champion-history"]();
         }
+      });
+
+      window.addEventListener("scroll", () => {
+        syncSubmitPreviewFloating();
+      }, { passive: true });
+
+      window.addEventListener("resize", () => {
+        renderCurrentView({ includeReveal: false });
+        window.requestAnimationFrame(() => syncSubmitPreviewFloating());
+      });
+
+      window.visualViewport?.addEventListener("resize", () => {
+        window.requestAnimationFrame(() => syncSubmitPreviewFloating());
       });
 
       async function initializeApp() {

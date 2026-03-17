@@ -613,7 +613,8 @@
         championHistory: [],
         pending: false,
         feedback: "",
-        error: ""
+        error: "",
+        feedbackTimer: 0
       };
 
       const els = {
@@ -673,9 +674,22 @@
         };
       }
 
-      function setFeedback(message = "", isError = false) {
+      function setFeedback(message = "", isError = false, autoHideMs = 0) {
+        if (state.feedbackTimer) {
+          window.clearTimeout(state.feedbackTimer);
+          state.feedbackTimer = 0;
+        }
         state.feedback = isError ? "" : message;
         state.error = isError ? message : "";
+        const duration = message ? (autoHideMs || (isError ? 4200 : 2600)) : 0;
+        if (duration > 0) {
+          state.feedbackTimer = window.setTimeout(() => {
+            state.feedback = "";
+            state.error = "";
+            state.feedbackTimer = 0;
+            renderFeedback();
+          }, duration);
+        }
       }
 
       function buildSummaryPills() {

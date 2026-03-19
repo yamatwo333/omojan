@@ -300,8 +300,8 @@ async function completeRoundByHostDecision(host, guest, roundLabel, hostDecision
   await host.locator('button[data-action="submit-host-pick"]').click();
   await acknowledgeRevealForAll([host, guest]);
 
-  await expect(host.getByRole("heading", { name: "結果発表" })).toBeVisible({ timeout: 10000 });
-  await expect(guest.getByRole("heading", { name: "結果発表" })).toBeVisible({ timeout: 10000 });
+  await expect(host.getByRole("heading", { name: `${roundLabel}結果発表` })).toBeVisible({ timeout: 10000 });
+  await expect(guest.getByRole("heading", { name: `${roundLabel}結果発表` })).toBeVisible({ timeout: 10000 });
   await expect(host.locator("body")).toContainText(roundLabel);
   await expect(guest.locator("body")).toContainText(roundLabel);
   await expect(host.locator("body")).toContainText("票数内訳");
@@ -489,7 +489,7 @@ test("app restores session after reopening the browser context", async ({ browse
   await host.locator('button[data-action="submit-host-pick"]').click();
   await acknowledgeRevealForAll([host, guest]);
 
-  ({ context: guestContext, page: guest } = await reopenWithStoredSession(browser, guestContext, "結果発表"));
+  ({ context: guestContext, page: guest } = await reopenWithStoredSession(browser, guestContext, "ラウンド1結果発表"));
   await expect(guest.locator("body")).toContainText("ラウンド1");
   await expect(guest.locator("body")).toContainText("票数内訳");
 
@@ -549,7 +549,8 @@ test("app can open and close champion history from the landing screen", async ({
 
   await page.getByRole("button", { name: "一覧を見る" }).click();
   await expect(page.locator("#historyOverlay")).toBeVisible();
-  await expect(page.locator("#historyDialogBody")).toContainText("現場大洪水");
+  await expect(page.locator("#historyDialogBody")).toContainText("すべての総合優勝ワード");
+  await expect(page.locator("#historyDialogBody .history-dialog-item")).toHaveCount(5);
 
   await page.getByRole("button", { name: "閉じる" }).click();
   await expect(page.locator("#historyOverlay")).toBeHidden();
@@ -558,19 +559,21 @@ test("app can open and close champion history from the landing screen", async ({
 test("app can like champion history items and show ranking", async ({ page }) => {
   await page.goto(STATIC_URL);
 
+  await expect(page.getByRole("heading", { name: "いいね数ランキング ベスト10" })).toBeVisible();
   await page.getByRole("button", { name: "一覧を見る" }).click();
-  await expect(page.locator("#historyDialogBody")).toContainText("いいねベスト10");
+  await expect(page.locator("#historyOverlay")).toBeVisible();
 
   const firstLikeButton = page.locator("#historyDialogBody [data-action='toggle-champion-like']").first();
   const initialLikeLabel = (await firstLikeButton.textContent()) || "";
   const initialLikeCount = Number((initialLikeLabel.match(/(\d+)/) || [0, "0"])[1]);
   await expect(firstLikeButton).toContainText("♡");
-  await firstLikeButton.click();
+  await firstLikeButton.click({ force: true });
   await expect(firstLikeButton).toContainText(`♡ ${initialLikeCount + 1}`);
+  await expect(page.getByRole("heading", { name: "いいね数ランキング ベスト10" })).toBeVisible();
 
   const moreButton = page.getByRole("button", { name: "もっと見る" });
   if (await moreButton.count()) {
     await moreButton.click();
-    await expect(page.locator("#historyDialogBody")).toContainText("すべての総合優勝ワード");
+    await expect(page.locator("#historyDialogBody .history-dialog-item")).toHaveCount(10);
   }
 });

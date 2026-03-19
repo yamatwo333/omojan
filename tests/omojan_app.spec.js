@@ -434,7 +434,7 @@ test("mobile submit view keeps a floating preview and uses unified reveal labels
     top: card.getBoundingClientRect().top,
     className: card.className
   }));
-  expect(previewState.className).toContain("is-floating");
+  expect(previewState.className).toContain("is-sticky");
   expect(previewState.top).toBeLessThanOrEqual(statusBottom + 12);
   const initialFontSize = await host.locator("#previewWord .word-line").first().evaluate((node) => Number.parseFloat(getComputedStyle(node).fontSize));
   await host.getByRole("button", { name: "小" }).click();
@@ -553,4 +553,24 @@ test("app can open and close champion history from the landing screen", async ({
 
   await page.getByRole("button", { name: "閉じる" }).click();
   await expect(page.locator("#historyOverlay")).toBeHidden();
+});
+
+test("app can like champion history items and show ranking", async ({ page }) => {
+  await page.goto(STATIC_URL);
+
+  await page.getByRole("button", { name: "一覧を見る" }).click();
+  await expect(page.locator("#historyDialogBody")).toContainText("いいねベスト10");
+
+  const firstLikeButton = page.locator("#historyDialogBody [data-action='toggle-champion-like']").first();
+  const initialLikeLabel = (await firstLikeButton.textContent()) || "";
+  const initialLikeCount = Number((initialLikeLabel.match(/(\d+)/) || [0, "0"])[1]);
+  await expect(firstLikeButton).toContainText("♡");
+  await firstLikeButton.click();
+  await expect(firstLikeButton).toContainText(`♡ ${initialLikeCount + 1}`);
+
+  const moreButton = page.getByRole("button", { name: "もっと見る" });
+  if (await moreButton.count()) {
+    await moreButton.click();
+    await expect(page.locator("#historyDialogBody")).toContainText("すべての総合優勝ワード");
+  }
 });

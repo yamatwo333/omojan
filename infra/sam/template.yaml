@@ -34,6 +34,7 @@ Resources:
           - content-type
           - x-omojan-player-token
           - x-omojan-admin-passcode
+          - x-omojan-device-id
         AllowMethods:
           - GET
           - POST

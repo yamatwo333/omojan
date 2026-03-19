@@ -8,6 +8,7 @@ const MOCK_DIR = fs.existsSync(LOCAL_DATA_DIR) ? LOCAL_DATA_DIR : path.join(ROOT
 const ROOM_TTL_SECONDS = 60 * 60 * 24 * 3;
 const STARTING_HAND_SIZE = 10;
 const ADMIN_PASSCODE_HEADER = "X-Omojan-Admin-Passcode";
+const DEVICE_ID_HEADER = "X-Omojan-Device-Id";
 const MAX_ROOM_MEMBERS = 12;
 
 const defaultDeck = readJson("deck_default.json").data;
@@ -29,7 +30,7 @@ function buildHeaders() {
     "cache-control": "no-store",
     "access-control-allow-origin": "*",
     "access-control-allow-methods": "GET,POST,PUT,DELETE,OPTIONS",
-    "access-control-allow-headers": "content-type,x-omojan-player-token,x-omojan-admin-passcode"
+    "access-control-allow-headers": "content-type,x-omojan-player-token,x-omojan-admin-passcode,x-omojan-device-id"
   };
 }
 
@@ -85,6 +86,8 @@ function parseRoute(method, pathname) {
     { method: "GET", pattern: /^\/v1\/health$/, route: "health" },
     { method: "GET", pattern: /^\/v1\/champions\/recent$/, route: "getChampionsRecent" },
     { method: "GET", pattern: /^\/v1\/champions\/history$/, route: "getChampionsHistory" },
+    { method: "GET", pattern: /^\/v1\/champions\/ranking$/, route: "getChampionsRanking" },
+    { method: "POST", pattern: /^\/v1\/champions\/([^/]+)\/like-toggle$/, route: "toggleChampionLike" },
     { method: "GET", pattern: /^\/v1\/admin\/champions$/, route: "getAdminChampions" },
     { method: "DELETE", pattern: /^\/v1\/admin\/champions\/([^/]+)$/, route: "deleteAdminChampion" },
     { method: "GET", pattern: /^\/v1\/admin\/decks\/([^/]+)$/, route: "getDeck" },
@@ -150,6 +153,8 @@ function handleHealth() {
       "admin:champions:get",
       "admin:champions:delete",
       "champions:history:get",
+      "champions:ranking:get",
+      "champions:like:toggle",
       "rooms:create",
       "rooms:join",
       "rooms:get",
@@ -238,8 +243,16 @@ function normalizeKnownRevision(value) {
   return Number.isInteger(revision) && revision >= 1 ? revision : null;
 }
 
+function normalizeDeviceId(value) {
+  return String(value || "").trim().slice(0, 200);
+}
+
 function hashPlayerToken(playerToken) {
   return `sha256:${crypto.createHash("sha256").update(playerToken).digest("hex")}`;
+}
+
+function hashDeviceId(deviceId) {
+  return `sha256:${crypto.createHash("sha256").update(String(deviceId || "")).digest("hex")}`;
 }
 
 function makeId(prefix) {
@@ -775,12 +788,46 @@ function buildChampionHistoryEntry(room) {
     sizePreset: champion.sizePreset,
     lineGapPreset: champion.lineGapPreset,
     renderedLines: clone(champion.renderedLines || []),
+    likeCount: 0,
     wonAt,
     createdAt: wonAt
   };
 }
 
-function toChampionHistoryView(item) {
+function buildSeedChampionHistoryEntry(item) {
+  return {
+    PK: "CHAMPIONS",
+    SK: `TS#${item.wonAt}#SEED#${item.championId}`,
+    entityType: "ChampionHistory",
+    championId: item.championId,
+    roomId: "",
+    inviteCode: "",
+    playerId: "",
+    displayName: item.displayName,
+    phrase: item.phrase,
+    fontId: item.fontId || "classic",
+    sizePreset: normalizeSizePreset(item.sizePreset),
+    lineGapPreset: normalizeLineGapPreset(item.lineGapPreset),
+    renderedLines: clone(item.renderedLines || [item.phrase]),
+    likeCount: Math.max(0, Number(item.likeCount || 0)),
+    wonAt: item.wonAt,
+    createdAt: item.wonAt
+  };
+}
+
+function buildChampionLikeItem(championId, deviceIdHash, issuedAt = nowIso()) {
+  return {
+    PK: `CHAMPION#${championId}`,
+    SK: `LIKE#${deviceIdHash}`,
+    entityType: "ChampionLike",
+    championId,
+    deviceIdHash,
+    createdAt: issuedAt
+  };
+}
+
+function toChampionHistoryView(item, options = {}) {
+  const likedChampionIds = options.likedChampionIds || null;
   return {
     championId: item.championId,
     phrase: item.phrase,
@@ -790,17 +837,38 @@ function toChampionHistoryView(item) {
     sizePreset: normalizeSizePreset(item.sizePreset),
     lineGapPreset: normalizeLineGapPreset(item.lineGapPreset),
     renderedLines: clone(item.renderedLines || [item.phrase]),
+    likeCount: Math.max(0, Number(item.likeCount || 0)),
+    likedByMe: likedChampionIds ? likedChampionIds.has(item.championId) : Boolean(item.likedByMe),
     roomId: item.roomId || "",
     inviteCode: item.inviteCode || ""
   };
 }
 
-function buildRecentChampionItems(historyItems, limit) {
+function getChampionWonAtRank(item) {
+  const timestamp = Date.parse(item?.wonAt || "");
+  return Number.isFinite(timestamp) ? timestamp : -1;
+}
+
+function compareChampionRank(left, right) {
+  const likeDelta = Math.max(0, Number(right.likeCount || 0)) - Math.max(0, Number(left.likeCount || 0));
+  if (likeDelta !== 0) {
+    return likeDelta;
+  }
+
+  const wonAtDelta = getChampionWonAtRank(right) - getChampionWonAtRank(left);
+  if (wonAtDelta !== 0) {
+    return wonAtDelta;
+  }
+
+  return String(left.championId || "").localeCompare(String(right.championId || ""));
+}
+
+function buildRecentChampionItems(historyItems, limit, options = {}) {
   const merged = [];
   const seen = new Set();
 
   for (const item of historyItems) {
-    const normalized = toChampionHistoryView(item);
+    const normalized = toChampionHistoryView(item, options);
     if (seen.has(normalized.championId)) {
       continue;
     }
@@ -816,7 +884,7 @@ function buildRecentChampionItems(historyItems, limit) {
       continue;
     }
     seen.add(item.championId);
-    merged.push(clone(item));
+    merged.push(toChampionHistoryView(buildSeedChampionHistoryEntry(item), options));
     if (merged.length >= limit) {
       break;
     }
@@ -825,8 +893,16 @@ function buildRecentChampionItems(historyItems, limit) {
   return merged;
 }
 
-function buildChampionHistoryViews(historyItems, limit) {
-  return historyItems.slice(0, Math.max(limit, 1)).map((item) => toChampionHistoryView(item));
+function buildChampionHistoryViews(historyItems, limit, options = {}) {
+  return historyItems.slice(0, Math.max(limit, 1)).map((item) => toChampionHistoryView(item, options));
+}
+
+function buildChampionRankingViews(historyItems, limit, options = {}) {
+  return historyItems
+    .slice()
+    .sort(compareChampionRank)
+    .slice(0, Math.max(limit, 1))
+    .map((item) => toChampionHistoryView(item, options));
 }
 
 function createRoomMember(params) {
@@ -1472,6 +1548,29 @@ async function createDynamoRoomRepository(options = {}) {
     return response.Items || [];
   }
 
+  async function queryAllChampionHistory() {
+    const items = [];
+    let exclusiveStartKey;
+
+    do {
+      const response = await documentClient.send(
+        new modules.QueryCommand({
+          TableName: tableName,
+          KeyConditionExpression: "PK = :pk",
+          ExpressionAttributeValues: {
+            ":pk": "CHAMPIONS"
+          },
+          ScanIndexForward: false,
+          ExclusiveStartKey: exclusiveStartKey
+        })
+      );
+      items.push(...(response.Items || []));
+      exclusiveStartKey = response.LastEvaluatedKey;
+    } while (exclusiveStartKey);
+
+    return items;
+  }
+
   async function findChampionHistoryItemById(championId) {
     let exclusiveStartKey;
 
@@ -1498,6 +1597,88 @@ async function createDynamoRoomRepository(options = {}) {
     } while (exclusiveStartKey);
 
     return null;
+  }
+
+  async function getChampionLikeItem(championId, deviceIdHash) {
+    if (!championId || !deviceIdHash) {
+      return null;
+    }
+    const response = await documentClient.send(
+      new modules.GetCommand({
+        TableName: tableName,
+        Key: {
+          PK: `CHAMPION#${championId}`,
+          SK: `LIKE#${deviceIdHash}`
+        }
+      })
+    );
+    return response.Item || null;
+  }
+
+  async function queryChampionLikeItems(championId) {
+    const items = [];
+    let exclusiveStartKey;
+
+    do {
+      const response = await documentClient.send(
+        new modules.QueryCommand({
+          TableName: tableName,
+          KeyConditionExpression: "PK = :pk",
+          ExpressionAttributeValues: {
+            ":pk": `CHAMPION#${championId}`
+          },
+          ExclusiveStartKey: exclusiveStartKey
+        })
+      );
+      items.push(...(response.Items || []));
+      exclusiveStartKey = response.LastEvaluatedKey;
+    } while (exclusiveStartKey);
+
+    return items;
+  }
+
+  async function resolveLikedChampionIds(championIds, deviceIdHash) {
+    if (!deviceIdHash || !Array.isArray(championIds) || !championIds.length) {
+      return new Set();
+    }
+
+    const liked = await Promise.all(
+      championIds.map(async (championId) => {
+        const item = await getChampionLikeItem(championId, deviceIdHash);
+        return item ? championId : null;
+      })
+    );
+
+    return new Set(liked.filter(Boolean));
+  }
+
+  async function ensureChampionHistoryItem(championId) {
+    const existingItem = await findChampionHistoryItemById(championId);
+    if (existingItem) {
+      return existingItem;
+    }
+
+    const seedItem = recentChampions.find((item) => item.championId === championId);
+    if (!seedItem) {
+      return null;
+    }
+
+    const championItem = buildSeedChampionHistoryEntry(seedItem);
+    try {
+      await documentClient.send(
+        new modules.PutCommand({
+          TableName: tableName,
+          Item: championItem,
+          ConditionExpression: "attribute_not_exists(PK) AND attribute_not_exists(SK)"
+        })
+      );
+      return championItem;
+    } catch (error) {
+      if (!toConditionalFailure(error)) {
+        throw error;
+      }
+      return findChampionHistoryItemById(championId);
+    }
   }
 
   async function getPersistedDeckItem(deckId) {
@@ -1583,14 +1764,108 @@ async function createDynamoRoomRepository(options = {}) {
       throw domainError(409, "CONFLICT_RETRY", "デッキ更新が競合しました。もう一度お試しください。", true);
     },
 
-    async getRecentChampions(limit) {
+    async getRecentChampions(limit, options = {}) {
       const items = await queryChampionHistory(limit);
-      return buildChampionHistoryViews(items, limit);
+      const mergedPreview = buildRecentChampionItems(items, limit);
+      return buildRecentChampionItems(items, limit, {
+        likedChampionIds: await resolveLikedChampionIds(
+          mergedPreview.map((item) => item.championId),
+          options.deviceIdHash
+        )
+      });
     },
 
-    async getChampionHistory(limit) {
+    async getChampionHistory(limit, options = {}) {
       const items = await queryChampionHistory(limit);
-      return buildChampionHistoryViews(items, limit);
+      return buildChampionHistoryViews(items, limit, {
+        likedChampionIds: await resolveLikedChampionIds(
+          items.slice(0, Math.max(limit, 1)).map((item) => item.championId),
+          options.deviceIdHash
+        )
+      });
+    },
+
+    async getChampionRanking(limit, options = {}) {
+      const items = await queryAllChampionHistory();
+      const rankedItems = buildChampionRankingViews(items, limit);
+      return buildChampionRankingViews(items, limit, {
+        likedChampionIds: await resolveLikedChampionIds(
+          rankedItems.map((item) => item.championId),
+          options.deviceIdHash
+        )
+      });
+    },
+
+    async toggleChampionLike(championId, deviceIdHash) {
+      if (!deviceIdHash) {
+        throw domainError(400, "DEVICE_ID_REQUIRED", "いいねには端末識別子が必要です。");
+      }
+
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        const championItem = await ensureChampionHistoryItem(championId);
+        if (!championItem) {
+          throw domainError(404, "CHAMPION_NOT_FOUND", "指定された総合優勝ワード履歴は存在しません。");
+        }
+
+        const likeItem = await getChampionLikeItem(championId, deviceIdHash);
+        const nextLikeCount = Math.max(0, Number(championItem.likeCount || 0) + (likeItem ? -1 : 1));
+        const nextChampionItem = {
+          ...championItem,
+          likeCount: nextLikeCount,
+          updatedAt: nowIso()
+        };
+
+        try {
+          await documentClient.send(
+            new modules.TransactWriteCommand({
+              TransactItems: [
+                {
+                  Put: {
+                    TableName: tableName,
+                    Item: nextChampionItem,
+                    ConditionExpression: "attribute_not_exists(#likeCount) OR #likeCount = :expectedLikeCount",
+                    ExpressionAttributeNames: {
+                      "#likeCount": "likeCount"
+                    },
+                    ExpressionAttributeValues: {
+                      ":expectedLikeCount": Math.max(0, Number(championItem.likeCount || 0))
+                    }
+                  }
+                },
+                likeItem
+                  ? {
+                      Delete: {
+                        TableName: tableName,
+                        Key: {
+                          PK: likeItem.PK,
+                          SK: likeItem.SK
+                        },
+                        ConditionExpression: "attribute_exists(PK)"
+                      }
+                    }
+                  : {
+                      Put: {
+                        TableName: tableName,
+                        Item: buildChampionLikeItem(championId, deviceIdHash),
+                        ConditionExpression: "attribute_not_exists(PK) AND attribute_not_exists(SK)"
+                      }
+                    }
+              ]
+            })
+          );
+
+          return toChampionHistoryView(nextChampionItem, {
+            likedChampionIds: new Set(likeItem ? [] : [championId])
+          });
+        } catch (error) {
+          if (toConditionalFailure(error)) {
+            continue;
+          }
+          throw error;
+        }
+      }
+
+      throw domainError(409, "CONFLICT_RETRY", "いいねの更新が競合しました。もう一度お試しください。", true);
     },
 
     async deleteChampion(championId) {
@@ -1598,6 +1873,8 @@ async function createDynamoRoomRepository(options = {}) {
       if (!item) {
         throw domainError(404, "CHAMPION_NOT_FOUND", "指定された総合優勝ワード履歴は存在しません。");
       }
+
+       const likeItems = await queryChampionLikeItems(championId);
 
       await documentClient.send(
         new modules.DeleteCommand({
@@ -1608,6 +1885,18 @@ async function createDynamoRoomRepository(options = {}) {
           }
         })
       );
+
+      for (const likeItem of likeItems) {
+        await documentClient.send(
+          new modules.DeleteCommand({
+            TableName: tableName,
+            Key: {
+              PK: likeItem.PK,
+              SK: likeItem.SK
+            }
+          })
+        );
+      }
 
       return toChampionHistoryView(item);
     },
@@ -2190,21 +2479,8 @@ function createMemoryRoomRepository() {
   const rooms = new Map();
   const invites = new Map();
   const decks = new Map([[defaultDeck.deckId, buildDeckState(defaultDeck.deckId, defaultDeck, defaultDeck.version || 1)]]);
-  const championHistory = recentChampions.map((item) => ({
-    PK: "CHAMPIONS",
-    SK: `TS#${item.wonAt}#SEED#${item.championId}`,
-    entityType: "ChampionHistory",
-    championId: item.championId,
-    roomId: "",
-    inviteCode: "",
-    playerId: "",
-    displayName: item.displayName,
-    phrase: item.phrase,
-    fontId: "",
-    renderedLines: [item.phrase],
-    wonAt: item.wonAt,
-    createdAt: item.wonAt
-  }));
+  const championHistory = recentChampions.map((item) => buildSeedChampionHistoryEntry(item));
+  const championLikes = new Map();
 
   function saveRoom(room) {
     rooms.set(room.roomId, clone(room));
@@ -2250,12 +2526,62 @@ function createMemoryRoomRepository() {
       return clone(nextDeck);
     },
 
-    async getRecentChampions(limit) {
-      return buildChampionHistoryViews(championHistory, limit);
+    async getRecentChampions(limit, options = {}) {
+      const items = buildRecentChampionItems(championHistory, limit);
+      const likedChampionIds = new Set(
+        items
+          .filter((item) => championLikes.get(item.championId)?.has(options.deviceIdHash))
+          .map((item) => item.championId)
+      );
+      return buildRecentChampionItems(championHistory, limit, { likedChampionIds });
     },
 
-    async getChampionHistory(limit) {
-      return buildChampionHistoryViews(championHistory, limit);
+    async getChampionHistory(limit, options = {}) {
+      const items = championHistory.slice(0, Math.max(limit, 1));
+      const likedChampionIds = new Set(
+        items
+          .filter((item) => championLikes.get(item.championId)?.has(options.deviceIdHash))
+          .map((item) => item.championId)
+      );
+      return buildChampionHistoryViews(championHistory, limit, { likedChampionIds });
+    },
+
+    async getChampionRanking(limit, options = {}) {
+      const rankedItems = buildChampionRankingViews(championHistory, limit);
+      const likedChampionIds = new Set(
+        rankedItems
+          .filter((item) => championLikes.get(item.championId)?.has(options.deviceIdHash))
+          .map((item) => item.championId)
+      );
+      return buildChampionRankingViews(championHistory, limit, { likedChampionIds });
+    },
+
+    async toggleChampionLike(championId, deviceIdHash) {
+      if (!deviceIdHash) {
+        throw domainError(400, "DEVICE_ID_REQUIRED", "いいねには端末識別子が必要です。");
+      }
+      const item = championHistory.find((entry) => entry.championId === championId);
+      if (!item) {
+        throw domainError(404, "CHAMPION_NOT_FOUND", "指定された総合優勝ワード履歴は存在しません。");
+      }
+
+      const likeSet = championLikes.get(championId) || new Set();
+      let likedByMe = false;
+      if (likeSet.has(deviceIdHash)) {
+        likeSet.delete(deviceIdHash);
+      } else {
+        likeSet.add(deviceIdHash);
+        likedByMe = true;
+      }
+      if (likeSet.size) {
+        championLikes.set(championId, likeSet);
+      } else {
+        championLikes.delete(championId);
+      }
+      item.likeCount = likeSet.size;
+      return toChampionHistoryView(item, {
+        likedChampionIds: likedByMe ? new Set([championId]) : new Set()
+      });
     },
 
     async deleteChampion(championId) {
@@ -2264,6 +2590,7 @@ function createMemoryRoomRepository() {
         throw domainError(404, "CHAMPION_NOT_FOUND", "指定された総合優勝ワード履歴は存在しません。");
       }
       const [removed] = championHistory.splice(index, 1);
+      championLikes.delete(championId);
       return toChampionHistoryView(removed);
     },
 
@@ -2646,11 +2973,12 @@ function createHandler(options = {}) {
         case "getChampionsRecent":
           {
             const repository = await roomRepositoryPromise;
+            const deviceIdHash = hashDeviceId(normalizeDeviceId(getHeader(event, DEVICE_ID_HEADER)));
             if (typeof repository.getRecentChampions === "function") {
               const requestedLimit = Number(event.queryStringParameters?.limit || "5");
               const limit = Number.isFinite(requestedLimit) && requestedLimit > 0 ? requestedLimit : 5;
               return ok({
-                items: await repository.getRecentChampions(limit)
+                items: await repository.getRecentChampions(limit, { deviceIdHash })
               });
             }
             return handleGetChampionsRecent(event);
@@ -2658,15 +2986,43 @@ function createHandler(options = {}) {
         case "getChampionsHistory":
           {
             const repository = await roomRepositoryPromise;
+            const deviceIdHash = hashDeviceId(normalizeDeviceId(getHeader(event, DEVICE_ID_HEADER)));
             if (typeof repository.getChampionHistory === "function") {
               const requestedLimit = Number(event.queryStringParameters?.limit || "50");
               const limit = Number.isFinite(requestedLimit) && requestedLimit > 0 ? requestedLimit : 50;
               return ok({
-                items: await repository.getChampionHistory(limit)
+                items: await repository.getChampionHistory(limit, { deviceIdHash })
               });
             }
             return handleGetChampionsHistory(event);
           }
+        case "getChampionsRanking":
+          {
+            const repository = await roomRepositoryPromise;
+            const deviceIdHash = hashDeviceId(normalizeDeviceId(getHeader(event, DEVICE_ID_HEADER)));
+            const requestedLimit = Number(event.queryStringParameters?.limit || "10");
+            const limit = Number.isFinite(requestedLimit) && requestedLimit > 0 ? requestedLimit : 10;
+            if (typeof repository.getChampionRanking === "function") {
+              return ok({
+                items: await repository.getChampionRanking(limit, { deviceIdHash })
+              });
+            }
+            return ok({
+              items: []
+            });
+          }
+        case "toggleChampionLike": {
+          const repository = await roomRepositoryPromise;
+          if (typeof repository.toggleChampionLike !== "function") {
+            return fail(501, "NOT_IMPLEMENTED", "いいね機能は未対応です。");
+          }
+          const deviceId = normalizeDeviceId(getHeader(event, DEVICE_ID_HEADER));
+          if (!deviceId) {
+            return fail(400, "DEVICE_ID_REQUIRED", "いいねには端末識別子が必要です。");
+          }
+          const item = await repository.toggleChampionLike(matched.params[0], hashDeviceId(deviceId));
+          return ok({ item });
+        }
         case "getAdminChampions": {
           requireAdminPasscode(event, adminSharedPasscode);
           const repository = await roomRepositoryPromise;

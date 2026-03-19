@@ -209,15 +209,19 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        min-height: 32px;
-        padding: 0 10px;
+        min-height: 36px;
+        padding: 0 13px;
         border-radius: 999px;
-        border: 1px solid rgba(184, 138, 50, 0.3);
-        background: linear-gradient(180deg, rgba(255, 253, 247, 0.96), rgba(249, 241, 221, 0.92));
+        border: 1.5px solid rgba(184, 138, 50, 0.42);
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 236, 208, 0.94)),
+          rgba(255, 252, 243, 0.94);
         color: var(--green-deep);
         font-size: 12px;
         font-weight: 800;
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+        box-shadow:
+          0 10px 18px rgba(31, 24, 18, 0.08),
+          inset 0 1px 0 rgba(255, 255, 255, 0.9);
       }
 
       button,
@@ -228,6 +232,8 @@
       .action-card {
         touch-action: manipulation;
         -webkit-tap-highlight-color: transparent;
+        cursor: pointer;
+        user-select: none;
       }
 
       .card,
@@ -402,19 +408,23 @@
       }
 
       .chip {
-        min-height: 40px;
-        padding: 0 12px;
+        min-height: 42px;
+        padding: 0 14px;
         border-radius: 999px;
         font-size: 12px;
         font-weight: 700;
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+        box-shadow:
+          0 8px 14px rgba(31, 24, 18, 0.06),
+          inset 0 1px 0 rgba(255, 255, 255, 0.8);
       }
 
       .chip.active {
-        border-color: rgba(184, 68, 49, 0.32);
-        background: linear-gradient(180deg, rgba(254, 233, 225, 0.96), rgba(247, 210, 197, 0.92));
+        border-color: rgba(184, 68, 49, 0.4);
+        background: linear-gradient(180deg, rgba(255, 238, 231, 0.98), rgba(247, 209, 193, 0.96));
         color: #8d2d1d;
-        box-shadow: 0 10px 18px rgba(184, 68, 49, 0.08);
+        box-shadow:
+          0 12px 22px rgba(184, 68, 49, 0.14),
+          inset 0 1px 0 rgba(255, 255, 255, 0.84);
       }
 
       .btn {
@@ -423,33 +433,44 @@
         justify-content: center;
         min-height: 52px;
         padding: 0 16px;
-        border: 0;
+        border: 1px solid transparent;
         border-radius: 16px;
         font-size: 15px;
         font-weight: 800;
+        letter-spacing: 0.02em;
         transition:
           transform 160ms ease,
           box-shadow 160ms ease,
           filter 160ms ease,
-          background 200ms ease;
-        box-shadow: 0 14px 26px rgba(31, 24, 18, 0.1);
+          background 200ms ease,
+          border-color 160ms ease;
+        box-shadow: 0 14px 26px rgba(31, 24, 18, 0.12);
       }
 
       .btn.primary {
-        background: linear-gradient(180deg, #d3644c, #b03b28);
+        background: linear-gradient(180deg, #db6f50, #af2f1b 88%);
         color: #fff7ef;
+        border-color: rgba(127, 29, 18, 0.42);
         box-shadow:
-          0 16px 28px rgba(176, 59, 40, 0.24),
+          0 18px 30px rgba(176, 59, 40, 0.28),
           inset 0 1px 0 rgba(255, 240, 235, 0.34);
       }
 
       .btn.subtle {
-        border: 1px solid rgba(184, 138, 50, 0.36);
-        background: linear-gradient(180deg, rgba(255, 253, 247, 0.98), rgba(249, 241, 221, 0.94));
+        border-color: rgba(184, 138, 50, 0.46);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 238, 210, 0.96));
         color: var(--green-deep);
         box-shadow:
-          0 12px 24px rgba(31, 24, 18, 0.08),
+          0 14px 24px rgba(31, 24, 18, 0.1),
           inset 0 1px 0 rgba(255, 255, 255, 0.86);
+      }
+
+      .btn:not(:disabled):active,
+      .mini-btn:not(:disabled):active,
+      .chip:not(:disabled):active,
+      .tile:not(:disabled):active,
+      .action-card:not(:disabled):active {
+        transform: translateY(1px) scale(0.99);
       }
 
       .btn:disabled,
@@ -500,12 +521,37 @@
         display: block;
       }
 
+      .history-card-main {
+        display: grid;
+        gap: 4px;
+      }
+
+      .history-card-side {
+        display: grid;
+        justify-items: end;
+        gap: 8px;
+      }
+
       .player-card span,
       .history-card span,
       .muted {
         color: var(--muted);
         font-size: 12px;
         line-height: 1.55;
+      }
+
+      .like-btn {
+        min-width: 88px;
+        justify-content: center;
+      }
+
+      .like-btn.is-liked {
+        border-color: rgba(190, 73, 58, 0.28);
+        color: #8f2f25;
+        background: linear-gradient(180deg, rgba(255, 244, 240, 0.98), rgba(255, 228, 220, 0.94));
+        box-shadow:
+          0 12px 18px rgba(184, 68, 49, 0.12),
+          inset 0 1px 0 rgba(255, 255, 255, 0.86);
       }
 
       .player-role-actions {
@@ -611,6 +657,14 @@
         box-shadow:
           inset 0 1px 0 rgba(255, 255, 255, 0.88),
           0 16px 28px rgba(35, 22, 11, 0.08);
+      }
+
+      .word-board.board-skin-bare {
+        padding: 8px 6px 4px;
+        border: 0 !important;
+        border-radius: 0;
+        background: transparent !important;
+        box-shadow: none !important;
       }
 
       .preview-word,
@@ -1017,6 +1071,95 @@
         line-height: 1.6;
       }
 
+      .screen-card--round,
+      .screen-card--round-result {
+        background:
+          radial-gradient(circle at top right, rgba(108, 153, 119, 0.12), transparent 30%),
+          radial-gradient(circle at top left, rgba(255, 236, 176, 0.16), transparent 26%),
+          linear-gradient(180deg, rgba(255, 253, 248, 0.9), rgba(250, 244, 231, 0.84)),
+          rgba(255, 255, 255, 0.74);
+      }
+
+      .screen-card--final {
+        background:
+          radial-gradient(circle at top right, rgba(255, 231, 167, 0.24), transparent 32%),
+          radial-gradient(circle at bottom left, rgba(196, 82, 58, 0.1), transparent 28%),
+          linear-gradient(180deg, rgba(255, 251, 240, 0.96), rgba(251, 239, 211, 0.88)),
+          rgba(255, 255, 255, 0.76);
+        border-color: rgba(184, 138, 50, 0.28);
+      }
+
+      .screen-card--champion {
+        background:
+          radial-gradient(circle at top, rgba(255, 241, 173, 0.3), transparent 34%),
+          radial-gradient(circle at bottom right, rgba(208, 93, 52, 0.14), transparent 30%),
+          linear-gradient(180deg, rgba(255, 250, 236, 0.98), rgba(249, 229, 175, 0.92) 62%, rgba(241, 176, 97, 0.82)),
+          rgba(255, 255, 255, 0.7);
+        border-color: rgba(184, 138, 50, 0.34);
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.88),
+          0 20px 36px rgba(36, 24, 14, 0.14),
+          0 0 38px rgba(255, 180, 69, 0.12);
+      }
+
+      .decision-hero {
+        position: relative;
+        overflow: hidden;
+        margin-top: 14px;
+        padding: 18px 18px 16px;
+        border-radius: 22px;
+        border: 1px solid rgba(118, 89, 63, 0.16);
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.82),
+          0 14px 24px rgba(31, 24, 18, 0.08);
+      }
+
+      .decision-hero small {
+        display: block;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+      }
+
+      .decision-hero strong {
+        display: block;
+        margin-top: 8px;
+        color: var(--green-deep);
+        font-size: clamp(28px, 7vw, 42px);
+        line-height: 1.18;
+      }
+
+      .decision-hero p {
+        margin: 10px 0 0;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.65;
+      }
+
+      .decision-hero--round {
+        background:
+          radial-gradient(circle at top right, rgba(154, 196, 160, 0.18), transparent 28%),
+          linear-gradient(180deg, rgba(255, 253, 247, 0.98), rgba(241, 247, 241, 0.92)),
+          rgba(255, 255, 255, 0.78);
+      }
+
+      .decision-hero--final {
+        background:
+          radial-gradient(circle at top right, rgba(255, 232, 171, 0.34), transparent 32%),
+          linear-gradient(180deg, rgba(255, 250, 238, 0.99), rgba(248, 236, 200, 0.95)),
+          rgba(255, 255, 255, 0.8);
+        border-color: rgba(184, 138, 50, 0.24);
+      }
+
+      .decision-hero--host {
+        background:
+          radial-gradient(circle at top right, rgba(255, 220, 208, 0.3), transparent 30%),
+          linear-gradient(180deg, rgba(255, 250, 244, 0.99), rgba(249, 233, 224, 0.94)),
+          rgba(255, 255, 255, 0.8);
+        border-color: rgba(184, 68, 49, 0.18);
+      }
+
       .summary-pills {
         display: flex;
         flex-wrap: wrap;
@@ -1171,11 +1314,23 @@
         min-height: 96px;
       }
 
+      .history-dialog-section {
+        display: grid;
+        gap: 10px;
+      }
+
+      .history-dialog-footer {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 12px;
+        margin-top: 10px;
+      }
+
       .history-dialog-meta {
         display: flex;
         flex-wrap: wrap;
         gap: 6px 10px;
-        margin-top: 10px;
         color: var(--muted);
         font-size: 13px;
         line-height: 1.6;
@@ -1184,6 +1339,42 @@
       .history-dialog-meta strong {
         color: var(--green);
         font-weight: 800;
+      }
+
+      .history-ranking-list {
+        display: grid;
+        gap: 8px;
+      }
+
+      .history-ranking-card {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 14px;
+        border-radius: 16px;
+        border: 1px solid rgba(118, 89, 63, 0.14);
+        background: rgba(255, 255, 255, 0.74);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
+      }
+
+      .history-ranking-rank {
+        font-size: 13px;
+        font-weight: 900;
+        color: var(--red-dark);
+      }
+
+      .history-ranking-main {
+        min-width: 0;
+      }
+
+      .history-ranking-main strong {
+        display: block;
+      }
+
+      .history-ranking-main span {
+        color: var(--muted);
+        font-size: 12px;
       }
 
       .section-heading {
@@ -1310,12 +1501,12 @@
       .reveal-card .preview-caption {
         margin-top: 12px;
         text-align: center;
-        font-size: 18px;
+        font-size: 19px;
         font-weight: 800;
       }
 
       .reveal-card.is-champion .preview-caption {
-        font-size: 16px;
+        font-size: 18px;
         color: #7b3416;
         font-weight: 800;
       }
@@ -1330,13 +1521,12 @@
       }
 
       .reveal-card.is-champion .champion-word {
-        min-height: min(42vh, 250px);
-        padding: 16px 10px;
-        border-radius: 24px;
-        background: linear-gradient(180deg, rgba(255, 252, 244, 0.92), rgba(248, 236, 199, 0.86));
-        box-shadow:
-          inset 0 1px 0 rgba(255, 255, 255, 0.9),
-          0 16px 24px rgba(113, 79, 10, 0.12);
+        min-height: min(42vh, 232px);
+        padding: 12px 8px 6px;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        box-shadow: none;
       }
 
       .reveal-card .word-board {
@@ -1368,7 +1558,7 @@
       .reveal-card.is-submission .preview-caption {
         margin-top: 10px;
         color: var(--green);
-        font-size: 18px;
+        font-size: 19px;
         font-weight: 800;
       }
 
@@ -1485,15 +1675,12 @@
       }
 
       .champion-stage.is-grand .champion-word {
-        min-height: 232px;
-        border-radius: 24px;
-        background:
-          linear-gradient(180deg, rgba(255, 253, 247, 0.98), rgba(255, 241, 197, 0.94)),
-          #fff8ea;
-        box-shadow:
-          inset 0 1px 0 rgba(255, 255, 255, 0.92),
-          0 18px 28px rgba(150, 86, 7, 0.2),
-          0 0 44px rgba(255, 188, 69, 0.18);
+        min-height: 210px;
+        padding: 10px 8px 6px;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        box-shadow: none;
       }
 
       .champion-stage.is-grand .stage-footnote {
@@ -1508,7 +1695,7 @@
         color: var(--green-deep);
         font-size: 14px;
         line-height: 1.5;
-        text-align: center;
+        text-align: left;
         font-weight: 800;
       }
 
@@ -1612,9 +1799,19 @@
           display: block;
         }
 
+        #submitTopSlot {
+          position: sticky;
+          top: calc(10px + env(safe-area-inset-top));
+          z-index: 12;
+        }
+
         .preview-card.is-sticky,
         .preview-card.is-floating {
-          top: calc(10px + env(safe-area-inset-top));
+          position: relative;
+          top: auto;
+          left: auto;
+          width: auto;
+          margin-top: 0;
         }
 
         .status-row,
@@ -1638,13 +1835,13 @@
 
         .card h2,
         .panel h3 {
-          font-size: 24px;
+          font-size: 26px;
         }
 
         .card p,
         .panel p,
         .section-note {
-          font-size: 17px;
+          font-size: 18px;
         }
 
         .field label,
@@ -1655,24 +1852,24 @@
         .player-card span,
         .history-card span,
         .muted {
-          font-size: 15px;
+          font-size: 16px;
         }
 
         .btn {
-          min-height: 56px;
-          font-size: 18px;
+          min-height: 58px;
+          font-size: 19px;
         }
 
         .tile {
-          min-height: 88px;
-          font-size: 17px;
+          min-height: 92px;
+          font-size: 18px;
         }
 
         .summary-pill,
         .summary-pill strong,
         .mini-btn,
         .status-row {
-          font-size: 14px;
+          font-size: 15px;
         }
 
         .tile-grid {
@@ -1685,6 +1882,15 @@
 
         .preview-card .word-board {
           min-height: 150px;
+        }
+
+        .decision-hero strong {
+          font-size: clamp(30px, 9vw, 44px);
+        }
+
+        .history-dialog,
+        .reveal-card {
+          width: min(96vw, 520px);
         }
       }
     </style>
@@ -1741,8 +1947,14 @@
       const APP_SESSION_MAP_KEY = "omojan-app-sessions";
       const APP_ROOM_ID_KEY = "omojan-app-room-id";
       const APP_PLAYER_TOKEN_KEY = "omojan-app-player-token";
+      const APP_DEVICE_ID_KEY = "omojan-app-device-id";
       const GOOGLE_FONTS_HREF = "https://fonts.googleapis.com/css2?family=DotGothic16&family=Rampart+One&family=Yusei+Magic&display=swap";
       const REMOTE_FONT_IDS = new Set(["magic", "rampart", "dot"]);
+      const GOOGLE_FONT_DESCRIPTORS = {
+        magic: '700 20px "Yusei Magic"',
+        rampart: '400 20px "Rampart One"',
+        dot: '400 20px "DotGothic16"'
+      };
       const POLL_INTERVALS_MS = {
         activeTurn: 2300,
         waiting: 1700,
@@ -1769,10 +1981,9 @@
       ];
 
       const sizePresets = [
-        { id: "xl", label: "特大", singleMax: 146, multiMax: 122, singleMin: 40, multiMin: 32, renderScale: 1.42 },
-        { id: "large", label: "大", singleMax: 110, multiMax: 92, singleMin: 24, multiMin: 22, renderScale: 1.04 },
-        { id: "medium", label: "中", singleMax: 78, multiMax: 64, singleMin: 16, multiMin: 16, renderScale: 0.78 },
-        { id: "small", label: "小", singleMax: 52, multiMax: 44, singleMin: 11, multiMin: 11, renderScale: 0.54 }
+        { id: "large", label: "大", singleMax: 122, multiMax: 100, singleMin: 28, multiMin: 24, renderScale: 1.2 },
+        { id: "medium", label: "中", singleMax: 86, multiMax: 70, singleMin: 18, multiMin: 16, renderScale: 0.84 },
+        { id: "small", label: "小", singleMax: 58, multiMax: 46, singleMin: 12, multiMin: 11, renderScale: 0.54 }
       ];
 
       const lineGapPresets = [
@@ -1783,14 +1994,19 @@
 
       const state = {
         apiBaseUrl: "",
+        deviceId: "",
         room: null,
         roomId: "",
         playerToken: "",
         recentChampions: [],
         championHistoryItems: [],
+        championRankingItems: [],
         championHistoryOpen: false,
         championHistoryPending: false,
         championHistoryError: "",
+        championHistoryLimit: 10,
+        championHistoryHasMore: false,
+        championLikePendingIds: [],
         isLoading: true,
         pendingAction: false,
         pendingMode: "",
@@ -1861,7 +2077,8 @@
         },
         googleFonts: {
           requested: false,
-          loaded: false
+          loaded: false,
+          promise: null
         }
       };
 
@@ -1976,16 +2193,22 @@
         window.setTimeout(task, 180);
       }
 
-      function ensureGoogleFontsLoaded(fontIds = []) {
-        if (state.googleFonts.requested) {
-          return;
+      function normalizeSizePresetId(sizePresetId) {
+        if (sizePresetId === "xl") {
+          return "large";
         }
+        return sizePresetId;
+      }
+
+      function ensureGoogleFontsLoaded(fontIds = []) {
         if (!fontIds.some((fontId) => REMOTE_FONT_IDS.has(fontId))) {
-          return;
+          return Promise.resolve();
+        }
+        if (state.googleFonts.promise) {
+          return state.googleFonts.promise;
         }
         state.googleFonts.requested = true;
-
-        scheduleIdleTask(() => {
+        state.googleFonts.promise = new Promise((resolve) => {
           if (!document.head.querySelector('link[data-omojan-fonts="preconnect-google"]')) {
             const preconnectGoogle = document.createElement("link");
             preconnectGoogle.rel = "preconnect";
@@ -2003,25 +2226,42 @@
             document.head.appendChild(preconnectGstatic);
           }
 
-          if (document.head.querySelector('link[data-omojan-fonts="stylesheet"]')) {
+          const existing = document.head.querySelector('link[data-omojan-fonts="stylesheet"]');
+          if (existing) {
+            resolve(existing);
             return;
           }
 
           const link = document.createElement("link");
           link.rel = "stylesheet";
           link.href = GOOGLE_FONTS_HREF;
-          link.media = "print";
           link.dataset.omojanFonts = "stylesheet";
           link.onload = () => {
-            link.media = "all";
             state.googleFonts.loaded = true;
             state.renderCache.appKey = "";
             resetIncrementalViewCaches();
             state.renderCache.revealKey = "";
             render();
+            resolve(link);
           };
+          link.onerror = () => resolve(link);
           document.head.appendChild(link);
         });
+        return state.googleFonts.promise;
+      }
+
+      async function ensureFontsReady(fontIds = []) {
+        const remoteFontIds = [...new Set(fontIds.filter((fontId) => REMOTE_FONT_IDS.has(fontId)))];
+        if (!remoteFontIds.length) {
+          return;
+        }
+        await ensureGoogleFontsLoaded(remoteFontIds);
+        if (!document.fonts?.load) {
+          return;
+        }
+        await Promise.all(
+          remoteFontIds.map((fontId) => document.fonts.load(GOOGLE_FONT_DESCRIPTORS[fontId], "おもじゃん"))
+        );
       }
 
       function collectVisibleFontIds(room = state.room, view = deriveView(room)) {
@@ -2106,7 +2346,8 @@
       }
 
       function getSizePreset(sizePresetId) {
-        return sizePresets.find((preset) => preset.id === sizePresetId) || sizePresets[1];
+        const normalizedId = normalizeSizePresetId(sizePresetId);
+        return sizePresets.find((preset) => preset.id === normalizedId) || sizePresets[0];
       }
 
       function getLineGapPreset(lineGapPresetId) {
@@ -2164,6 +2405,23 @@
         window.localStorage.removeItem(APP_PLAYER_TOKEN_KEY);
       }
 
+      function makeDeviceId() {
+        if (window.crypto?.randomUUID) {
+          return `dv_${window.crypto.randomUUID()}`;
+        }
+        return `dv_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+      }
+
+      function getOrCreateDeviceId() {
+        const stored = String(window.localStorage.getItem(APP_DEVICE_ID_KEY) || "").trim();
+        if (stored) {
+          return stored;
+        }
+        const created = makeDeviceId();
+        window.localStorage.setItem(APP_DEVICE_ID_KEY, created);
+        return created;
+      }
+
       function setFeedback(message = "", isError = false, autoHideMs = 0) {
         if (state.feedbackTimer) {
           window.clearTimeout(state.feedbackTimer);
@@ -2189,6 +2447,9 @@
         }
         if (container.dataset.variant) {
           classNames.push(container.dataset.variant);
+        }
+        if (container.dataset.boardSkin) {
+          classNames.push(`board-skin-${container.dataset.boardSkin}`);
         }
         if (lineMode === "single") {
           classNames.push("is-single-line");
@@ -2392,15 +2653,17 @@
         const maxFont = Math.max(minFontBase, Math.round(maxFontBase * sizePreset.renderScale));
         const minFont = Math.max(12, Math.round(minFontBase * Math.max(0.68, sizePreset.renderScale - 0.08)));
         const lineGapPreset = options.lineGapPreset || "none";
+        const boardSkin = options.boardSkin || "framed";
         return `
           <div
-            class="word-board auto-fit-word ${variant} ${getFontClass(fontId)}${mode === "single" ? " is-single-line" : ""}"
+            class="word-board auto-fit-word ${variant} board-skin-${boardSkin} ${getFontClass(fontId)}${mode === "single" ? " is-single-line" : ""}"
             data-font-id="${escapeHtml(fontId)}"
             data-line-mode="${mode}"
             data-max-font="${maxFont}"
             data-min-font="${minFont}"
             data-size-preset="${escapeHtml(sizePreset.id)}"
             data-line-gap-preset="${escapeHtml(lineGapPreset)}"
+            data-board-skin="${escapeHtml(boardSkin)}"
           >
             ${lines.map((line) => `<span class="word-line">${escapeHtml(line)}</span>`).join("")}
           </div>
@@ -2577,7 +2840,9 @@
       }
 
       function getRecentChampionsStamp() {
-        return state.recentChampions.map((item) => `${item.phrase}:${item.displayName}:${item.wonAt}`).join("|");
+        return state.recentChampions
+          .map((item) => `${item.championId}:${item.phrase}:${item.displayName}:${item.wonAt}:${item.likeCount || 0}:${item.likedByMe ? 1 : 0}`)
+          .join("|");
       }
 
       function getAppRenderKey(room = state.room, view = deriveView(room)) {
@@ -2818,12 +3083,14 @@
       }
 
       async function apiRequest(path, options = {}) {
-        const { method = "GET", body, playerToken = state.playerToken } = options;
+        const { method = "GET", body, playerToken = state.playerToken, headers = {} } = options;
         return fetchJson(`${state.apiBaseUrl}${path}`, {
           method,
           headers: {
             ...(body === undefined ? {} : { "content-type": "application/json" }),
-            ...(playerToken ? { "X-Omojan-Player-Token": playerToken } : {})
+            ...(state.deviceId ? { "X-Omojan-Device-Id": state.deviceId } : {}),
+            ...(playerToken ? { "X-Omojan-Player-Token": playerToken } : {}),
+            ...headers
           },
           ...(body === undefined ? {} : { body: JSON.stringify(body) })
         });
@@ -2835,25 +3102,47 @@
 
       async function loadRecentChampions() {
         try {
-          const payload = await fetchJson(`${state.apiBaseUrl}/champions/recent?limit=5`);
+          const payload = await apiRequest("/champions/recent?limit=5", { playerToken: "" });
           state.recentChampions = payload.data.items || [];
         } catch {
           const payload = await fetchJson(FIXTURE_CHAMPIONS_URL);
-          state.recentChampions = payload.data.items || [];
+          state.recentChampions = (payload.data.items || []).map((item) => ({
+            ...item,
+            likeCount: Number(item.likeCount || 0),
+            likedByMe: false
+          }));
         }
       }
 
       async function loadChampionHistory(limit = 50) {
         try {
-          const payload = await fetchJson(`${state.apiBaseUrl}/champions/history?limit=${limit}`);
+          const payload = await apiRequest(`/champions/history?limit=${limit}`, { playerToken: "" });
           state.championHistoryItems = payload.data.items || [];
+          state.championHistoryHasMore = state.championHistoryItems.length >= limit;
           state.championHistoryError = "";
         } catch (error) {
           state.championHistoryError = error instanceof Error ? error.message : "履歴の取得に失敗しました。";
           if (!state.championHistoryItems.length) {
             const payload = await fetchJson(FIXTURE_CHAMPIONS_URL);
-            state.championHistoryItems = payload.data.items || [];
+            state.championHistoryItems = (payload.data.items || []).map((item) => ({
+              ...item,
+              likeCount: Number(item.likeCount || 0),
+              likedByMe: false
+            }));
+            state.championHistoryHasMore = state.championHistoryItems.length >= limit;
           }
+        }
+      }
+
+      async function loadChampionRanking(limit = 10) {
+        try {
+          const payload = await apiRequest(`/champions/ranking?limit=${limit}`, { playerToken: "" });
+          state.championRankingItems = payload.data.items || [];
+        } catch {
+          state.championRankingItems = state.championHistoryItems
+            .slice()
+            .sort((left, right) => Number(right.likeCount || 0) - Number(left.likeCount || 0))
+            .slice(0, limit);
         }
       }
 
@@ -3123,16 +3412,67 @@
         return phaseMessageMap[room.game.phase] || `${escapeHtml(currentRound?.label || "現在ラウンド")} が進行中です。`;
       }
 
+      function getChampionLikeCount(item) {
+        return Math.max(0, Number(item?.likeCount || 0));
+      }
+
+      function isChampionLikePending(championId) {
+        return state.championLikePendingIds.includes(championId);
+      }
+
+      function formatChampionLikeLabel(item) {
+        return `♡ ${getChampionLikeCount(item)}`;
+      }
+
+      function renderChampionLikeButton(item, options = {}) {
+        if (!item?.championId) {
+          return "";
+        }
+        const pending = isChampionLikePending(item.championId);
+        return `
+          <button
+            class="mini-btn like-btn${item.likedByMe ? " is-liked" : ""}"
+            type="button"
+            data-action="toggle-champion-like"
+            data-champion-id="${escapeHtml(item.championId)}"
+            ${pending ? "disabled" : ""}
+          >
+            ${escapeHtml(pending ? "..." : formatChampionLikeLabel(item))}
+          </button>
+        `;
+      }
+
+      function patchChampionCollection(items, nextItem) {
+        return items.map((item) => (item.championId === nextItem.championId ? { ...item, ...nextItem } : item));
+      }
+
+      function applyChampionLikeUpdate(nextItem) {
+        state.recentChampions = patchChampionCollection(state.recentChampions, nextItem);
+        state.championHistoryItems = patchChampionCollection(state.championHistoryItems, nextItem);
+        state.championRankingItems = patchChampionCollection(state.championRankingItems, nextItem)
+          .slice()
+          .sort((left, right) => {
+            const likeDelta = getChampionLikeCount(right) - getChampionLikeCount(left);
+            if (likeDelta !== 0) {
+              return likeDelta;
+            }
+            return String(right.wonAt || "").localeCompare(String(left.wonAt || ""));
+          });
+      }
+
       function renderRecentChampions() {
         return renderHistoryList(
           state.recentChampions,
           (item) => `
             <div class="history-card">
-              <div>
+              <div class="history-card-main">
                 <strong>${escapeHtml(item.phrase)}</strong>
                 <span>${escapeHtml(item.displayName)}</span>
               </div>
-              <span>${escapeHtml(formatChampionHistoryWonAtCompact(item.wonAt))}</span>
+              <div class="history-card-side">
+                <span>${escapeHtml(formatChampionHistoryWonAtCompact(item.wonAt))}</span>
+                ${renderChampionLikeButton(item)}
+              </div>
             </div>
           `,
           "最近の総合優勝ワードはまだありません。"
@@ -3182,6 +3522,36 @@
         });
       }
 
+      function renderChampionRankingSection() {
+        if (!state.championRankingItems.length) {
+          return "";
+        }
+
+        return `
+          <section class="history-dialog-section">
+            <div class="section-heading">
+              <h3>いいねベスト10</h3>
+            </div>
+            <div class="history-ranking-list">
+              ${state.championRankingItems
+                .map(
+                  (item, index) => `
+                    <article class="history-ranking-card">
+                      <div class="history-ranking-rank">#${index + 1}</div>
+                      <div class="history-ranking-main">
+                        <strong>${escapeHtml(item.phrase)}</strong>
+                        <span>${escapeHtml(item.displayName)}</span>
+                      </div>
+                      ${renderChampionLikeButton(item)}
+                    </article>
+                  `
+                )
+                .join("")}
+            </div>
+          </section>
+        `;
+      }
+
       function renderChampionHistoryOverlay() {
         if (!state.championHistoryOpen) {
           state.renderCache.championHistoryKey = "";
@@ -3193,8 +3563,14 @@
           state.championHistoryOpen ? "open" : "closed",
           state.championHistoryPending ? "pending" : "idle",
           state.championHistoryError,
+          state.championHistoryHasMore ? "more" : "done",
+          state.championHistoryLimit,
+          state.championLikePendingIds.join(","),
+          state.championRankingItems
+            .map((item) => `${item.championId}:${item.likeCount || 0}:${item.likedByMe ? 1 : 0}`)
+            .join("|"),
           state.championHistoryItems
-            .map((item) => `${item.championId}:${item.phrase}:${item.displayName}:${item.wonAt}`)
+            .map((item) => `${item.championId}:${item.phrase}:${item.displayName}:${item.wonAt}:${item.likeCount || 0}:${item.likedByMe ? 1 : 0}`)
             .join("|")
         ].join("|");
 
@@ -3215,9 +3591,12 @@
                       lineGapPreset: item.lineGapPreset,
                       sizePreset: item.sizePreset
                     })}
-                    <div class="history-dialog-meta">
-                      <strong>${escapeHtml(item.displayName)}</strong>
-                      <span>${escapeHtml(formatChampionHistoryWonAt(item.wonAt))}</span>
+                    <div class="history-dialog-footer">
+                      <div class="history-dialog-meta">
+                        <strong>${escapeHtml(item.displayName)}</strong>
+                        <span>${escapeHtml(formatChampionHistoryWonAt(item.wonAt))}</span>
+                      </div>
+                      ${renderChampionLikeButton(item)}
                     </div>
                   </article>
                 `
@@ -3228,7 +3607,25 @@
         els.historyDialogBody.innerHTML = `
           ${state.championHistoryPending ? `<div class="info-box">履歴を読み込んでいます。</div>` : ""}
           ${state.championHistoryError ? `<div class="info-box">${escapeHtml(state.championHistoryError)}</div>` : ""}
-          ${listHtml}
+          ${renderChampionRankingSection()}
+          <section class="history-dialog-section">
+            <div class="section-heading">
+              <h3>すべての総合優勝ワード</h3>
+              <span class="muted">${state.championHistoryItems.length}件</span>
+            </div>
+            ${listHtml}
+          </section>
+          ${
+            state.championHistoryHasMore
+              ? `
+                <div class="dialog-actions align-center">
+                  <button class="btn subtle" type="button" data-action="load-more-champion-history" ${state.championHistoryPending ? "disabled" : ""}>
+                    もっと見る
+                  </button>
+                </div>
+              `
+              : ""
+          }
         `;
         hydrateWordBoards(els.historyDialogBody);
         els.historyOverlay.hidden = false;
@@ -3297,6 +3694,7 @@
           label,
           entry,
           wordClass,
+          boardSkin = "framed",
           maxFont,
           minFont,
           emptyText,
@@ -3312,7 +3710,8 @@
                     maxFont,
                     minFont,
                     lineGapPreset: entry.lineGapPreset,
-                    sizePreset: entry.sizePreset
+                    sizePreset: entry.sizePreset,
+                    boardSkin
                   })
                 : `<div class="empty-state">${escapeHtml(emptyText)}</div>`
             }
@@ -3481,7 +3880,7 @@
                       lineGapPreset: round.winner.lineGapPreset,
                       sizePreset: round.winner.sizePreset
                     })}
-                    <footer>${escapeHtml(round.winner.displayName || resolvePlayerDisplayName(room, round.winner.playerId, round.winner.displayName))}</footer>
+                    <footer>${escapeHtml(resolvePlayerDisplayName(room, round.winner.playerId, round.winner.displayName))}</footer>
                   </article>
                 `
               )
@@ -3853,7 +4252,7 @@
         const chars = Array.from(getDraftText(room));
         const activeLineMode = lineModes.find((mode) => mode.id === state.draftLineMode)?.label || "";
         const activeFont = fonts.find((font) => font.id === state.draftFontId)?.label || "";
-        const activeSize = sizePresets.find((preset) => preset.id === state.draftSizePreset)?.label || "";
+        const activeSize = getSizePreset(state.draftSizePreset).label || "";
         const activeGap = lineGapPresets.find((preset) => preset.id === state.draftLineGapPreset)?.label || "";
         return `
           <section class="panel appearance-panel">
@@ -4172,10 +4571,10 @@
         state.renderCache.resultActionsKey = "";
       }
 
-      function renderDecisionShell(title) {
+      function renderDecisionShell(title, screenClass = "screen-card--round") {
         return `
           ${renderScreenAlerts()}
-          <section class="card">
+          <section class="card ${screenClass}">
             <h2>${escapeHtml(title)}</h2>
             <div id="decisionFocusSlot"></div>
             <div id="decisionSummarySlot"></div>
@@ -4194,11 +4593,23 @@
         if (view === "vote" || view === "revote" || view === "finalVote") {
           const candidates = isFinal ? getFinalCandidates(room, isRevote ? "revote" : "vote") : getVoteCandidates(room, view === "revote" ? "revote" : "vote");
           const source = isFinal ? room.game.finalVote : round;
+          const selectedCandidate =
+            candidates.find((candidate) => (candidate.candidateId ?? candidate.playerId) === (isFinal ? state.selectedFinalTarget : (view === "revote" ? state.selectedHostTarget : state.selectedVoteTarget))) || null;
           return {
             type: "vote",
             title: isFinal ? (isRevote ? "最終再投票" : "最終投票") : (view === "revote" ? "再投票" : "投票"),
             label: isFinal ? (isRevote ? "最終再投票" : "最終投票") : (view === "revote" ? "再投票" : getCurrentRound(room)?.label || "投票"),
-            description: "",
+            focusLabel: isFinal
+              ? (isRevote ? "総合優勝の再投票" : "総合優勝を決める投票")
+              : (view === "revote" ? `${getCurrentRound(room)?.label || "ラウンド"}の再投票` : `${getCurrentRound(room)?.label || "ラウンド"}の投票`),
+            focusTitle: selectedCandidate
+              ? selectedCandidate.phrase
+              : isFinal
+                ? (isRevote ? "同票のワードから選ぶ" : "総合優勝のワードを選ぶ")
+                : (view === "revote" ? "同票のワードから選ぶ" : "一番おもしろいワードを選ぶ"),
+            focusDescription: selectedCandidate
+              ? resolvePlayerDisplayName(room, selectedCandidate.playerId, selectedCandidate.displayName)
+              : (isRevote ? "同票になったワードだけが並びます。" : ""),
             summaryTitle: isRevote ? "同票になったワード" : "",
             summaryHtml:
               isRevote && source?.voteSummary
@@ -4213,6 +4624,8 @@
             dataAttr: isFinal ? "final-vote-id" : (view === "revote" ? "revote-id" : "vote-id"),
             selfId: room.me.playerId,
             allowSelfVote,
+            screenClass: isFinal ? "screen-card--final" : "screen-card--round",
+            heroTone: isFinal ? "final" : "round",
             action: isFinal ? "submit-final-vote" : (view === "revote" ? "submit-revote" : "submit-vote"),
             buttonLabel: isFinal ? (isRevote ? "このワードに再投票" : "このワードに投票") : (view === "revote" ? "このワードに再投票" : "このワードに投票")
           };
@@ -4221,28 +4634,40 @@
         const source = isFinal ? room.game.finalVote : round;
         const counts = source?.voteSummary?.counts || [];
         const tiedIds = isFinal ? source?.voteSummary?.tiedCandidateIds || [] : source?.voteSummary?.tiedPlayerIds || [];
+        const candidates = isFinal ? source.candidates.filter((candidate) => tiedIds.includes(candidate.candidateId)) : getVoteCandidates(room, "revote");
+        const selectedCandidate =
+          candidates.find((candidate) => (candidate.candidateId ?? candidate.playerId) === (isFinal ? state.selectedFinalTarget : state.selectedHostTarget)) || null;
         return {
           type: "host",
           title: isFinal ? "最終ホスト裁定" : "ホスト裁定",
           label: isFinal ? "最終裁定" : getCurrentRound(room)?.label || "ホスト裁定",
-          description: "",
+          focusLabel: isFinal ? "総合優勝の裁定" : `${getCurrentRound(room)?.label || "ラウンド"}の裁定`,
+          focusTitle: selectedCandidate ? selectedCandidate.phrase : (isFinal ? "総合優勝を決める" : "勝ちワードを決める"),
+          focusDescription: selectedCandidate
+            ? resolvePlayerDisplayName(room, selectedCandidate.playerId, selectedCandidate.displayName)
+            : "同票になったワードから決めます。",
           summaryTitle: "同票になったワード",
           summaryHtml: renderTiedCountSummary(counts, tiedIds, isFinal ? "candidateId" : "playerId"),
-          candidates: isFinal ? source.candidates.filter((candidate) => tiedIds.includes(candidate.candidateId)) : getVoteCandidates(room, "revote"),
+          candidates,
           selectedId: isFinal ? state.selectedFinalTarget : state.selectedHostTarget,
           dataAttr: isFinal ? "final-pick-id" : "host-pick-id",
           selfId: "__none__",
           allowSelfVote: true,
+          screenClass: isFinal ? "screen-card--champion" : "screen-card--round",
+          heroTone: isFinal ? "final" : "host",
           action: isFinal ? "submit-final-host-pick" : "submit-host-pick",
           buttonLabel: "このワードで確定"
         };
       }
 
       function renderDecisionFocus(config) {
-        if (!config.description) {
-          return "";
-        }
-        return `<p class="section-note">${escapeHtml(config.description)}</p>`;
+        return `
+          <section class="decision-hero decision-hero--${escapeHtml(config.heroTone || "round")}">
+            <small>${escapeHtml(config.focusLabel || config.label || "")}</small>
+            <strong>${escapeHtml(config.focusTitle || "")}</strong>
+            ${config.focusDescription ? `<p>${escapeHtml(config.focusDescription)}</p>` : ""}
+          </section>
+        `;
       }
 
       function renderDecisionSummary(config) {
@@ -4279,7 +4704,7 @@
           state.renderCache.decisionSummaryKey = "";
           state.renderCache.decisionCardsKey = "";
           state.renderCache.decisionActionsKey = "";
-          els.app.innerHTML = renderDecisionShell(config.title);
+          els.app.innerHTML = renderDecisionShell(config.title, config.screenClass);
         }
 
         const candidatesStamp = config.candidates
@@ -4296,10 +4721,10 @@
         patchSlot(els.app, "#decisionActionsSlot", "decisionActionsKey", actionsKey, renderDecisionActions(config));
       }
 
-      function renderResultShell(title) {
+      function renderResultShell(title, screenClass = "screen-card--round-result") {
         return `
           ${renderScreenAlerts()}
-          <section class="card">
+          <section class="card ${screenClass}">
             <h2>${escapeHtml(title)}</h2>
             <div id="resultHeroSlot"></div>
             <div id="resultExtraSlot"></div>
@@ -4315,6 +4740,7 @@
           const winner = round?.winner;
           return {
             title: "結果発表",
+            screenClass: "screen-card--round-result",
             heroHtml: renderWordStage({
               stageClass: "result-stage",
               label: round?.label || "ラウンド結果",
@@ -4353,11 +4779,13 @@
         const champion = room.game.champion;
         return {
           title: "結果一覧",
+          screenClass: "screen-card--champion",
           heroHtml: renderWordStage({
             stageClass: "champion-stage is-grand",
             label: "総合優勝",
             entry: champion,
             wordClass: "champion-word",
+            boardSkin: "bare",
             maxFont: 70,
             minFont: 30,
             emptyText: "未確定です。",
@@ -4392,7 +4820,7 @@
           state.renderCache.resultExtraKey = "";
           state.renderCache.resultCountsKey = "";
           state.renderCache.resultActionsKey = "";
-          els.app.innerHTML = renderResultShell(config.title);
+          els.app.innerHTML = renderResultShell(config.title, config.screenClass);
         }
 
         const heroKey = [view, room.revision, config.heroHtml].join("|");
@@ -4423,8 +4851,8 @@
                   >
                     <span class="badge">${escapeHtml(candidate.displayName)}</span>
                     ${renderWordBoard(candidate.renderedLines, candidate.fontId, "vote-word", {
-                      maxFont: 64,
-                      minFont: 30,
+                      maxFont: 76,
+                      minFont: 34,
                       lineGapPreset: candidate.lineGapPreset,
                       sizePreset: candidate.sizePreset
                     })}
@@ -4847,11 +5275,16 @@
         }
 
         const slotRect = submitTopSlot.getBoundingClientRect();
-        const statusRect = document.querySelector(".status-row")?.getBoundingClientRect();
         const isMobile = window.matchMedia("(max-width: 520px)").matches;
-        const floatTop = isMobile
-          ? Math.max(12, Math.round((statusRect?.bottom || 0) + 8))
-          : 8;
+        if (isMobile) {
+          submitTopSlot.style.minHeight = "";
+          previewCard.classList.remove("is-floating");
+          previewCard.style.removeProperty("--preview-floating-top");
+          previewCard.style.removeProperty("--preview-floating-left");
+          previewCard.style.removeProperty("--preview-floating-width");
+          return;
+        }
+        const floatTop = 8;
         const cardHeight = previewCard.offsetHeight;
         const revealOpen = !els.revealOverlay.hidden;
         const hasScrolled = window.scrollY > 1;
@@ -4966,6 +5399,7 @@
             fontId: reveal.fontId || "classic",
             sizePreset: reveal.sizePreset || "large",
             lineGapPreset: reveal.lineGapPreset || "none",
+            boardSkin: "bare",
             meta: resolvePlayerDisplayName(room, reveal.playerId, reveal.displayName),
             buttonLabel: meAcknowledged ? "ほかの人を待っています" : "結果一覧を見る",
             acknowledged: meAcknowledged,
@@ -4977,12 +5411,13 @@
         }
         if (reveal.kind === "round_winner") {
           return {
-            badge: round?.label || "ラウンド勝利",
-            lines: clone(reveal.renderedLines || [reveal.phrase]),
-            fontId: reveal.fontId || "classic",
-            sizePreset: reveal.sizePreset || "large",
-            lineGapPreset: reveal.lineGapPreset || "none",
-            meta: resolvePlayerDisplayName(room, reveal.playerId, reveal.displayName),
+          badge: round?.label || "ラウンド勝利",
+          lines: clone(reveal.renderedLines || [reveal.phrase]),
+          fontId: reveal.fontId || "classic",
+          sizePreset: reveal.sizePreset || "large",
+          lineGapPreset: reveal.lineGapPreset || "none",
+          boardSkin: "framed",
+          meta: resolvePlayerDisplayName(room, reveal.playerId, reveal.displayName),
             buttonLabel: meAcknowledged ? "ほかの人を待っています" : "閉じる",
             acknowledged: meAcknowledged,
             kind: "round_winner",
@@ -4995,8 +5430,9 @@
           badge: round?.label || "ラウンド公開",
           lines: clone(reveal.renderedLines || [reveal.phrase]),
           fontId: reveal.fontId || "broadcast",
-          sizePreset: reveal.sizePreset || "xl",
+          sizePreset: normalizeSizePresetId(reveal.sizePreset || "large"),
           lineGapPreset: reveal.lineGapPreset || "none",
+          boardSkin: "framed",
           meta: resolvePlayerDisplayName(room, reveal.playerId, reveal.displayName),
           buttonLabel: meAcknowledged ? "ほかの人を待っています" : "閉じる",
           acknowledged: meAcknowledged,
@@ -5052,11 +5488,15 @@
         els.revealWord.dataset.minFont = String(Math.max(12, Math.round(revealMinFontBase * Math.max(0.68, sizePreset.renderScale - 0.08))));
         els.revealWord.dataset.sizePreset = sizePreset.id;
         els.revealWord.dataset.lineGapPreset = presentation.lineGapPreset || "none";
+        els.revealWord.dataset.boardSkin = presentation.boardSkin || "framed";
         els.revealWord.className = `word-board auto-fit-word ${els.revealWord.dataset.variant}`;
         els.revealWord.innerHTML = presentation.lines.map((line) => `<span class="word-line">${escapeHtml(line)}</span>`).join("");
         hydrateWordBoard(els.revealWord);
         window.requestAnimationFrame(() => hydrateWordBoard(els.revealWord));
         window.setTimeout(() => hydrateWordBoard(els.revealWord), 60);
+        ensureFontsReady([presentation.fontId || "classic"]).then(() => {
+          hydrateWordBoard(els.revealWord);
+        }).catch(() => {});
         els.closeRevealBtn.textContent = presentation.buttonLabel;
         els.closeRevealBtn.disabled = Boolean(presentation.acknowledged || state.pendingAction);
       }
@@ -5148,7 +5588,12 @@
         state.syncIssueMessage = describeAppError(error, "refresh");
       }
 
+      async function loadChampionHistoryBundle(limit = state.championHistoryLimit) {
+        await Promise.all([loadChampionHistory(limit), loadChampionRanking(10)]);
+      }
+
       async function openChampionHistory() {
+        state.championHistoryLimit = 10;
         state.championHistoryOpen = true;
         state.championHistoryPending = true;
         state.championHistoryError = "";
@@ -5158,7 +5603,7 @@
         renderCurrentView({ includeReveal: false });
 
         try {
-          await loadChampionHistory(80);
+          await loadChampionHistoryBundle(state.championHistoryLimit);
         } finally {
           state.championHistoryPending = false;
           renderCurrentView({ includeReveal: false });
@@ -5170,6 +5615,32 @@
         state.championHistoryPending = false;
         state.championHistoryError = "";
         renderCurrentView({ includeReveal: false });
+      }
+
+      async function toggleChampionLike(championId) {
+        if (!championId || isChampionLikePending(championId)) {
+          return;
+        }
+        state.championLikePendingIds = [...state.championLikePendingIds, championId];
+        renderCurrentView({ includeReveal: false });
+
+        try {
+          const payload = await apiRequest(`/champions/${encodeURIComponent(championId)}/like-toggle`, {
+            method: "POST",
+            body: {},
+            playerToken: ""
+          });
+          applyChampionLikeUpdate(payload.data.item);
+          renderCurrentView({ includeReveal: false });
+          await loadRecentChampions();
+          if (state.championHistoryOpen) {
+            await loadChampionHistoryBundle(state.championHistoryLimit);
+          }
+          setFeedback(payload.data.item.likedByMe ? "いいねしました。" : "いいねを取り消しました。", false, 1800);
+        } finally {
+          state.championLikePendingIds = state.championLikePendingIds.filter((item) => item !== championId);
+          renderCurrentView({ includeReveal: false });
+        }
       }
 
       function toggleDraftTile(tileId) {
@@ -5231,6 +5702,7 @@
           selector: "[data-font-id]",
           handle: (button) => {
             state.draftFontId = button.dataset.fontId;
+            ensureGoogleFontsLoaded([state.draftFontId]);
             renderCurrentView({ includeReveal: false });
           }
         },
@@ -5382,11 +5854,25 @@
             await copyText(getInviteUrl(state.room.inviteCode), "招待URLをコピーしました。");
           }
         },
+        "toggle-champion-like": async (button) => {
+          await toggleChampionLike(button.dataset.championId);
+        },
         "open-champion-history": async () => {
           await openChampionHistory();
         },
         "close-champion-history": async () => {
           closeChampionHistory();
+        },
+        "load-more-champion-history": async () => {
+          state.championHistoryPending = true;
+          state.championHistoryLimit += 10;
+          renderCurrentView({ includeReveal: false });
+          try {
+            await loadChampionHistory(state.championHistoryLimit);
+          } finally {
+            state.championHistoryPending = false;
+            renderCurrentView({ includeReveal: false });
+          }
         },
         "start-game": async () => {
           await runAction(async () => {
@@ -5414,6 +5900,7 @@
         "submit-word": async () => {
           await runAction(async () => {
             const room = state.room;
+            await ensureFontsReady([state.draftFontId]);
             const payload = await postApi(`/rooms/${encodeURIComponent(state.roomId)}/rounds/${room.game.roundIndex}/submit`, buildSubmitPayload(room));
             state.selectedVoteTarget = "";
             state.selectedHostTarget = "";
@@ -5573,12 +6060,14 @@
         const apiBaseUrl = params.get("apiBaseUrl");
         const invite = params.get("invite");
         state.apiBaseUrl = apiBaseUrl ? apiBaseUrl.replace(/\/$/, "") : resolveDefaultApiBaseUrl();
+        state.deviceId = getOrCreateDeviceId();
         if (invite) {
           state.inviteCode = invite;
         }
 
         ensureApiNetworkHints();
         warmApiConnection();
+        ensureGoogleFontsLoaded([...REMOTE_FONT_IDS]);
 
         state.isLoading = false;
         render({ immediate: true });

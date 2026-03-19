@@ -351,6 +351,12 @@ MVP では `1 アクション = 1 API` を原則にします。
 
 - `GET /champions/recent`
   - 最近の優勝ワード一覧
+- `GET /champions/history`
+  - 過去の総合優勝ワード一覧
+- `GET /champions/ranking`
+  - いいね上位ワード
+- `POST /champions/{championId}/like-toggle`
+  - `X-Omojan-Device-Id` ベースの 1端末1いいね / 取り消し
 
 ### 9-5. 再接続 / セッション系
 

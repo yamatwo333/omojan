@@ -663,6 +663,8 @@ sinceRevision=12
 
 - 呼び出し者
   - 誰でも
+- Header
+  - `X-Omojan-Device-Id` 任意
 - 用途
   - ロビーに表示する全体共通の履歴取得
 - 補足
@@ -679,7 +681,9 @@ sinceRevision=12
         "championId": "ch_20260315_001",
         "phrase": "現場大洪水",
         "displayName": "やまだ",
-        "wonAt": "2026-03-15T10:59:00Z"
+        "wonAt": "2026-03-15T10:59:00Z",
+        "likeCount": 12,
+        "likedByMe": false
       }
     ]
   }
@@ -692,6 +696,8 @@ sinceRevision=12
 
 - 呼び出し者
   - 誰でも
+- Header
+  - `X-Omojan-Device-Id` 任意
 - 用途
   - ゲーム本体の「一覧を見る」で、過去の総合優勝ワードをまとめて表示する
 
@@ -709,6 +715,8 @@ sinceRevision=12
         "wonAt": "2026-03-15T10:59:00Z",
         "fontId": "classic",
         "renderedLines": ["現場", "大洪水"],
+        "likeCount": 12,
+        "likedByMe": true,
         "roomId": "room_abcd1234",
         "inviteCode": "OMO-1234"
       }
@@ -716,6 +724,29 @@ sinceRevision=12
   }
 }
 ```
+
+### 8-3. 総合優勝ワードいいねランキング取得
+
+`GET /v1/champions/ranking?limit=10`
+
+- 呼び出し者
+  - 誰でも
+- Header
+  - `X-Omojan-Device-Id` 任意
+- 用途
+  - 過去の総合優勝ワードから、いいね数の多い上位ワードを表示する
+
+### 8-4. 総合優勝ワードへいいね / 取り消し
+
+`POST /v1/champions/{championId}/like-toggle`
+
+- 呼び出し者
+  - 誰でも
+- Header
+  - `X-Omojan-Device-Id` 必須
+- 用途
+  - ログインなしで `1端末1いいね`
+  - 再度押すと取り消し
 
 ## 9. 運営用 API
 

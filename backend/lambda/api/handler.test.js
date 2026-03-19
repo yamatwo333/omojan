@@ -33,6 +33,12 @@ function createAdminHeaders(passcode) {
   };
 }
 
+function createDeviceHeaders(deviceId) {
+  return {
+    "X-Omojan-Device-Id": deviceId
+  };
+}
+
 async function getRoom(handler, roomId, playerToken) {
   const response = await handler(
     createEvent("GET", `/v1/rooms/${roomId}`, {
@@ -404,6 +410,8 @@ test("GET /v1/health returns lambda scaffold metadata", async () => {
     "admin:champions:get",
     "admin:champions:delete",
     "champions:history:get",
+    "champions:ranking:get",
+    "champions:like:toggle",
     "rooms:create",
     "rooms:join",
     "rooms:get",
@@ -461,6 +469,64 @@ test("GET /v1/champions/history returns champion history items", async () => {
   assert.equal(body.data.items.length, 4);
   assert.ok(body.data.items[0].championId);
   assert.ok(Array.isArray(body.data.items[0].renderedLines));
+});
+
+test("champion likes can toggle and ranking reflects the count", async () => {
+  const handler = createTestHandler();
+  const deviceHeaders = createDeviceHeaders("device-like-test");
+  const historyResponse = await handler(
+    createEvent("GET", "/v1/champions/history", {
+      query: { limit: "10" }
+    })
+  );
+  const historyBody = await parseResponse(historyResponse);
+  const targetChampionId = historyBody.data.items.at(-1)?.championId || historyBody.data.items[0].championId;
+
+  let response = await handler(
+    createEvent("POST", `/v1/champions/${targetChampionId}/like-toggle`, {
+      headers: deviceHeaders,
+      body: {}
+    })
+  );
+  let body = await parseResponse(response);
+  assert.equal(response.statusCode, 200);
+  assert.equal(body.data.item.championId, targetChampionId);
+  assert.equal(body.data.item.likeCount, 1);
+  assert.equal(body.data.item.likedByMe, true);
+
+  response = await handler(
+    createEvent("GET", "/v1/champions/history", {
+      headers: deviceHeaders,
+      query: { limit: "10" }
+    })
+  );
+  body = await parseResponse(response);
+  const likedItem = body.data.items.find((item) => item.championId === targetChampionId);
+  assert.ok(likedItem);
+  assert.equal(likedItem.likeCount, 1);
+  assert.equal(likedItem.likedByMe, true);
+
+  response = await handler(
+    createEvent("GET", "/v1/champions/ranking", {
+      headers: deviceHeaders,
+      query: { limit: "3" }
+    })
+  );
+  body = await parseResponse(response);
+  assert.equal(response.statusCode, 200);
+  assert.equal(body.data.items[0].championId, targetChampionId);
+  assert.equal(body.data.items[0].likeCount, 1);
+  assert.equal(body.data.items[0].likedByMe, true);
+
+  response = await handler(
+    createEvent("POST", `/v1/champions/${targetChampionId}/like-toggle`, {
+      headers: deviceHeaders,
+      body: {}
+    })
+  );
+  body = await parseResponse(response);
+  assert.equal(body.data.item.likeCount, 0);
+  assert.equal(body.data.item.likedByMe, false);
 });
 
 test("admin champion history API can list and delete items", async () => {

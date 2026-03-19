@@ -312,6 +312,23 @@
         margin-top: 12px;
       }
 
+      .button-row.align-left {
+        justify-content: flex-start;
+      }
+
+      .button-row.align-right {
+        justify-content: flex-end;
+      }
+
+      .button-row.split-actions {
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .button-row.split-actions .btn.primary {
+        margin-left: auto;
+      }
+
       .chip-row.compact {
         margin-top: 0;
       }
@@ -1579,16 +1596,16 @@
       ];
 
       const sizePresets = [
-        { id: "xl", label: "特大", singleMax: 126, multiMax: 108, singleMin: 34, multiMin: 28, renderScale: 1.22 },
-        { id: "large", label: "大", singleMax: 104, multiMax: 88, singleMin: 24, multiMin: 22, renderScale: 1.06 },
-        { id: "medium", label: "中", singleMax: 84, multiMax: 70, singleMin: 18, multiMin: 18, renderScale: 0.9 },
-        { id: "small", label: "小", singleMax: 66, multiMax: 54, singleMin: 13, multiMin: 13, renderScale: 0.74 }
+        { id: "xl", label: "特大", singleMax: 146, multiMax: 122, singleMin: 40, multiMin: 32, renderScale: 1.42 },
+        { id: "large", label: "大", singleMax: 110, multiMax: 92, singleMin: 24, multiMin: 22, renderScale: 1.04 },
+        { id: "medium", label: "中", singleMax: 78, multiMax: 64, singleMin: 16, multiMin: 16, renderScale: 0.78 },
+        { id: "small", label: "小", singleMax: 52, multiMax: 44, singleMin: 11, multiMin: 11, renderScale: 0.54 }
       ];
 
       const lineGapPresets = [
         { id: "none", label: "なし", value: "0.02em", spaces: "" },
-        { id: "normal", label: "1マス", value: "0.52em", spaces: "　" },
-        { id: "wide", label: "2マス", value: "0.94em", spaces: "　　" }
+        { id: "normal", label: "半角", value: "0.3em", spaces: " " },
+        { id: "wide", label: "全角", value: "0.58em", spaces: "　" }
       ];
 
       const state = {
@@ -3179,7 +3196,7 @@
             })}
             ${summaryHtml}
             ${renderVoteCards(candidates, selectedId, dataAttr, selfId, { allowSelfVote })}
-            <div class="button-row">
+            <div class="button-row align-right">
               <button class="btn primary" type="button" data-action="${action}" ${selectedId && !state.pendingAction ? "" : "disabled"}>
                 ${escapeHtml(buttonLabel)}
               </button>
@@ -3224,7 +3241,7 @@
               { className: "panel" }
             )}
             ${renderVoteCards(candidates, selectedId, dataAttr, "__none__", { disableSelf: false })}
-            <div class="button-row">
+            <div class="button-row align-right">
               <button class="btn primary" type="button" data-action="${action}" ${selectedId && !state.pendingAction ? "" : "disabled"}>
                 このワードで確定
               </button>
@@ -3402,7 +3419,7 @@
                 )
                 .join("")}
             </div>
-            <div class="button-row">
+            <div class="button-row align-right">
               <button class="btn primary" type="button" data-action="create-room" ${state.pendingAction ? "disabled" : ""}>ルームを作る</button>
             </div>
           </section>
@@ -3432,7 +3449,7 @@
                 <input id="joinDisplayName" class="input" type="text" maxlength="20" placeholder="例: たなか" value="${escapeHtml(state.joinDisplayName)}" data-field="joinDisplayName" />
               </div>
             </div>
-            <div class="button-row">
+            <div class="button-row align-right">
               <button class="btn primary" type="button" data-action="join-room" ${state.pendingAction ? "disabled" : ""}>参加する</button>
             </div>
           </section>
@@ -3537,7 +3554,7 @@
 
       function renderLobbyUtility(room) {
         return `
-          <div class="button-row">
+          <div class="button-row align-left">
             <button class="btn subtle" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
           </div>
         `;
@@ -3564,7 +3581,7 @@
                       .join("")}
                   </div>
                   ${renderPlayerOrderPreview(room)}
-                  <div class="button-row">
+                  <div class="button-row align-right">
                     <button class="btn primary" type="button" data-action="start-game" ${ready && !state.pendingAction ? "" : "disabled"}>この順で開始</button>
                   </div>
                   ${ready ? "" : `<div class="info-box">参加プレイヤーが ${room.playerCount} 人そろうと開始できます。</div>`}
@@ -3653,7 +3670,7 @@
 
       function renderSubmitUtility() {
         return `
-          <div class="button-row">
+          <div class="button-row align-left">
             <button class="btn subtle" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
           </div>
         `;
@@ -3776,7 +3793,7 @@
                 )
                 .join("")}
             </div>
-            <div class="button-row">
+            <div class="button-row split-actions">
               <button class="btn subtle" type="button" data-action="swap-selection" ${selectedTiles.length === 2 ? "" : "disabled"}>順番入替</button>
               <button class="btn subtle" type="button" data-action="clear-selection">選択をクリア</button>
               <button class="btn primary" type="button" data-action="submit-word" ${selectedTiles.length === 2 && !state.pendingAction ? "" : "disabled"}>この見た目で提出</button>
@@ -3862,7 +3879,7 @@
 
       function renderWaitActions() {
         return `
-          <div class="button-row">
+          <div class="button-row align-left">
             <button class="btn subtle" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
           </div>
         `;
@@ -4071,11 +4088,11 @@
 
       function renderDecisionActions(config) {
         return `
-          <div class="button-row">
+          <div class="button-row split-actions">
+            <button class="btn subtle" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
             <button class="btn primary" type="button" data-action="${config.action}" ${config.selectedId && !state.pendingAction ? "" : "disabled"}>
               ${escapeHtml(config.buttonLabel)}
             </button>
-            <button class="btn subtle" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
           </div>
         `;
       }
@@ -4144,16 +4161,16 @@
             countsHtml: renderCountBreakdown("票数内訳", round?.voteSummary?.counts || [], (item) => `${item.count}票 / ${item.displayName}`),
             actionsHtml: room.me.isHost
               ? `
-                  <div class="button-row">
+                  <div class="button-row split-actions">
+                    <button class="btn subtle" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
                     <button class="btn primary" type="button" data-action="proceed-round" ${state.pendingAction ? "disabled" : ""}>
                       ${room.game.roundIndex === room.game.rounds.length - 1 ? "最終投票へ進む" : "次のラウンドへ"}
                     </button>
-                    <button class="btn subtle" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
                   </div>
                 `
               : `
-                  <div class="button-row">
-                    <div class="info-box">ホストの進行待ちです。</div>
+                  <div class="info-box">ホストの進行待ちです。</div>
+                  <div class="button-row align-left">
                     <button class="btn subtle" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
                   </div>
                 `
@@ -4179,14 +4196,14 @@
             : "",
           actionsHtml: room.me.isHost
             ? `
-                <div class="button-row">
-                  <button class="btn primary" type="button" data-action="restart-game" ${state.pendingAction ? "disabled" : ""}>もう一度最初から</button>
+                <div class="button-row split-actions">
                   <button class="btn subtle" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
+                  <button class="btn primary" type="button" data-action="restart-game" ${state.pendingAction ? "disabled" : ""}>もう一度最初から</button>
                 </div>
               `
             : `
-                <div class="button-row">
-                  <div class="info-box">ホストの再開待ちです。</div>
+                <div class="info-box">ホストの再開待ちです。</div>
+                <div class="button-row align-left">
                   <button class="btn subtle" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
                 </div>
               `

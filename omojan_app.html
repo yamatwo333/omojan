@@ -2939,9 +2939,7 @@
             ? "同期中"
             : isSyncPending()
               ? getSyncPendingCopy().short
-              : state.roomId
-                ? "更新"
-                : "再読込";
+              : "更新";
         }
         renderFeedbackDock();
       }

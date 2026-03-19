@@ -209,16 +209,16 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        min-height: 36px;
-        padding: 0 14px;
-        border-radius: 14px;
-        border: 1.5px solid rgba(23, 63, 44, 0.44);
-        background: linear-gradient(180deg, #2d6b4a, #163f2c 88%);
+        min-height: 38px;
+        padding: 0 15px;
+        border-radius: 15px;
+        border: 2px solid rgba(23, 63, 44, 0.5);
+        background: linear-gradient(180deg, #2f744f, #173f2c 88%);
         color: #fff8ef;
         font-size: 12px;
         font-weight: 800;
         box-shadow:
-          0 14px 22px rgba(24, 47, 34, 0.18),
+          0 16px 24px rgba(24, 47, 34, 0.2),
           inset 0 1px 0 rgba(255, 255, 255, 0.18);
       }
 
@@ -457,7 +457,7 @@
       .btn.subtle,
       .btn.secondary {
         border-color: rgba(23, 63, 44, 0.44);
-        background: linear-gradient(180deg, #2d6b4a, #163f2c 88%);
+        background: linear-gradient(180deg, #2f744f, #173f2c 88%);
         color: #fff8ef;
         box-shadow:
           0 16px 26px rgba(24, 47, 34, 0.18),
@@ -474,11 +474,11 @@
       }
 
       .btn.danger {
-        border-color: rgba(149, 43, 30, 0.34);
-        background: linear-gradient(180deg, rgba(255, 247, 242, 0.98), rgba(252, 225, 216, 0.95));
-        color: #922f21;
+        border-color: rgba(123, 93, 44, 0.34);
+        background: linear-gradient(180deg, rgba(255, 253, 246, 0.98), rgba(242, 230, 198, 0.95));
+        color: #51401e;
         box-shadow:
-          0 14px 24px rgba(115, 36, 24, 0.1),
+          0 14px 24px rgba(62, 45, 20, 0.12),
           inset 0 1px 0 rgba(255, 255, 255, 0.86);
       }
 
@@ -506,15 +506,15 @@
       .room-code {
         display: inline-flex;
         align-items: center;
-        padding: 8px 12px;
-        border-radius: 14px;
-        background: rgba(255, 252, 245, 0.82);
-        border: 1px solid rgba(184, 138, 50, 0.22);
-        color: var(--green-deep);
-        font-size: 13px;
+        padding: 7px 11px;
+        border-radius: 12px;
+        background: rgba(255, 252, 245, 0.58);
+        border: 1px dashed rgba(184, 138, 50, 0.26);
+        color: #6a5a43;
+        font-size: 12px;
         font-weight: 800;
         letter-spacing: 0.08em;
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+        box-shadow: none;
       }
 
       .player-card,
@@ -566,6 +566,12 @@
       .like-btn {
         min-width: 88px;
         justify-content: center;
+        border-color: rgba(160, 112, 122, 0.34);
+        background: linear-gradient(180deg, rgba(255, 251, 251, 0.98), rgba(247, 237, 241, 0.94));
+        color: #7d3e58;
+        box-shadow:
+          0 12px 18px rgba(92, 54, 69, 0.1),
+          inset 0 1px 0 rgba(255, 255, 255, 0.88);
       }
 
       .like-btn.is-liked {
@@ -575,6 +581,10 @@
         box-shadow:
           0 12px 18px rgba(184, 68, 49, 0.12),
           inset 0 1px 0 rgba(255, 255, 255, 0.86);
+      }
+
+      .like-btn.is-pending {
+        filter: saturate(0.94);
       }
 
       .player-role-actions {
@@ -588,12 +598,12 @@
         align-items: center;
         padding: 5px 9px;
         border-radius: 999px;
-        background: linear-gradient(180deg, rgba(245, 251, 246, 0.96), rgba(225, 239, 227, 0.92));
-        color: var(--green-deep);
-        font-size: 12px;
+        background: rgba(236, 244, 238, 0.84);
+        color: #4f6a57;
+        font-size: 11px;
         font-weight: 700;
         white-space: nowrap;
-        border: 1px solid rgba(35, 68, 47, 0.12);
+        border: 1px solid rgba(35, 68, 47, 0.1);
       }
 
       .preview-card,
@@ -955,13 +965,16 @@
         position: relative;
         overflow: hidden;
         width: 100%;
-        padding: 14px;
+        padding: 14px 14px 16px;
         border-radius: 18px;
         text-align: left;
-        border: 1.5px solid rgba(118, 89, 63, 0.2);
+        border: 2px solid rgba(118, 89, 63, 0.18);
+        background:
+          radial-gradient(circle at top right, rgba(255, 242, 199, 0.28), transparent 34%),
+          linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(249, 243, 228, 0.94));
         box-shadow:
           inset 0 1px 0 rgba(255, 255, 255, 0.86),
-          0 12px 22px rgba(31, 24, 18, 0.08);
+          0 16px 24px rgba(31, 24, 18, 0.1);
         transition:
           transform 150ms ease,
           box-shadow 150ms ease,
@@ -974,12 +987,12 @@
       }
 
       .action-card.selected {
-        border-color: rgba(184, 68, 49, 0.5);
+        border-color: rgba(23, 63, 44, 0.46);
         background:
-          radial-gradient(circle at top right, rgba(255, 219, 205, 0.46), transparent 30%),
-          linear-gradient(180deg, rgba(255, 242, 235, 0.99), rgba(250, 220, 208, 0.94));
+          radial-gradient(circle at top right, rgba(210, 239, 216, 0.46), transparent 30%),
+          linear-gradient(180deg, rgba(244, 253, 246, 0.99), rgba(217, 239, 222, 0.95));
         box-shadow:
-          0 18px 30px rgba(184, 68, 49, 0.18),
+          0 20px 32px rgba(24, 47, 34, 0.16),
           inset 0 1px 0 rgba(255, 255, 255, 0.78);
       }
 
@@ -1010,17 +1023,17 @@
         min-height: 30px;
         padding: 0 10px;
         border-radius: 999px;
-        border: 1px solid rgba(184, 138, 50, 0.22);
-        background: rgba(255, 253, 248, 0.82);
-        color: var(--muted);
+        border: 1px solid rgba(23, 63, 44, 0.18);
+        background: rgba(237, 246, 239, 0.9);
+        color: #486253;
         font-size: 11px;
         font-weight: 800;
       }
 
       .action-card.selected .action-card-indicator {
-        border-color: rgba(184, 68, 49, 0.38);
-        background: rgba(255, 235, 228, 0.94);
-        color: #922f21;
+        border-color: rgba(23, 63, 44, 0.28);
+        background: rgba(32, 87, 60, 0.96);
+        color: #fff7ea;
       }
 
       .empty-state,
@@ -1159,7 +1172,7 @@
         position: relative;
         overflow: hidden;
         margin-top: 14px;
-        padding: 16px 18px 16px;
+        padding: 15px 18px 14px;
         border-radius: 22px;
         border: 1px solid rgba(118, 89, 63, 0.16);
         box-shadow:
@@ -1170,17 +1183,17 @@
       .decision-hero small {
         display: block;
         color: var(--muted);
-        font-size: 12px;
+        font-size: 11px;
         font-weight: 800;
-        letter-spacing: 0.04em;
+        letter-spacing: 0.08em;
       }
 
       .decision-hero strong {
         display: block;
         margin-top: 6px;
         color: var(--green-deep);
-        font-size: clamp(22px, 5.2vw, 32px);
-        line-height: 1.28;
+        font-size: clamp(18px, 4.2vw, 25px);
+        line-height: 1.34;
       }
 
       .decision-hero p {
@@ -1244,20 +1257,20 @@
         display: inline-flex;
         align-items: center;
         gap: 6px;
-        min-height: 34px;
-        padding: 0 12px;
-        border-radius: 14px;
-        border: 1px solid rgba(184, 138, 50, 0.16);
-        background: rgba(255, 253, 247, 0.72);
-        color: var(--green-deep);
-        font-size: 12px;
+        min-height: 30px;
+        padding: 0 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(184, 138, 50, 0.12);
+        background: rgba(255, 253, 247, 0.48);
+        color: #6a5a43;
+        font-size: 11px;
         font-weight: 700;
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
+        box-shadow: none;
       }
 
       .summary-pill strong {
-        color: var(--ink);
-        font-size: 12px;
+        color: #2b261f;
+        font-size: 11px;
       }
 
       .order-preview {
@@ -1506,6 +1519,13 @@
         gap: 12px;
       }
 
+      .section-heading.stack {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        align-items: flex-start;
+        gap: 10px;
+      }
+
       .section-heading h3 {
         margin: 0;
         color: var(--green);
@@ -1520,6 +1540,15 @@
 
       .dialog-actions.align-right {
         justify-content: flex-end;
+      }
+
+      .submit-actions {
+        justify-content: flex-start;
+        gap: 8px;
+      }
+
+      .submit-actions .btn.primary {
+        margin-left: auto;
       }
 
       .reveal-card {
@@ -1666,13 +1695,13 @@
       .reveal-card .word-board {
         min-height: 210px;
         margin-top: 12px;
-        padding: 10px 10px 8px;
+        padding: 12px 14px 10px;
       }
 
       .reveal-card.is-submission .word-board {
         min-height: min(52vh, 340px);
         margin-top: 0;
-        padding: 20px 22px 14px;
+        padding: 26px 28px 18px;
       }
 
       .reveal-card.is-submission .reveal-actions {
@@ -1690,9 +1719,9 @@
       }
 
       .reveal-card.is-submission .preview-caption {
-        margin-top: 10px;
+        margin-top: 12px;
         color: var(--green);
-        font-size: 19px;
+        font-size: 18px;
         font-weight: 800;
       }
 
@@ -1935,12 +1964,17 @@
           display: block;
         }
 
-        .preview-card.is-sticky,
-        .preview-card.is-floating {
+        .preview-card.is-sticky {
           position: sticky;
           top: calc(10px + env(safe-area-inset-top));
-          left: auto;
-          width: auto;
+          margin-top: 0;
+        }
+
+        .preview-card.is-floating {
+          position: fixed;
+          top: var(--preview-floating-top, calc(10px + env(safe-area-inset-top)));
+          left: var(--preview-floating-left, 0);
+          width: var(--preview-floating-width, 100%);
           margin-top: 0;
         }
 
@@ -1996,6 +2030,17 @@
           font-size: 15px;
         }
 
+        .section-heading.stack {
+          display: grid;
+          justify-content: stretch;
+          gap: 10px;
+        }
+
+        .section-heading.stack .mini-btn,
+        .section-heading.stack .btn.compact {
+          justify-self: flex-end;
+        }
+
         .tile {
           min-height: 92px;
           font-size: 18px;
@@ -2016,8 +2061,21 @@
           padding: 18px 14px;
         }
 
+        #submitTopSlot {
+          position: relative;
+          z-index: 12;
+        }
+
         .preview-card .word-board {
           min-height: 150px;
+        }
+
+        .submit-actions {
+          gap: 6px;
+        }
+
+        .submit-actions .btn {
+          min-width: 0;
         }
 
         .decision-hero strong {
@@ -2117,9 +2175,9 @@
       ];
 
       const sizePresets = [
-        { id: "large", label: "大", singleMax: 146, multiMax: 118, singleMin: 34, multiMin: 28, renderScale: 1.42 },
-        { id: "medium", label: "中", singleMax: 92, multiMax: 72, singleMin: 20, multiMin: 17, renderScale: 0.9 },
-        { id: "small", label: "小", singleMax: 52, multiMax: 38, singleMin: 11, multiMin: 10, renderScale: 0.44 }
+        { id: "large", label: "大", singleMax: 186, multiMax: 146, singleMin: 38, multiMin: 32, renderScale: 1.82 },
+        { id: "medium", label: "中", singleMax: 106, multiMax: 78, singleMin: 21, multiMin: 18, renderScale: 1.02 },
+        { id: "small", label: "小", singleMax: 56, multiMax: 40, singleMin: 10, multiMin: 9, renderScale: 0.54 }
       ];
 
       const lineGapPresets = [
@@ -2786,7 +2844,8 @@
         const sizePreset = getSizePreset(options.sizePreset || "large");
         const maxFontBase = options.maxFont || 46;
         const minFontBase = options.minFont || 18;
-        const maxFont = Math.max(minFontBase, Math.round(maxFontBase * sizePreset.renderScale));
+        const fontSizeHint = Number.isFinite(Number(options.fontSizeHint)) ? Math.round(Number(options.fontSizeHint)) : 0;
+        const maxFont = Math.max(minFontBase, Math.round(maxFontBase * sizePreset.renderScale), fontSizeHint);
         const minFont = Math.max(12, Math.round(minFontBase * Math.max(0.68, sizePreset.renderScale - 0.08)));
         const lineGapPreset = options.lineGapPreset || "none";
         const boardSkin = options.boardSkin || "framed";
@@ -2797,6 +2856,7 @@
             data-line-mode="${mode}"
             data-max-font="${maxFont}"
             data-min-font="${minFont}"
+            ${fontSizeHint ? `data-font-size-hint="${fontSizeHint}"` : ""}
             data-size-preset="${escapeHtml(sizePreset.id)}"
             data-line-gap-preset="${escapeHtml(lineGapPreset)}"
             data-board-skin="${escapeHtml(boardSkin)}"
@@ -2816,9 +2876,13 @@
         const lineGapPreset = node.dataset.lineGapPreset || "none";
         const maxFont = Number(node.dataset.maxFont || "46");
         const minFont = Number(node.dataset.minFont || "18");
+        const fontSizeHint = Number(node.dataset.fontSizeHint || "0");
         const width = node.clientWidth || 300;
         const height = node.clientHeight || 120;
         let chosen = minFont;
+        if (fontSizeHint >= minFont && fontSizeHint <= maxFont && doesWordFit(lines, fontClass, lineMode, fontSizeHint, width, height, lineGapPreset)) {
+          chosen = fontSizeHint;
+        } else
         for (let fontSize = maxFont; fontSize >= minFont; fontSize -= 1) {
           if (doesWordFit(lines, fontClass, lineMode, fontSize, width, height, lineGapPreset)) {
             chosen = fontSize;
@@ -3571,19 +3635,41 @@
         const pending = isChampionLikePending(item.championId);
         return `
           <button
-            class="mini-btn like-btn${item.likedByMe ? " is-liked" : ""}"
+            class="mini-btn like-btn${item.likedByMe ? " is-liked" : ""}${pending ? " is-pending" : ""}"
             type="button"
             data-action="toggle-champion-like"
             data-champion-id="${escapeHtml(item.championId)}"
-            ${pending ? "disabled" : ""}
+            aria-pressed="${item.likedByMe ? "true" : "false"}"
+            aria-busy="${pending ? "true" : "false"}"
           >
-            ${escapeHtml(pending ? "..." : formatChampionLikeLabel(item))}
+            ${escapeHtml(formatChampionLikeLabel(item))}
           </button>
         `;
       }
 
       function patchChampionCollection(items, nextItem) {
         return items.map((item) => (item.championId === nextItem.championId ? { ...item, ...nextItem } : item));
+      }
+
+      function findChampionItem(championId) {
+        return (
+          state.championHistoryItems.find((item) => item.championId === championId) ||
+          state.recentChampions.find((item) => item.championId === championId) ||
+          state.championRankingItems.find((item) => item.championId === championId) ||
+          null
+        );
+      }
+
+      function buildOptimisticChampionLikeItem(item) {
+        if (!item) {
+          return null;
+        }
+        const nextLiked = !item.likedByMe;
+        return {
+          ...item,
+          likedByMe: nextLiked,
+          likeCount: Math.max(0, Number(item.likeCount || 0) + (nextLiked ? 1 : -1))
+        };
       }
 
       function applyChampionLikeUpdate(nextItem) {
@@ -3626,8 +3712,8 @@
 
         return `
           <section class="panel">
-            <div class="section-heading">
-              <h3>いいね数ランキング ベスト10</h3>
+            <div class="section-heading stack">
+              <h3>いいね数ランキング</h3>
             </div>
             <div class="history-ranking-list">
               ${state.championRankingItems
@@ -3653,9 +3739,9 @@
         return `
           <div class="champion-overview">
             <section class="panel">
-              <div class="section-heading">
+              <div class="section-heading stack">
                 <h3>${escapeHtml(title)}</h3>
-                <button class="mini-btn" type="button" data-action="open-champion-history">一覧を見る</button>
+                <button class="btn secondary compact" type="button" data-action="open-champion-history">一覧を見る</button>
               </div>
               ${renderRecentChampions()}
             </section>
@@ -3729,7 +3815,8 @@
                       maxFont: 28,
                       minFont: 16,
                       lineGapPreset: item.lineGapPreset,
-                      sizePreset: item.sizePreset
+                      sizePreset: item.sizePreset,
+                      fontSizeHint: item.fontSizeHint
                     })}
                     <div class="history-dialog-footer">
                       <div class="history-dialog-meta">
@@ -3748,7 +3835,7 @@
           ${state.championHistoryPending ? `<div class="info-box">履歴を読み込んでいます。</div>` : ""}
           ${state.championHistoryError ? `<div class="info-box">${escapeHtml(state.championHistoryError)}</div>` : ""}
           <section class="history-dialog-section">
-            <div class="section-heading">
+            <div class="section-heading stack">
               <h3>すべての総合優勝ワード</h3>
               <span class="muted">${state.championHistoryItems.length}件</span>
             </div>
@@ -3850,6 +3937,7 @@
                     minFont,
                     lineGapPreset: entry.lineGapPreset,
                     sizePreset: entry.sizePreset,
+                    fontSizeHint: entry.fontSizeHint,
                     boardSkin
                   })
                 : `<div class="empty-state">${escapeHtml(emptyText)}</div>`
@@ -3989,7 +4077,8 @@
                       maxFont: 46,
                       minFont: 24,
                       lineGapPreset: submission.lineGapPreset,
-                      sizePreset: submission.sizePreset
+                      sizePreset: submission.sizePreset,
+                      fontSizeHint: submission.fontSizeHint
                     })}
                   </article>
                 `
@@ -4017,7 +4106,8 @@
                       maxFont: 56,
                       minFont: 28,
                       lineGapPreset: round.winner.lineGapPreset,
-                      sizePreset: round.winner.sizePreset
+                      sizePreset: round.winner.sizePreset,
+                      fontSizeHint: round.winner.fontSizeHint
                     })}
                     <footer>${escapeHtml(resolvePlayerDisplayName(room, round.winner.playerId, round.winner.displayName))}</footer>
                   </article>
@@ -4504,9 +4594,9 @@
                 )
                 .join("")}
             </div>
-            <div class="button-row split-actions">
-              <button class="btn neutral" type="button" data-action="swap-selection" ${selectedTiles.length === 2 ? "" : "disabled"}>順番入替</button>
-              <button class="btn neutral" type="button" data-action="clear-selection">選択をクリア</button>
+            <div class="button-row split-actions submit-actions">
+              <button class="btn secondary compact" type="button" data-action="swap-selection" ${selectedTiles.length === 2 ? "" : "disabled"}>順番入替</button>
+              <button class="btn secondary compact" type="button" data-action="clear-selection">選択をクリア</button>
               <button class="btn primary" type="button" data-action="submit-word" ${selectedTiles.length === 2 && !state.pendingAction ? "" : "disabled"}>この見た目で提出</button>
             </div>
           </section>
@@ -5009,7 +5099,8 @@
                       maxFont: 76,
                       minFont: 34,
                       lineGapPreset: candidate.lineGapPreset,
-                      sizePreset: candidate.sizePreset
+                      sizePreset: candidate.sizePreset,
+                      fontSizeHint: candidate.fontSizeHint
                     })}
                   </button>
                 `;
@@ -5406,8 +5497,19 @@
           return;
         }
         const layout = computeDraftLayout();
+        const text = state.draftLineMode === "single" ? getDraftDisplayText(room) : getDraftText(room);
+        const chars = Array.from(text);
+        const sizePreset = getSizePreset(state.draftSizePreset);
+        previewWord.dataset.fontId = state.draftFontId;
+        previewWord.dataset.lineMode = state.draftLineMode;
+        previewWord.dataset.sizePreset = sizePreset.id;
         previewWord.dataset.variant = "preview-word";
         previewWord.dataset.lineGapPreset = state.draftLineGapPreset;
+        previewWord.dataset.maxFont = String(
+          Math.max(layout.fontSize, state.draftLineMode === "single" ? sizePreset.singleMax : sizePreset.multiMax)
+        );
+        previewWord.dataset.minFont = String(getMinimumFontSize(chars.length, state.draftLineMode, state.draftSizePreset));
+        previewWord.dataset.fontSizeHint = String(layout.fontSize);
         applyWordMarkup(previewWord, layout.lines, getFontClass(state.draftFontId), state.draftLineMode, layout.fontSize, state.draftLineGapPreset);
         window.requestAnimationFrame(() => syncSubmitPreviewFloating(room));
         window.setTimeout(() => syncSubmitPreviewFloating(room), 120);
@@ -5430,20 +5532,13 @@
         }
 
         const slotRect = submitTopSlot.getBoundingClientRect();
-        const isMobile = window.matchMedia("(max-width: 520px)").matches;
-        if (isMobile) {
-          submitTopSlot.style.minHeight = "";
-          previewCard.classList.remove("is-floating");
-          previewCard.style.removeProperty("--preview-floating-top");
-          previewCard.style.removeProperty("--preview-floating-left");
-          previewCard.style.removeProperty("--preview-floating-width");
-          return;
-        }
-        const floatTop = 8;
+        const statusBottom = els.statusRow?.getBoundingClientRect().bottom || 0;
+        const feedbackBottom = els.feedbackDock?.children.length ? els.feedbackDock.getBoundingClientRect().bottom : 0;
+        const floatTop = Math.max(8, statusBottom, feedbackBottom) + 8;
         const cardHeight = previewCard.offsetHeight;
         const revealOpen = !els.revealOverlay.hidden;
-        const hasScrolled = window.scrollY > 1;
-        const canFloat = !revealOpen && (isMobile ? window.scrollY > 12 || slotRect.top < floatTop + 8 : hasScrolled || slotRect.top < floatTop);
+        const hasScrolled = window.scrollY > 1 || document.documentElement.scrollTop > 1 || document.body.scrollTop > 1;
+        const canFloat = !revealOpen && (hasScrolled || slotRect.top < floatTop);
 
         if (!canFloat) {
           submitTopSlot.style.minHeight = "";
@@ -5553,6 +5648,7 @@
             lines: clone(reveal.renderedLines || [reveal.phrase]),
             fontId: reveal.fontId || "classic",
             sizePreset: reveal.sizePreset || "large",
+            fontSizeHint: reveal.fontSizeHint || 0,
             lineGapPreset: reveal.lineGapPreset || "none",
             boardSkin: "bare",
             meta: resolvePlayerDisplayName(room, reveal.playerId, reveal.displayName),
@@ -5570,6 +5666,7 @@
           lines: clone(reveal.renderedLines || [reveal.phrase]),
           fontId: reveal.fontId || "classic",
           sizePreset: reveal.sizePreset || "large",
+          fontSizeHint: reveal.fontSizeHint || 0,
           lineGapPreset: reveal.lineGapPreset || "none",
           boardSkin: "framed",
           meta: resolvePlayerDisplayName(room, reveal.playerId, reveal.displayName),
@@ -5586,6 +5683,7 @@
           lines: clone(reveal.renderedLines || [reveal.phrase]),
           fontId: reveal.fontId || "broadcast",
           sizePreset: normalizeSizePresetId(reveal.sizePreset || "large"),
+          fontSizeHint: reveal.fontSizeHint || 0,
           lineGapPreset: reveal.lineGapPreset || "none",
           boardSkin: "framed",
           meta: resolvePlayerDisplayName(room, reveal.playerId, reveal.displayName),
@@ -5639,8 +5737,11 @@
         els.revealWord.dataset.variant = presentation.variant || (presentation.kind === "champion" ? "champion-word" : "result-word");
         els.revealWord.dataset.fontId = presentation.fontId || "classic";
         els.revealWord.dataset.lineMode = presentation.lines.length <= 1 ? "single" : "manual";
-        els.revealWord.dataset.maxFont = String(Math.max(revealMinFontBase, Math.round(revealMaxFontBase * sizePreset.renderScale)));
+        els.revealWord.dataset.maxFont = String(
+          Math.max(revealMinFontBase, Math.round(revealMaxFontBase * sizePreset.renderScale), presentation.fontSizeHint || 0)
+        );
         els.revealWord.dataset.minFont = String(Math.max(12, Math.round(revealMinFontBase * Math.max(0.68, sizePreset.renderScale - 0.08))));
+        els.revealWord.dataset.fontSizeHint = presentation.fontSizeHint ? String(presentation.fontSizeHint) : "";
         els.revealWord.dataset.sizePreset = sizePreset.id;
         els.revealWord.dataset.lineGapPreset = presentation.lineGapPreset || "none";
         els.revealWord.dataset.boardSkin = presentation.boardSkin || "framed";
@@ -5704,6 +5805,7 @@
           fontId: state.draftFontId,
           sizePreset: state.draftSizePreset,
           lineGapPreset: state.draftLineGapPreset,
+          fontSizeHint: layout.fontSize,
           lineMode: state.draftLineMode,
           manualBreaks: clone(state.draftManualBreaks),
           renderedLines: clone(layout.lines)
@@ -5776,6 +5878,11 @@
         if (!championId || isChampionLikePending(championId)) {
           return;
         }
+        const currentItem = findChampionItem(championId);
+        const optimisticItem = buildOptimisticChampionLikeItem(currentItem);
+        if (optimisticItem) {
+          applyChampionLikeUpdate(optimisticItem);
+        }
         state.championLikePendingIds = [...state.championLikePendingIds, championId];
         renderCurrentView({ includeReveal: false });
 
@@ -5787,11 +5894,20 @@
           });
           applyChampionLikeUpdate(payload.data.item);
           renderCurrentView({ includeReveal: false });
-          await loadRecentChampions();
-          if (state.championHistoryOpen) {
-            await loadChampionHistoryBundle(state.championHistoryLimit);
-          }
+          Promise.all([
+            loadRecentChampions(),
+            loadChampionRanking(10),
+            state.championHistoryOpen ? loadChampionHistory(state.championHistoryLimit) : Promise.resolve()
+          ])
+            .then(() => renderCurrentView({ includeReveal: false }))
+            .catch(() => {});
           setFeedback(payload.data.item.likedByMe ? "いいねしました。" : "いいねを取り消しました。", false, 1800);
+        } catch (error) {
+          if (currentItem) {
+            applyChampionLikeUpdate(currentItem);
+          }
+          const appError = error instanceof AppError ? error : new AppError("いいねの更新に失敗しました。", { cause: error });
+          setFeedback(describeAppError(appError, "action"), true, 2800);
         } finally {
           state.championLikePendingIds = state.championLikePendingIds.filter((item) => item !== championId);
           renderCurrentView({ includeReveal: false });

@@ -559,7 +559,7 @@ test("app can open and close champion history from the landing screen", async ({
 test("app can like champion history items and show ranking", async ({ page }) => {
   await page.goto(STATIC_URL);
 
-  await expect(page.getByRole("heading", { name: "いいね数ランキング ベスト10" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "いいね数ランキング" })).toBeVisible();
   await page.getByRole("button", { name: "一覧を見る" }).click();
   await expect(page.locator("#historyOverlay")).toBeVisible();
 
@@ -569,7 +569,7 @@ test("app can like champion history items and show ranking", async ({ page }) =>
   await expect(firstLikeButton).toContainText("♡");
   await firstLikeButton.click({ force: true });
   await expect(firstLikeButton).toContainText(`♡ ${initialLikeCount + 1}`);
-  await expect(page.getByRole("heading", { name: "いいね数ランキング ベスト10" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "いいね数ランキング" })).toBeVisible();
 
   const moreButton = page.getByRole("button", { name: "もっと見る" });
   if (await moreButton.count()) {

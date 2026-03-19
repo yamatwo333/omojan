@@ -238,6 +238,11 @@ function normalizeLineGapPreset(value) {
   return ["none", "normal", "wide"].includes(value) ? value : "none";
 }
 
+function normalizeFontSizeHint(value) {
+  const size = Number(value);
+  return Number.isFinite(size) && size >= 8 ? Math.min(220, Math.round(size)) : 0;
+}
+
 function normalizeKnownRevision(value) {
   const revision = Number(value);
   return Number.isInteger(revision) && revision >= 1 ? revision : null;
@@ -616,6 +621,7 @@ function buildSubmittedRoom(room, mePlayer, roundIndex, payload) {
     fontId: String(payload.fontId || "broadcast"),
     sizePreset: normalizeSizePreset(payload.sizePreset),
     lineGapPreset: normalizeLineGapPreset(payload.lineGapPreset),
+    fontSizeHint: normalizeFontSizeHint(payload.fontSizeHint),
     renderedLines,
     submittedAt: nowIso()
   });
@@ -636,6 +642,9 @@ function buildSubmittedRoom(room, mePlayer, roundIndex, payload) {
     playerId: updatedPlayer.playerId,
     phrase,
     fontId: String(payload.fontId || "broadcast"),
+    sizePreset: normalizeSizePreset(payload.sizePreset),
+    lineGapPreset: normalizeLineGapPreset(payload.lineGapPreset),
+    fontSizeHint: normalizeFontSizeHint(payload.fontSizeHint),
     renderedLines
   });
 
@@ -686,6 +695,7 @@ function setRoundWinner(updatedRoom, round, winnerPlayerId, source, counts) {
     fontId: submission.fontId,
     sizePreset: submission.sizePreset,
     lineGapPreset: submission.lineGapPreset,
+    fontSizeHint: submission.fontSizeHint,
     renderedLines: submission.renderedLines,
     voteCount: countRow?.count || 0,
     source
@@ -706,6 +716,7 @@ function setRoundWinner(updatedRoom, round, winnerPlayerId, source, counts) {
     fontId: submission.fontId,
     sizePreset: submission.sizePreset,
     lineGapPreset: submission.lineGapPreset,
+    fontSizeHint: submission.fontSizeHint,
     renderedLines: submission.renderedLines
   });
 }
@@ -744,6 +755,7 @@ function setFinalWinner(updatedRoom, finalVote, winnerCandidateId, source, count
     fontId: candidate.fontId,
     sizePreset: candidate.sizePreset,
     lineGapPreset: candidate.lineGapPreset,
+    fontSizeHint: candidate.fontSizeHint,
     renderedLines: candidate.renderedLines,
     voteCount: countRow?.count || 0,
     source
@@ -762,6 +774,7 @@ function setFinalWinner(updatedRoom, finalVote, winnerCandidateId, source, count
     fontId: candidate.fontId,
     sizePreset: candidate.sizePreset,
     lineGapPreset: candidate.lineGapPreset,
+    fontSizeHint: candidate.fontSizeHint,
     renderedLines: candidate.renderedLines
   });
 }
@@ -787,6 +800,7 @@ function buildChampionHistoryEntry(room) {
     fontId: champion.fontId,
     sizePreset: champion.sizePreset,
     lineGapPreset: champion.lineGapPreset,
+    fontSizeHint: champion.fontSizeHint,
     renderedLines: clone(champion.renderedLines || []),
     likeCount: 0,
     wonAt,
@@ -808,6 +822,7 @@ function buildSeedChampionHistoryEntry(item) {
     fontId: item.fontId || "classic",
     sizePreset: normalizeSizePreset(item.sizePreset),
     lineGapPreset: normalizeLineGapPreset(item.lineGapPreset),
+    fontSizeHint: normalizeFontSizeHint(item.fontSizeHint),
     renderedLines: clone(item.renderedLines || [item.phrase]),
     likeCount: Math.max(0, Number(item.likeCount || 0)),
     wonAt: item.wonAt,
@@ -836,6 +851,7 @@ function toChampionHistoryView(item, options = {}) {
     fontId: item.fontId || "classic",
     sizePreset: normalizeSizePreset(item.sizePreset),
     lineGapPreset: normalizeLineGapPreset(item.lineGapPreset),
+    fontSizeHint: normalizeFontSizeHint(item.fontSizeHint),
     renderedLines: clone(item.renderedLines || [item.phrase]),
     likeCount: Math.max(0, Number(item.likeCount || 0)),
     likedByMe: likedChampionIds ? likedChampionIds.has(item.championId) : Boolean(item.likedByMe),
@@ -1399,6 +1415,9 @@ function toRevealView(reveal) {
     playerId: reveal.playerId,
     phrase: reveal.phrase,
     fontId: reveal.fontId,
+    sizePreset: normalizeSizePreset(reveal.sizePreset),
+    lineGapPreset: normalizeLineGapPreset(reveal.lineGapPreset),
+    fontSizeHint: normalizeFontSizeHint(reveal.fontSizeHint),
     renderedLines: clone(reveal.renderedLines || []),
     acknowledgedPlayerIds: clone(reveal.acknowledgedPlayerIds || [])
   };

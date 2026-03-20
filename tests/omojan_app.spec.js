@@ -440,7 +440,7 @@ test("mobile submit view keeps a floating preview and uses unified reveal labels
   await host.getByRole("button", { name: "小" }).click();
   await host.waitForTimeout(200);
   const reducedFontSize = await host.locator("#previewWord .word-line").first().evaluate((node) => Number.parseFloat(getComputedStyle(node).fontSize));
-  expect(initialFontSize - reducedFontSize).toBeGreaterThanOrEqual(8);
+  expect(initialFontSize - reducedFontSize).toBeGreaterThanOrEqual(20);
   const noOverflow = await host.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1);
   expect(noOverflow).toBeTruthy();
 
@@ -495,6 +495,39 @@ test("app restores session after reopening the browser context", async ({ browse
 
   await hostContext.close();
   await guestContext.close();
+});
+
+test("host can transfer host role in the lobby", async ({ browser }) => {
+  const hostContext = await browser.newContext();
+  const guestContext = await browser.newContext();
+  const thirdContext = await browser.newContext();
+  const host = await hostContext.newPage();
+  const guest = await guestContext.newPage();
+  const third = await thirdContext.newPage();
+
+  await host.goto(STATIC_URL);
+  await host.fill("#createDisplayName", "HostShift");
+  await host.getByRole("button", { name: "3人" }).click();
+  await host.getByRole("button", { name: "ルームを作る" }).click();
+  const inviteCode = ((await host.locator(".room-code").textContent()) || "").trim();
+
+  await guest.goto(`${STATIC_URL}&invite=${encodeURIComponent(inviteCode)}`);
+  await guest.fill("#joinDisplayName", "GuestShift");
+  await guest.getByRole("button", { name: "参加する" }).click();
+
+  await third.goto(`${STATIC_URL}&invite=${encodeURIComponent(inviteCode)}`);
+  await third.fill("#joinDisplayName", "ThirdShift");
+  await third.getByRole("button", { name: "参加する" }).click();
+
+  await expect(host.locator("body")).toContainText("ホスト HostShift");
+  await host.locator(".player-card", { hasText: "GuestShift" }).getByRole("button", { name: "ホストにする" }).click();
+  await expect(host.locator("body")).toContainText("ホスト GuestShift");
+  await expect(host.locator(".player-card", { hasText: "GuestShift" })).toContainText("ホスト");
+  await expect(guest.locator("body")).toContainText("ホスト GuestShift");
+
+  await hostContext.close();
+  await guestContext.close();
+  await thirdContext.close();
 });
 
 test("app shows a friendly message for an invalid invite code", async ({ page }) => {

@@ -99,6 +99,7 @@ function parseRoute(method, pathname) {
     { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/reveal-close$/, route: "closeReveal" },
     { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/start-player$/, route: "startPlayer" },
     { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/player-role$/, route: "setPlayerRole" },
+    { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/host-transfer$/, route: "transferHost" },
     { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/start$/, route: "startGame" },
     { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/rounds\/(\d+)\/submit$/, route: "submitWord" },
     { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/rounds\/(\d+)\/vote$/, route: "submitVote" },
@@ -162,6 +163,7 @@ function handleHealth() {
       "rooms:reveal-close",
       "rooms:start-player",
       "rooms:player-role",
+      "rooms:host-transfer",
       "rooms:start",
       "rounds:submit",
       "rounds:vote",
@@ -231,7 +233,10 @@ function normalizePlayerRole(value) {
 }
 
 function normalizeSizePreset(value) {
-  return ["xl", "large", "medium", "small"].includes(value) ? value : "large";
+  if (value === "small") {
+    return "small";
+  }
+  return "large";
 }
 
 function normalizeLineGapPreset(value) {
@@ -955,9 +960,6 @@ function buildVotedRoom(room, mePlayer, roundIndex, targetPlayerId, mode = "vote
 
   const ballotKey = mode === "revote" ? "revotes" : "votes";
   const existingBallots = round[ballotKey] || {};
-  if (existingBallots[mePlayer.playerId]) {
-    throw domainError(409, "ALREADY_VOTED", "すでに投票済みです。");
-  }
 
   const validTargetIds =
     mode === "revote" ? round.voteSummary?.tiedPlayerIds || [] : round.submissions.map((submission) => submission.playerId);
@@ -1052,6 +1054,7 @@ function beginFinalVote(updatedRoom) {
       fontId: round.winner.fontId,
       sizePreset: round.winner.sizePreset,
       lineGapPreset: round.winner.lineGapPreset,
+      fontSizeHint: round.winner.fontSizeHint,
       renderedLines: round.winner.renderedLines
     })),
     votes: {},
@@ -1093,9 +1096,6 @@ function buildFinalVotedRoom(room, mePlayer, candidateId, mode = "vote") {
 
   const ballotKey = mode === "revote" ? "revotes" : "votes";
   const existingBallots = finalVote[ballotKey] || {};
-  if (existingBallots[mePlayer.playerId]) {
-    throw domainError(409, "ALREADY_VOTED", "すでに投票済みです。");
-  }
 
   const validTargetIds =
     mode === "revote" ? finalVote.voteSummary?.tiedCandidateIds || [] : finalVote.candidates.map((candidate) => candidate.candidateId);
@@ -1375,7 +1375,7 @@ function buildMyHand(room, mePlayer) {
   }));
 }
 
-function toRoundView(round) {
+function toRoundView(round, mePlayer) {
   return {
     roundIndex: round.roundIndex,
     label: round.label,
@@ -1385,11 +1385,13 @@ function toRoundView(round) {
     voteSummary: round.voteSummary ? clone(round.voteSummary) : null,
     winner: round.winner ? clone(round.winner) : null,
     votedPlayerIds: Object.keys(round.votes || {}),
-    revotedPlayerIds: Object.keys(round.revotes || {})
+    revotedPlayerIds: Object.keys(round.revotes || {}),
+    myVoteTargetId: mePlayer ? round.votes?.[mePlayer.playerId] || "" : "",
+    myRevoteTargetId: mePlayer ? round.revotes?.[mePlayer.playerId] || "" : ""
   };
 }
 
-function toFinalVoteView(finalVote) {
+function toFinalVoteView(finalVote, mePlayer) {
   if (!finalVote) {
     return null;
   }
@@ -1399,7 +1401,9 @@ function toFinalVoteView(finalVote) {
     voteSummary: finalVote.voteSummary ? clone(finalVote.voteSummary) : null,
     winner: finalVote.winner ? clone(finalVote.winner) : null,
     votedPlayerIds: Object.keys(finalVote.votes || {}),
-    revotedPlayerIds: Object.keys(finalVote.revotes || {})
+    revotedPlayerIds: Object.keys(finalVote.revotes || {}),
+    myVoteCandidateId: mePlayer ? finalVote.votes?.[mePlayer.playerId] || "" : "",
+    myRevoteCandidateId: mePlayer ? finalVote.revotes?.[mePlayer.playerId] || "" : ""
   };
 }
 
@@ -1447,8 +1451,8 @@ function mapRoomResponse(room, mePlayer) {
       players: players.map(toPlayerView),
       activePlayerIds: activePlayers.map((player) => player.playerId),
       spectatorPlayerIds: spectatorPlayers.map((player) => player.playerId),
-      rounds: Array.isArray(room.game?.rounds) ? room.game.rounds.map(toRoundView) : createEmptyRounds(room.playerCount).map(toRoundView),
-      finalVote: toFinalVoteView(room.game?.finalVote),
+      rounds: Array.isArray(room.game?.rounds) ? room.game.rounds.map((round) => toRoundView(round, mePlayer)) : createEmptyRounds(room.playerCount).map((round) => toRoundView(round, mePlayer)),
+      finalVote: toFinalVoteView(room.game?.finalVote, mePlayer),
       champion: room.game?.champion ? clone(room.game.champion) : null,
       reveal: toRevealView(room.game?.reveal)
     },
@@ -2209,6 +2213,60 @@ async function createDynamoRoomRepository(options = {}) {
       throw domainError(409, "CONFLICT_RETRY", "観戦設定の更新が競合しました。もう一度お試しください。", true);
     },
 
+    async transferHost(roomId, playerToken, targetPlayerId) {
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        const room = await getRoomItem(roomId);
+        if (!room) {
+          throw domainError(404, "ROOM_NOT_FOUND", "指定された room は存在しません。");
+        }
+        const mePlayer = getPlayerByToken(room, playerToken);
+        if (!mePlayer) {
+          throw domainError(401, "PLAYER_TOKEN_INVALID", "playerToken が必要です。");
+        }
+        if (!mePlayer.isHost) {
+          throw domainError(403, "NOT_HOST", "ホストのみ実行できます。");
+        }
+        if (room.game?.phase !== "lobby") {
+          throw domainError(409, "INVALID_PHASE", "lobby でのみホストを切り替えできます。");
+        }
+
+        const updatedRoom = clone(room);
+        const currentHost = updatedRoom.players.find((player) => player.isHost);
+        const nextHost = updatedRoom.players.find((player) => player.playerId === targetPlayerId);
+        if (!nextHost) {
+          throw domainError(404, "PLAYER_NOT_FOUND", "対象プレイヤーが見つかりません。");
+        }
+        if (normalizePlayerRole(nextHost.role) !== "player") {
+          throw domainError(409, "HOST_TRANSFER_REQUIRES_PLAYER", "参加中のプレイヤーだけホストにできます。");
+        }
+        if (nextHost.isHost) {
+          return { room: updatedRoom, mePlayer: updatedRoom.players.find((player) => player.playerId === mePlayer.playerId) };
+        }
+
+        if (currentHost) {
+          currentHost.isHost = false;
+        }
+        nextHost.isHost = true;
+        updatedRoom.hostPlayerId = nextHost.playerId;
+        updatedRoom.updatedAt = nowIso();
+        updatedRoom.expiresAt = Math.floor(Date.now() / 1000) + ROOM_TTL_SECONDS;
+        updatedRoom.revision += 1;
+
+        try {
+          await putRoomItem(updatedRoom, room.revision);
+          const updatedMePlayer = updatedRoom.players.find((player) => player.playerId === mePlayer.playerId);
+          return { room: updatedRoom, mePlayer: updatedMePlayer };
+        } catch (error) {
+          if (toConditionalFailure(error)) {
+            continue;
+          }
+          throw error;
+        }
+      }
+
+      throw domainError(409, "CONFLICT_RETRY", "ホスト切り替えが競合しました。もう一度お試しください。", true);
+    },
+
     async startGame(roomId, playerToken, deckId) {
       for (let attempt = 0; attempt < 5; attempt += 1) {
         const room = await getRoomItem(roomId);
@@ -2811,6 +2869,52 @@ function createMemoryRoomRepository() {
       };
     },
 
+    async transferHost(roomId, playerToken, targetPlayerId) {
+      const room = rooms.get(roomId);
+      if (!room) {
+        throw domainError(404, "ROOM_NOT_FOUND", "指定された room は存在しません。");
+      }
+      const mePlayer = getPlayerByToken(room, playerToken);
+      if (!mePlayer) {
+        throw domainError(401, "PLAYER_TOKEN_INVALID", "playerToken が必要です。");
+      }
+      if (!mePlayer.isHost) {
+        throw domainError(403, "NOT_HOST", "ホストのみ実行できます。");
+      }
+      if (room.game?.phase !== "lobby") {
+        throw domainError(409, "INVALID_PHASE", "lobby でのみホストを切り替えできます。");
+      }
+
+      const updatedRoom = clone(room);
+      const currentHost = updatedRoom.players.find((player) => player.isHost);
+      const nextHost = updatedRoom.players.find((player) => player.playerId === targetPlayerId);
+      if (!nextHost) {
+        throw domainError(404, "PLAYER_NOT_FOUND", "対象プレイヤーが見つかりません。");
+      }
+      if (normalizePlayerRole(nextHost.role) !== "player") {
+        throw domainError(409, "HOST_TRANSFER_REQUIRES_PLAYER", "参加中のプレイヤーだけホストにできます。");
+      }
+      if (nextHost.isHost) {
+        return {
+          room: clone(updatedRoom),
+          mePlayer: clone(updatedRoom.players.find((player) => player.playerId === mePlayer.playerId))
+        };
+      }
+
+      if (currentHost) {
+        currentHost.isHost = false;
+      }
+      nextHost.isHost = true;
+      updatedRoom.hostPlayerId = nextHost.playerId;
+      updatedRoom.updatedAt = nowIso();
+      updatedRoom.revision += 1;
+      saveRoom(updatedRoom);
+      return {
+        room: clone(updatedRoom),
+        mePlayer: clone(updatedRoom.players.find((player) => player.playerId === mePlayer.playerId))
+      };
+    },
+
     async startGame(roomId, playerToken, deckId) {
       const room = rooms.get(roomId);
       if (!room) {
@@ -3182,6 +3286,23 @@ function createHandler(options = {}) {
           const role = normalizePlayerRole(body.role);
           const repository = await roomRepositoryPromise;
           const result = await repository.setPlayerRole(matched.params[0], playerToken, targetPlayerId, role);
+          return ok(toRoomPayload(result.room, result.mePlayer));
+        }
+        case "transferHost": {
+          const body = parseBody(event);
+          if (!body) {
+            return fail(400, "INVALID_JSON", "JSON の形式が不正です。");
+          }
+          const playerToken = getHeader(event, "X-Omojan-Player-Token");
+          if (!playerToken) {
+            return fail(401, "PLAYER_TOKEN_INVALID", "playerToken が必要です。");
+          }
+          const targetPlayerId = String(body.targetPlayerId || "").trim();
+          if (!targetPlayerId) {
+            return fail(400, "INVALID_TARGET", "対象プレイヤーが不正です。");
+          }
+          const repository = await roomRepositoryPromise;
+          const result = await repository.transferHost(matched.params[0], playerToken, targetPlayerId);
           return ok(toRoomPayload(result.room, result.mePlayer));
         }
         case "startGame": {

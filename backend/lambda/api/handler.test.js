@@ -419,6 +419,7 @@ test("GET /v1/health returns lambda scaffold metadata", async () => {
     "rooms:reveal-close",
     "rooms:start-player",
     "rooms:player-role",
+    "rooms:host-transfer",
     "rooms:start",
     "rounds:submit",
     "rounds:vote",
@@ -852,6 +853,27 @@ test("host can switch lobby members between player and spectator", async () => {
   assert.equal(body.data.room.game.players.find((player) => player.playerId === spectator.playerId).role, "player");
 });
 
+test("host can transfer host role to another active player in lobby", async () => {
+  const handler = createTestHandler();
+  const session = await createSession(handler, ["ホスト", "ゲストA", "ゲストB"]);
+  const host = findPlayer(session, "ホスト");
+  const nextHost = findPlayer(session, "ゲストA");
+
+  const response = await handler(
+    createEvent("POST", `/v1/rooms/${session.roomId}/host-transfer`, {
+      headers: { "X-Omojan-Player-Token": host.playerToken },
+      body: { targetPlayerId: nextHost.playerId }
+    })
+  );
+  const body = await parseResponse(response);
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(body.ok, true);
+  assert.equal(body.data.room.hostPlayerId, nextHost.playerId);
+  assert.equal(body.data.room.game.players.find((player) => player.playerId === nextHost.playerId).isHost, true);
+  assert.equal(body.data.room.game.players.find((player) => player.playerId === host.playerId).isHost, false);
+});
+
 test("get room returns notModified when client revision is current", async () => {
   const handler = createTestHandler();
   const session = await createSession(handler, ["ホスト", "ゲスト"]);
@@ -1009,6 +1031,23 @@ test("round votes can resolve directly into round_result", async () => {
   assert.deepEqual(resultRoom.game.rounds[0].votedPlayerIds.sort(), session.players.map((player) => player.playerId).sort());
 });
 
+test("round vote can be changed before everyone finishes voting", async () => {
+  const handler = createTestHandler();
+  const session = await createSession(handler, ["ホスト", "ゲストA", "ゲストB"]);
+  await startGame(handler, session, "ホスト");
+  await submitAllForCurrentRound(handler, session, 0);
+
+  await voteFor(handler, session, "ホスト", 0, "ゲストA", "vote");
+  let room = await getRoom(handler, session.roomId, findPlayer(session, "ホスト").playerToken);
+  assert.equal(room.game.phase, "round_vote");
+  assert.equal(room.game.rounds[0].myVoteTargetId, findPlayer(session, "ゲストA").playerId);
+
+  await voteFor(handler, session, "ホスト", 0, "ゲストB", "vote");
+  room = await getRoom(handler, session.roomId, findPlayer(session, "ホスト").playerToken);
+  assert.equal(room.game.phase, "round_vote");
+  assert.equal(room.game.rounds[0].myVoteTargetId, findPlayer(session, "ゲストB").playerId);
+});
+
 test("tie can progress through revote and host decision", async () => {
   const handler = createTestHandler();
   const session = await createSession(handler, ["ホスト", "ゲストA", "ゲストB"]);
@@ -1136,6 +1175,38 @@ test("two-player final vote allows voting for your own winning word", async () =
 
   assert.equal(room.game.phase, "final_revote");
   assert.equal(room.game.finalVote.voteSummary.tiedCandidateIds.length, 2);
+});
+
+test("final vote can be changed before everyone finishes voting", async () => {
+  const handler = createTestHandler();
+  const session = await createSession(handler, ["ホスト", "ゲストA", "ゲストB"]);
+  let room = await reachFinalVote(handler, session);
+  const host = findPlayer(session, "ホスト");
+  const firstCandidateId = room.game.finalVote.candidates[0].candidateId;
+  const secondCandidateId = room.game.finalVote.candidates[1].candidateId;
+
+  let response = await handler(
+    createEvent("POST", `/v1/rooms/${session.roomId}/final-vote`, {
+      headers: { "X-Omojan-Player-Token": host.playerToken },
+      body: { candidateId: firstCandidateId }
+    })
+  );
+  let body = await parseResponse(response);
+  assert.equal(response.statusCode, 200);
+  assert.equal(body.data.room.game.phase, "final_vote");
+
+  response = await handler(
+    createEvent("POST", `/v1/rooms/${session.roomId}/final-vote`, {
+      headers: { "X-Omojan-Player-Token": host.playerToken },
+      body: { candidateId: secondCandidateId }
+    })
+  );
+  body = await parseResponse(response);
+  assert.equal(response.statusCode, 200);
+
+  room = await getRoom(handler, session.roomId, host.playerToken);
+  assert.equal(room.game.phase, "final_vote");
+  assert.equal(room.game.finalVote.myVoteCandidateId, secondCandidateId);
 });
 
 test("recent champions includes newly finished game at the top", async () => {

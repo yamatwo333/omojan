@@ -248,6 +248,12 @@ async function submitCurrentVote(page, action = "submit-vote", targetDisplayName
   ]);
 }
 
+async function submitVoteAndWaitForCompletion(page, action = "submit-vote", targetDisplayName = "") {
+  await submitCurrentVote(page, action, targetDisplayName);
+  await expect(page.getByRole("heading", { name: /投票完了|再投票完了|最終投票完了|最終再投票完了/ })).toBeVisible({ timeout: 10000 });
+  await expect(page.locator(".vote-complete-card")).toContainText("投票を受け付けました");
+}
+
 async function expectTurnState(host, guest, activeDisplayName) {
   const activePage = activeDisplayName === "HostFlowTest" ? host : guest;
   const waitingPage = activeDisplayName === "HostFlowTest" ? guest : host;
@@ -334,6 +340,23 @@ test("app vote card selection enables submit button", async ({ page }) => {
   await expect(page.locator('button[data-action="submit-vote"]')).toBeEnabled();
 });
 
+test("app shows a vote complete screen and lets the player return to change the vote", async ({ page }) => {
+  const session = await setupRoundVoteRoom();
+
+  await page.goto(STATIC_URL);
+  await page.evaluate(({ roomId, hostToken }) => {
+    window.localStorage.setItem("omojan-app-room-id", roomId);
+    window.localStorage.setItem("omojan-app-player-token", hostToken);
+  }, session);
+  await page.reload();
+
+  await expect(page.getByRole("heading", { name: "投票" })).toBeVisible();
+  await submitVoteAndWaitForCompletion(page, "submit-vote", "HostAppTest");
+  await page.getByRole("button", { name: "投票を変更" }).click();
+  await expect(page.getByRole("heading", { name: "投票" })).toBeVisible();
+  await expect(page.locator("[data-vote-id][aria-pressed='true']")).toHaveCount(1);
+});
+
 test("app can complete create, join, start, submit, vote, host decision, and show round result", async ({ browser }) => {
   const { hostContext, guestContext, host, guest } = await createTwoPlayerRoom(browser);
 
@@ -384,8 +407,13 @@ test("app can complete a full game through final champion and restart", async ({
   await finalPick.click();
   await host.locator('button[data-action="submit-final-host-pick"]').click();
 
-  await acknowledgeRevealForAll([host, guest]);
+  await expect(host.locator("#revealOverlay")).toBeVisible({ timeout: 10000 });
+  await expect(guest.locator("#revealOverlay")).toBeVisible({ timeout: 10000 });
+  await host.getByRole("button", { name: "結果一覧を見る" }).click();
   await expect(host.getByRole("heading", { name: "結果一覧" })).toBeVisible({ timeout: 10000 });
+  await expect(guest.locator("#revealOverlay")).toBeVisible({ timeout: 10000 });
+  await acknowledgeRevealOn(guest);
+  await reconnect(guest);
   await expect(guest.getByRole("heading", { name: "結果一覧" })).toBeVisible({ timeout: 10000 });
   await expect(host.locator(".champion-stage .stage-footnote")).not.toContainText("のワード");
   await expect(host.locator(".champion-stage .stage-footnote")).toContainText(/HostFlowTest|GuestFlowTest/);
@@ -437,10 +465,14 @@ test("mobile submit view keeps a floating preview and uses unified reveal labels
   expect(previewState.className).toContain("is-sticky");
   expect(previewState.top).toBeLessThanOrEqual(statusBottom + 12);
   const initialFontSize = await host.locator("#previewWord .word-line").first().evaluate((node) => Number.parseFloat(getComputedStyle(node).fontSize));
+  await host.getByRole("button", { name: "中" }).click();
+  await host.waitForTimeout(200);
+  const mediumFontSize = await host.locator("#previewWord .word-line").first().evaluate((node) => Number.parseFloat(getComputedStyle(node).fontSize));
   await host.getByRole("button", { name: "小" }).click();
   await host.waitForTimeout(200);
-  const reducedFontSize = await host.locator("#previewWord .word-line").first().evaluate((node) => Number.parseFloat(getComputedStyle(node).fontSize));
-  expect(initialFontSize - reducedFontSize).toBeGreaterThanOrEqual(20);
+  const smallFontSize = await host.locator("#previewWord .word-line").first().evaluate((node) => Number.parseFloat(getComputedStyle(node).fontSize));
+  expect(initialFontSize - mediumFontSize).toBeGreaterThanOrEqual(18);
+  expect(mediumFontSize - smallFontSize).toBeGreaterThanOrEqual(16);
   const noOverflow = await host.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1);
   expect(noOverflow).toBeTruthy();
 

@@ -233,8 +233,11 @@ function normalizePlayerRole(value) {
 }
 
 function normalizeSizePreset(value) {
-  if (value === "small") {
-    return "small";
+  if (value === "tiny") {
+    return "tiny";
+  }
+  if (value === "small" || value === "medium") {
+    return "medium";
   }
   return "large";
 }

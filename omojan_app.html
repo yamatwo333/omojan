@@ -841,13 +841,14 @@
 
       .settings-grid {
         display: grid;
-        gap: 12px;
+        gap: 10px;
+        grid-template-columns: minmax(0, 1fr);
       }
 
       .setting-group {
         display: grid;
-        gap: 8px;
-        padding: 12px 12px 10px;
+        gap: 10px;
+        padding: 14px 14px 12px;
         border-radius: 18px;
         border: 1px solid rgba(118, 89, 63, 0.14);
         background:
@@ -882,17 +883,12 @@
       .submit-actions-secondary {
         display: inline-flex;
         flex-wrap: wrap;
-        gap: 8px;
+        gap: 6px;
       }
 
-      @media (min-width: 720px) {
-        .settings-grid {
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-
-        .settings-grid .setting-group.is-wide {
-          grid-column: 1 / -1;
-        }
+      .size-chip-row .chip {
+        min-width: 94px;
+        justify-content: center;
       }
 
       .break-panel p {
@@ -1366,6 +1362,31 @@
         font-size: 13px;
         line-height: 1.55;
         text-align: center;
+      }
+
+      .vote-complete-card {
+        margin-top: 14px;
+        padding: 16px 18px;
+        border-radius: 20px;
+        border: 1px solid rgba(184, 138, 50, 0.18);
+        background:
+          radial-gradient(circle at top right, rgba(255, 238, 181, 0.2), transparent 32%),
+          linear-gradient(180deg, rgba(255, 252, 245, 0.98), rgba(247, 239, 222, 0.95)),
+          rgba(255, 255, 255, 0.72);
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.82),
+          0 14px 26px rgba(31, 24, 18, 0.08);
+      }
+
+      .vote-complete-card strong {
+        display: block;
+        color: var(--green-deep);
+        font-size: 17px;
+        font-weight: 900;
+      }
+
+      .vote-complete-card p {
+        margin: 8px 0 0;
       }
 
       .reveal-overlay {
@@ -2018,21 +2039,6 @@
           display: block;
         }
 
-        #submitTopSlot {
-          position: sticky;
-          top: calc(10px + env(safe-area-inset-top));
-          z-index: 12;
-        }
-
-        .preview-card.is-sticky,
-        .preview-card.is-floating {
-          position: static;
-          top: auto;
-          left: auto;
-          width: auto;
-          margin-top: 0;
-        }
-
         .status-row,
         .status-context,
         .mini-btn {
@@ -2117,10 +2123,6 @@
 
         .preview-card {
           padding: 18px 14px;
-        }
-
-        #submitTopSlot {
-          min-height: 0 !important;
         }
 
         .preview-card .word-board {
@@ -2232,8 +2234,9 @@
       ];
 
       const sizePresets = [
-        { id: "large", label: "大", singleMax: 152, multiMax: 112, singleMin: 34, multiMin: 26, renderScale: 1.34 },
-        { id: "small", label: "小", singleMax: 62, multiMax: 42, singleMin: 12, multiMin: 10, renderScale: 0.44 }
+        { id: "large", label: "大", singleMax: 182, multiMax: 130, singleMin: 22, multiMin: 18, renderScale: 1.5 },
+        { id: "medium", label: "中", singleMax: 92, multiMax: 60, singleMin: 13, multiMin: 11, renderScale: 0.78 },
+        { id: "tiny", label: "小", singleMax: 34, multiMax: 22, singleMin: 7, multiMin: 7, renderScale: 0.2 }
       ];
 
       const lineGapPresets = [
@@ -2277,6 +2280,7 @@
         selectedVoteTarget: "",
         selectedHostTarget: "",
         selectedFinalTarget: "",
+        decisionEditPhase: "",
         pollTimer: 0,
         pollFailureCount: 0,
         feedbackTimer: 0,
@@ -2444,10 +2448,16 @@
       }
 
       function normalizeSizePresetId(sizePresetId) {
-        if (sizePresetId === "xl" || sizePresetId === "medium") {
+        if (sizePresetId === "xl") {
           return "large";
         }
-        return sizePresetId;
+        if (sizePresetId === "small" || sizePresetId === "medium") {
+          return "medium";
+        }
+        if (sizePresetId === "tiny") {
+          return "tiny";
+        }
+        return "large";
       }
 
       function ensureGoogleFontsLoaded(fontIds = []) {
@@ -3003,6 +3013,68 @@
         return getFinalCandidates(room, mode).some((candidate) => candidate.playerId !== playerId);
       }
 
+      function getDecisionCompletion(room = state.room) {
+        if (!room || isSpectator(room)) {
+          return null;
+        }
+        const phase = room.game?.phase || "";
+        const round = getCurrentRound(room);
+        const isEditingCurrentPhase = state.decisionEditPhase === phase;
+        if (isEditingCurrentPhase) {
+          return null;
+        }
+
+        if (phase === "round_vote" && round?.myVoteTargetId) {
+          const candidate = getVoteCandidates(room, "vote").find((item) => item.playerId === round.myVoteTargetId);
+          return {
+            phase,
+            heading: "投票完了",
+            label: `${round?.label || "ラウンド"}の投票`,
+            phrase: candidate?.phrase || "",
+            displayName: candidate ? resolvePlayerDisplayName(room, candidate.playerId, candidate.displayName) : "",
+            buttonLabel: "投票を変更"
+          };
+        }
+
+        if (phase === "round_revote" && round?.myRevoteTargetId) {
+          const candidate = getVoteCandidates(room, "revote").find((item) => item.playerId === round.myRevoteTargetId);
+          return {
+            phase,
+            heading: "再投票完了",
+            label: `${round?.label || "ラウンド"}の再投票`,
+            phrase: candidate?.phrase || "",
+            displayName: candidate ? resolvePlayerDisplayName(room, candidate.playerId, candidate.displayName) : "",
+            buttonLabel: "再投票を変更"
+          };
+        }
+
+        if (phase === "final_vote" && room.game.finalVote?.myVoteCandidateId) {
+          const candidate = getFinalCandidates(room, "vote").find((item) => item.candidateId === room.game.finalVote.myVoteCandidateId);
+          return {
+            phase,
+            heading: "最終投票完了",
+            label: "最終投票",
+            phrase: candidate?.phrase || "",
+            displayName: candidate ? resolvePlayerDisplayName(room, candidate.playerId, candidate.displayName) : "",
+            buttonLabel: "最終投票を変更"
+          };
+        }
+
+        if (phase === "final_revote" && room.game.finalVote?.myRevoteCandidateId) {
+          const candidate = getFinalCandidates(room, "revote").find((item) => item.candidateId === room.game.finalVote.myRevoteCandidateId);
+          return {
+            phase,
+            heading: "最終再投票完了",
+            label: "最終再投票",
+            phrase: candidate?.phrase || "",
+            displayName: candidate ? resolvePlayerDisplayName(room, candidate.playerId, candidate.displayName) : "",
+            buttonLabel: "最終再投票を変更"
+          };
+        }
+
+        return null;
+      }
+
       function resolvePlayerDisplayName(room, playerId, fallback = "") {
         const players = room?.game?.players || room?.players || [];
         return players.find((player) => player.playerId === playerId)?.displayName || fallback || playerId || "";
@@ -3036,9 +3108,15 @@
           return room.game.currentTurnPlayerId === room.me.playerId ? "submit" : "wait";
         }
         if (phase === "round_vote") {
+          if (round?.myVoteTargetId && state.decisionEditPhase !== phase) {
+            return "wait";
+          }
           return "vote";
         }
         if (phase === "round_revote") {
+          if (round?.myRevoteTargetId && state.decisionEditPhase !== phase) {
+            return "wait";
+          }
           return "revote";
         }
         if (phase === "round_host_decide") {
@@ -3048,9 +3126,15 @@
           return "roundResult";
         }
         if (phase === "final_vote") {
+          if (room.game.finalVote?.myVoteCandidateId && state.decisionEditPhase !== phase) {
+            return "wait";
+          }
           return meCanFinalVote ? "finalVote" : "wait";
         }
         if (phase === "final_revote") {
+          if (room.game.finalVote?.myRevoteCandidateId && state.decisionEditPhase !== phase) {
+            return "wait";
+          }
           return meCanFinalRevote ? "finalVote" : "wait";
         }
         if (phase === "final_host_decide") {
@@ -3431,29 +3515,45 @@
           return;
         }
         const round = getCurrentRound(room);
+        const phase = room.game?.phase || "";
+        const isEditingCurrentPhase = state.decisionEditPhase === phase;
+        if (!["round_vote", "round_revote", "final_vote", "final_revote"].includes(phase)) {
+          state.decisionEditPhase = "";
+        } else if (state.decisionEditPhase && state.decisionEditPhase !== phase) {
+          state.decisionEditPhase = "";
+        }
         switch (room.game?.phase) {
           case "round_vote":
-            state.selectedVoteTarget = round?.myVoteTargetId || "";
+            if (!isEditingCurrentPhase) {
+              state.selectedVoteTarget = round?.myVoteTargetId || "";
+            }
             state.selectedHostTarget = "";
             state.selectedFinalTarget = "";
             return;
           case "round_revote":
-            state.selectedHostTarget = round?.myRevoteTargetId || "";
+            if (!isEditingCurrentPhase) {
+              state.selectedHostTarget = round?.myRevoteTargetId || "";
+            }
             state.selectedVoteTarget = "";
             state.selectedFinalTarget = "";
             return;
           case "final_vote":
-            state.selectedFinalTarget = room.game.finalVote?.myVoteCandidateId || "";
+            if (!isEditingCurrentPhase) {
+              state.selectedFinalTarget = room.game.finalVote?.myVoteCandidateId || "";
+            }
             state.selectedVoteTarget = "";
             state.selectedHostTarget = "";
             return;
           case "final_revote":
-            state.selectedFinalTarget = room.game.finalVote?.myRevoteCandidateId || "";
+            if (!isEditingCurrentPhase) {
+              state.selectedFinalTarget = room.game.finalVote?.myRevoteCandidateId || "";
+            }
             state.selectedVoteTarget = "";
             state.selectedHostTarget = "";
             return;
           case "round_host_decide":
           case "final_host_decide":
+            state.decisionEditPhase = "";
             return;
           default:
             clearDecisionState();
@@ -3679,6 +3779,10 @@
       function getWaitingMessage(room) {
         const currentRound = getCurrentRound(room);
         const currentPlayer = room.game.players.find((player) => player.playerId === room.game.currentTurnPlayerId);
+        const decisionCompletion = getDecisionCompletion(room);
+        if (decisionCompletion) {
+          return "ほかの人の入力を待っています。";
+        }
         if (isSpectator(room) && currentPlayer) {
           return `${currentPlayer.displayName} の手番を観戦中です。`;
         }
@@ -3706,6 +3810,11 @@
           return `${currentPlayer.displayName} の手番です。`;
         }
         return phaseMessageMap[room.game.phase] || `${escapeHtml(currentRound?.label || "現在ラウンド")} が進行中です。`;
+      }
+
+      function getWaitHeading(room = state.room) {
+        const decisionCompletion = getDecisionCompletion(room);
+        return decisionCompletion?.heading || "待機";
       }
 
       function getChampionLikeCount(item) {
@@ -4632,7 +4741,7 @@
                   <span class="setting-group-title">文字サイズ</span>
                   <span class="setting-group-value">${escapeHtml(activeSize)}</span>
                 </div>
-                <div class="chip-row">
+                <div class="chip-row size-chip-row">
                   ${sizePresets
                     .map(
                       (preset) => `
@@ -4760,11 +4869,10 @@
       }
 
       function renderWait(room) {
-        const submissions = getCurrentRound(room)?.submissions || [];
         return `
           ${renderScreenAlerts()}
           <section class="card">
-            <h2>待機</h2>
+            <h2>${escapeHtml(getWaitHeading(room))}</h2>
             <div id="waitFocusSlot"></div>
           </section>
 
@@ -4775,6 +4883,20 @@
 
       function renderWaitFocus(room) {
         const submissions = getCurrentRound(room)?.submissions || [];
+        const decisionCompletion = getDecisionCompletion(room);
+        if (decisionCompletion) {
+          return `
+            <section class="vote-complete-card">
+              <small>${escapeHtml(decisionCompletion.label)}</small>
+              <strong>投票を受け付けました</strong>
+              ${decisionCompletion.phrase ? `<p>いまは「${escapeHtml(decisionCompletion.phrase)}」に入れています。</p>` : ""}
+              ${renderSummaryPills([
+                { label: "状態", value: "投票完了" },
+                ...(decisionCompletion.displayName ? [{ label: "対象", value: decisionCompletion.displayName }] : [])
+              ])}
+            </section>
+          `;
+        }
         return renderFocusCallout({
           label: getCurrentRound(room)?.label || "進行中",
           title: getWaitingMessage(room),
@@ -4785,7 +4907,16 @@
         });
       }
 
-      function renderWaitActions() {
+      function renderWaitActions(room) {
+        const decisionCompletion = getDecisionCompletion(room);
+        if (decisionCompletion) {
+          return `
+            <div class="button-row split-actions">
+              <button class="btn danger" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
+              <button class="btn secondary" type="button" data-action="edit-current-vote" ${state.pendingAction ? "disabled" : ""}>${escapeHtml(decisionCompletion.buttonLabel)}</button>
+            </div>
+          `;
+        }
         return `
           <div class="button-row align-left">
             <button class="btn danger" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
@@ -4835,7 +4966,13 @@
 
         patchSlot(els.app, "#waitFocusSlot", "waitFocusKey", focusKey, renderWaitFocus(room));
         patchSlot(els.app, "#waitSubmissionsSlot", "waitSubmissionsKey", submissionsKey, renderWaitSubmissions(room));
-        patchSlot(els.app, "#waitActionsSlot", "waitSyncKey", state.pendingAction ? "pending" : "idle", renderWaitActions());
+        patchSlot(
+          els.app,
+          "#waitActionsSlot",
+          "waitSyncKey",
+          [state.pendingAction ? "pending" : "idle", getDecisionCompletion(room)?.phase || ""].join("|"),
+          renderWaitActions(room)
+        );
       }
 
       function renderPassiveSyncUi(room = state.room, view = deriveView(room)) {
@@ -5638,15 +5775,6 @@
           return;
         }
 
-        if (window.innerWidth < 720) {
-          submitTopSlot.style.minHeight = "";
-          previewCard.classList.remove("is-floating");
-          previewCard.style.removeProperty("--preview-floating-top");
-          previewCard.style.removeProperty("--preview-floating-left");
-          previewCard.style.removeProperty("--preview-floating-width");
-          return;
-        }
-
         const slotRect = submitTopSlot.getBoundingClientRect();
         const statusBottom = els.statusRow?.getBoundingClientRect().bottom || 0;
         const feedbackBottom = els.feedbackDock?.children.length ? els.feedbackDock.getBoundingClientRect().bottom : 0;
@@ -5749,7 +5877,11 @@
       }
 
       function getActiveReveal() {
-        return state.room?.game?.reveal || null;
+        const reveal = state.room?.game?.reveal || null;
+        if (reveal?.kind === "champion" && reveal.acknowledgedPlayerIds?.includes(state.room?.me?.playerId)) {
+          return null;
+        }
+        return reveal;
       }
 
       function buildRevealPresentation(reveal, room = state.room) {
@@ -5939,6 +6071,7 @@
         state.selectedVoteTarget = "";
         state.selectedHostTarget = "";
         state.selectedFinalTarget = "";
+        state.decisionEditPhase = "";
       }
 
       function isSyncPending() {
@@ -6174,6 +6307,13 @@
           setFeedback("");
           renderCurrentView({ includeReveal: false });
         },
+        "edit-current-vote": async () => {
+          if (!state.room?.game?.phase) {
+            return;
+          }
+          state.decisionEditPhase = state.room.game.phase;
+          render({ immediate: true });
+        },
         "close-reveal": async () => {
           const reveal = getActiveReveal();
           if (!reveal || state.pendingAction || reveal.acknowledgedPlayerIds?.includes(state.room?.me?.playerId)) {
@@ -6311,6 +6451,7 @@
             const payload = await postApi(`/rooms/${encodeURIComponent(state.roomId)}/rounds/${room.game.roundIndex}/vote`, {
               targetPlayerId: state.selectedVoteTarget
             });
+            state.decisionEditPhase = "";
             state.selectedVoteTarget = "";
             setRoom(payload.data.room);
           });
@@ -6321,6 +6462,7 @@
             const payload = await postApi(`/rooms/${encodeURIComponent(state.roomId)}/rounds/${room.game.roundIndex}/revote`, {
               targetPlayerId: state.selectedHostTarget
             });
+            state.decisionEditPhase = "";
             state.selectedHostTarget = "";
             setRoom(payload.data.room);
           });
@@ -6348,6 +6490,7 @@
             const payload = await postApi(`/rooms/${encodeURIComponent(state.roomId)}/${endpoint}`, {
               candidateId: state.selectedFinalTarget
             });
+            state.decisionEditPhase = "";
             state.selectedFinalTarget = "";
             setRoom(payload.data.room);
           });

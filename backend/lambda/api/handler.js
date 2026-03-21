@@ -96,6 +96,7 @@ function parseRoute(method, pathname) {
     { method: "POST", pattern: /^\/v1\/rooms\/join$/, route: "joinRoom" },
     { method: "GET", pattern: /^\/v1\/rooms\/([^/]+)$/, route: "getRoom" },
     { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/reconnect$/, route: "reconnectRoom" },
+    { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/edit-vote$/, route: "editCurrentVote" },
     { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/reveal-close$/, route: "closeReveal" },
     { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/start-player$/, route: "startPlayer" },
     { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/player-role$/, route: "setPlayerRole" },
@@ -160,6 +161,7 @@ function handleHealth() {
       "rooms:join",
       "rooms:get",
       "rooms:reconnect",
+      "rooms:edit-vote",
       "rooms:reveal-close",
       "rooms:start-player",
       "rooms:player-role",
@@ -1001,6 +1003,43 @@ function buildVotedRoom(room, mePlayer, roundIndex, targetPlayerId, mode = "vote
     }
   } else {
     setRoundWinner(updatedRoom, round, summary.winnerPlayerId, mode === "revote" ? "revote" : "initial", summary.counts);
+  }
+
+  updatedRoom.updatedAt = nowIso();
+  updatedRoom.expiresAt = Math.floor(Date.now() / 1000) + ROOM_TTL_SECONDS;
+  updatedRoom.revision += 1;
+  return updatedRoom;
+}
+
+function buildEditedVoteRoom(room, mePlayer) {
+  requireNoActiveReveal(room);
+  if (normalizePlayerRole(mePlayer.role) !== "player") {
+    throw domainError(403, "SPECTATOR_FORBIDDEN", "観戦中は投票を変更できません。");
+  }
+
+  const updatedRoom = clone(room);
+  const phase = updatedRoom.game?.phase || "";
+
+  if (phase === "round_vote" || phase === "round_revote") {
+    const round = getCurrentRound(updatedRoom);
+    if (!round) {
+      throw domainError(409, "INVALID_PHASE", "ラウンド状態が見つかりません。");
+    }
+    const ballotKey = phase === "round_revote" ? "revotes" : "votes";
+    if (round[ballotKey]?.[mePlayer.playerId]) {
+      delete round[ballotKey][mePlayer.playerId];
+    }
+  } else if (phase === "final_vote" || phase === "final_revote") {
+    const finalVote = updatedRoom.game?.finalVote;
+    if (!finalVote) {
+      throw domainError(409, "INVALID_PHASE", "最終投票候補が存在しません。");
+    }
+    const ballotKey = phase === "final_revote" ? "revotes" : "votes";
+    if (finalVote[ballotKey]?.[mePlayer.playerId]) {
+      delete finalVote[ballotKey][mePlayer.playerId];
+    }
+  } else {
+    throw domainError(409, "INVALID_PHASE", "投票画面へ戻れる段階ではありません。");
   }
 
   updatedRoom.updatedAt = nowIso();
@@ -2079,6 +2118,33 @@ async function createDynamoRoomRepository(options = {}) {
       throw domainError(409, "CONFLICT_RETRY", "再接続処理が競合しました。もう一度お試しください。", true);
     },
 
+    async editCurrentVote(roomId, playerToken) {
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        const room = await getRoomItem(roomId);
+        if (!room) {
+          throw domainError(404, "ROOM_NOT_FOUND", "指定された room は存在しません。");
+        }
+        const mePlayer = getPlayerByToken(room, playerToken);
+        if (!mePlayer) {
+          throw domainError(401, "PLAYER_TOKEN_INVALID", "playerToken が必要です。");
+        }
+
+        const updatedRoom = buildEditedVoteRoom(room, mePlayer);
+        try {
+          await putRoomItem(updatedRoom, room.revision);
+          const updatedMePlayer = updatedRoom.players.find((player) => player.playerId === mePlayer.playerId);
+          return { room: updatedRoom, mePlayer: updatedMePlayer };
+        } catch (error) {
+          if (toConditionalFailure(error)) {
+            continue;
+          }
+          throw error;
+        }
+      }
+
+      throw domainError(409, "CONFLICT_RETRY", "投票変更が競合しました。もう一度お試しください。", true);
+    },
+
     async closeReveal(roomId, playerToken, revealId = "") {
       for (let attempt = 0; attempt < 5; attempt += 1) {
         const room = await getRoomItem(roomId);
@@ -2768,6 +2834,21 @@ function createMemoryRoomRepository() {
       return { room: clone(updatedRoom), mePlayer: clone(player) };
     },
 
+    async editCurrentVote(roomId, playerToken) {
+      const room = rooms.get(roomId);
+      if (!room) {
+        throw domainError(404, "ROOM_NOT_FOUND", "指定された room は存在しません。");
+      }
+      const mePlayer = getPlayerByToken(room, playerToken);
+      if (!mePlayer) {
+        throw domainError(401, "PLAYER_TOKEN_INVALID", "playerToken が必要です。");
+      }
+      const updatedRoom = buildEditedVoteRoom(room, mePlayer);
+      saveRoom(updatedRoom);
+      const updatedMePlayer = updatedRoom.players.find((player) => player.playerId === mePlayer.playerId);
+      return { room: clone(updatedRoom), mePlayer: clone(updatedMePlayer) };
+    },
+
     async closeReveal(roomId, playerToken, revealId = "") {
       const room = rooms.get(roomId);
       if (!room) {
@@ -3241,6 +3322,15 @@ function createHandler(options = {}) {
             return fail(401, "PLAYER_TOKEN_INVALID", "playerToken が必要です。");
           }
           const result = await repository.reconnectRoom(matched.params[0], playerToken);
+          return ok(toRoomPayload(result.room, result.mePlayer));
+        }
+        case "editCurrentVote": {
+          const repository = await roomRepositoryPromise;
+          const playerToken = getHeader(event, "X-Omojan-Player-Token");
+          if (!playerToken) {
+            return fail(401, "PLAYER_TOKEN_INVALID", "playerToken が必要です。");
+          }
+          const result = await repository.editCurrentVote(matched.params[0], playerToken);
           return ok(toRoomPayload(result.room, result.mePlayer));
         }
         case "closeReveal": {

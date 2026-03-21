@@ -509,6 +509,15 @@
           inset 0 1px 0 rgba(255, 255, 255, 0.86);
       }
 
+      .btn.ghost {
+        border-color: rgba(142, 118, 67, 0.26);
+        background: linear-gradient(180deg, rgba(255, 252, 245, 0.82), rgba(245, 236, 212, 0.74));
+        color: #5f4c25;
+        box-shadow:
+          0 10px 20px rgba(62, 45, 20, 0.08),
+          inset 0 1px 0 rgba(255, 255, 255, 0.88);
+      }
+
       .btn.compact {
         min-height: 44px;
         padding: 0 14px;
@@ -1868,12 +1877,7 @@
       }
 
       .round-winner-card::before {
-        content: "";
-        position: absolute;
-        inset: 10px;
-        border-radius: 16px;
-        border: 1px solid rgba(255, 255, 255, 0.42);
-        pointer-events: none;
+        display: none;
       }
 
       .round-winner-card header {
@@ -1910,6 +1914,10 @@
         color: #8f2d12;
         font-weight: 800;
         letter-spacing: 0.04em;
+      }
+
+      .champion-stage.is-grand::before {
+        display: none;
       }
 
       .champion-stage.is-grand .champion-word {
@@ -2201,6 +2209,8 @@
       const APP_ROOM_ID_KEY = "omojan-app-room-id";
       const APP_PLAYER_TOKEN_KEY = "omojan-app-player-token";
       const APP_DEVICE_ID_KEY = "omojan-app-device-id";
+      const APP_LAST_DISPLAY_NAME_KEY = "omojan-app-last-display-name";
+      const DEFAULT_INVITE_CODE_PREFIX = "OMO-";
       const GOOGLE_FONTS_HREF = "https://fonts.googleapis.com/css2?family=DotGothic16&family=Rampart+One&family=Yusei+Magic&display=swap";
       const REMOTE_FONT_IDS = new Set(["magic", "rampart", "dot"]);
       const GOOGLE_FONT_DESCRIPTORS = {
@@ -2268,12 +2278,12 @@
         syncIssueMessage: "",
         createDisplayName: "",
         joinDisplayName: "",
-        inviteCode: "",
+        inviteCode: DEFAULT_INVITE_CODE_PREFIX,
         playerCount: 4,
         selectedStartPlayerId: "",
         draftSelectedTileIds: [],
         draftFontId: "broadcast",
-        draftSizePreset: "large",
+        draftSizePreset: "medium",
         draftLineGapPreset: "none",
         draftLineMode: "boundary",
         draftManualBreaks: [],
@@ -2445,6 +2455,48 @@
           return;
         }
         window.setTimeout(task, 180);
+      }
+
+      function normalizeInviteCodeInput(value) {
+        const compact = String(value || "").toUpperCase().replace(/\s+/g, "");
+        if (!compact) {
+          return DEFAULT_INVITE_CODE_PREFIX;
+        }
+        if (compact === "OMO") {
+          return DEFAULT_INVITE_CODE_PREFIX;
+        }
+        if (compact.startsWith(DEFAULT_INVITE_CODE_PREFIX)) {
+          return compact;
+        }
+        if (compact.startsWith("OMO")) {
+          return `${DEFAULT_INVITE_CODE_PREFIX}${compact.slice(3).replace(/^-+/, "")}`;
+        }
+        return `${DEFAULT_INVITE_CODE_PREFIX}${compact.replace(/^[-]+/, "")}`;
+      }
+
+      function hasUsableInviteCode(inviteCode) {
+        return Boolean(inviteCode && inviteCode !== DEFAULT_INVITE_CODE_PREFIX);
+      }
+
+      function getStoredDisplayName() {
+        return String(window.localStorage.getItem(APP_LAST_DISPLAY_NAME_KEY) || "").trim();
+      }
+
+      function saveStoredDisplayName(displayName) {
+        const normalized = String(displayName || "").trim();
+        if (!normalized) {
+          return;
+        }
+        window.localStorage.setItem(APP_LAST_DISPLAY_NAME_KEY, normalized);
+      }
+
+      function getAutoJoinDisplayName() {
+        const stored = getStoredDisplayName();
+        if (stored) {
+          return stored;
+        }
+        const suffix = String(state.deviceId || "").replace(/[^a-zA-Z0-9]/g, "").slice(-4).toUpperCase() || "0001";
+        return `ゲスト${suffix}`;
       }
 
       function normalizeSizePresetId(sizePresetId) {
@@ -3032,7 +3084,7 @@
             label: `${round?.label || "ラウンド"}の投票`,
             phrase: candidate?.phrase || "",
             displayName: candidate ? resolvePlayerDisplayName(room, candidate.playerId, candidate.displayName) : "",
-            buttonLabel: "投票を変更"
+            buttonLabel: "投票画面に戻る"
           };
         }
 
@@ -3044,7 +3096,7 @@
             label: `${round?.label || "ラウンド"}の再投票`,
             phrase: candidate?.phrase || "",
             displayName: candidate ? resolvePlayerDisplayName(room, candidate.playerId, candidate.displayName) : "",
-            buttonLabel: "再投票を変更"
+            buttonLabel: "投票画面に戻る"
           };
         }
 
@@ -3056,7 +3108,7 @@
             label: "最終投票",
             phrase: candidate?.phrase || "",
             displayName: candidate ? resolvePlayerDisplayName(room, candidate.playerId, candidate.displayName) : "",
-            buttonLabel: "最終投票を変更"
+            buttonLabel: "投票画面に戻る"
           };
         }
 
@@ -3068,7 +3120,7 @@
             label: "最終再投票",
             phrase: candidate?.phrase || "",
             displayName: candidate ? resolvePlayerDisplayName(room, candidate.playerId, candidate.displayName) : "",
-            buttonLabel: "最終再投票を変更"
+            buttonLabel: "投票画面に戻る"
           };
         }
 
@@ -3303,6 +3355,7 @@
         };
         saveStoredSessions(sessions);
         window.sessionStorage.setItem(APP_ACTIVE_ROOM_ID_KEY, state.roomId);
+        saveStoredDisplayName(state.room?.me?.displayName || state.createDisplayName || state.joinDisplayName);
       }
 
       function clearSession(roomId = state.roomId) {
@@ -3326,7 +3379,10 @@
 
       function exitToWelcome(options = {}) {
         const room = state.room;
-        const inviteCode = options.preserveInviteCode === false ? "" : options.inviteCode || room?.inviteCode || state.inviteCode;
+        const inviteCode =
+          options.preserveInviteCode === false
+            ? DEFAULT_INVITE_CODE_PREFIX
+            : normalizeInviteCodeInput(options.inviteCode || room?.inviteCode || state.inviteCode || DEFAULT_INVITE_CODE_PREFIX);
         const myName = room?.me?.displayName || "";
 
         clearPollTimer();
@@ -3341,6 +3397,7 @@
         setFeedback(options.errorMessage || options.copyMessage || "", Boolean(options.errorMessage), options.copyMessage ? 2800 : 0);
 
         if (myName) {
+          saveStoredDisplayName(myName);
           if (room?.me?.isHost) {
             state.createDisplayName = myName;
           } else {
@@ -3571,6 +3628,7 @@
         }
         syncDraftWithRoom(state.room);
         syncDecisionStateWithRoom(state.room);
+        saveStoredDisplayName(room?.me?.displayName);
         persistSession();
       }
 
@@ -3614,6 +3672,27 @@
           }
           throw error;
         }
+      }
+
+      async function autoJoinInviteRoom(inviteCode = state.inviteCode) {
+        if (!hasUsableInviteCode(inviteCode) || state.roomId) {
+          return false;
+        }
+        const displayName = getAutoJoinDisplayName();
+        state.joinDisplayName = displayName;
+        const payload = await fetchJson(`${state.apiBaseUrl}/rooms/join`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            inviteCode,
+            displayName
+          })
+        });
+        setRoom(payload.data.room, { playerToken: payload.data.playerToken, skipReveal: true });
+        if (payload.data.room.me.role === "spectator") {
+          setFeedback("観戦として参加しました。", false, 2600);
+        }
+        return true;
       }
 
       function clearPollTimer() {
@@ -3689,7 +3768,7 @@
           String(right.updatedAt || "").localeCompare(String(left.updatedAt || ""))
         );
 
-        if (state.inviteCode) {
+        if (hasUsableInviteCode(state.inviteCode)) {
           if (activeRoomId && sessions[activeRoomId]?.inviteCode === state.inviteCode) {
             prioritized.push(sessions[activeRoomId]);
           }
@@ -4304,6 +4383,7 @@
                       <strong>${escapeHtml(round.label)}</strong>
                     </header>
                     ${renderWordBoard(round.winner.renderedLines, round.winner.fontId, "result-word", {
+                      boardSkin: "bare",
                       maxFont: 56,
                       minFont: 28,
                       lineGapPreset: round.winner.lineGapPreset,
@@ -4911,15 +4991,15 @@
         const decisionCompletion = getDecisionCompletion(room);
         if (decisionCompletion) {
           return `
-            <div class="button-row split-actions">
-              <button class="btn danger" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
+            <div class="button-row align-left">
               <button class="btn secondary" type="button" data-action="edit-current-vote" ${state.pendingAction ? "disabled" : ""}>${escapeHtml(decisionCompletion.buttonLabel)}</button>
+              <button class="btn ghost" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
             </div>
           `;
         }
         return `
           <div class="button-row align-left">
-            <button class="btn danger" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
+            <button class="btn ghost" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
           </div>
         `;
       }
@@ -5491,6 +5571,7 @@
               label: "総合優勝",
               entry: champion,
               wordClass: "champion-word",
+              boardSkin: "bare",
               maxFont: 70,
               minFont: 30,
               emptyText: "未確定です。",
@@ -6062,9 +6143,14 @@
       }
 
       function updateFieldState(field, value) {
-        if (field in state) {
-          state[field] = value;
+        if (!(field in state)) {
+          return;
         }
+        if (field === "inviteCode") {
+          state.inviteCode = normalizeInviteCodeInput(value);
+          return;
+        }
+        state[field] = value;
       }
 
       function clearDecisionState() {
@@ -6311,8 +6397,11 @@
           if (!state.room?.game?.phase) {
             return;
           }
-          state.decisionEditPhase = state.room.game.phase;
-          render({ immediate: true });
+          await runAction(async () => {
+            const payload = await postApi(`/rooms/${encodeURIComponent(state.roomId)}/edit-vote`, {});
+            clearDecisionState();
+            setRoom(payload.data.room);
+          }, { pendingMode: "refresh" });
         },
         "close-reveal": async () => {
           const reveal = getActiveReveal();
@@ -6602,15 +6691,20 @@
         const invite = params.get("invite");
         state.apiBaseUrl = apiBaseUrl ? apiBaseUrl.replace(/\/$/, "") : resolveDefaultApiBaseUrl();
         state.deviceId = getOrCreateDeviceId();
+        const storedDisplayName = getStoredDisplayName();
+        if (storedDisplayName) {
+          state.createDisplayName = storedDisplayName;
+          state.joinDisplayName = storedDisplayName;
+        }
         if (invite) {
-          state.inviteCode = invite;
+          state.inviteCode = normalizeInviteCodeInput(invite);
         }
 
         ensureApiNetworkHints();
         warmApiConnection();
         ensureFontsReady([...REMOTE_FONT_IDS]).catch(() => {});
 
-        state.isLoading = false;
+        state.isLoading = Boolean(invite);
         render({ immediate: true });
 
         const championsTask = Promise.all([loadRecentChampions(), loadChampionRanking(10)])
@@ -6622,6 +6716,24 @@
         try {
           const restored = await restoreSession();
           if (restored) {
+            state.isLoading = false;
+            render({ immediate: true });
+          } else if (invite) {
+            try {
+              await autoJoinInviteRoom(state.inviteCode);
+              state.isLoading = false;
+              render({ immediate: true });
+            } catch (error) {
+              exitToWelcome({
+                errorMessage: describeAppError(error, "join"),
+                preserveInviteCode: true,
+                inviteCode: state.inviteCode
+              });
+              state.isLoading = false;
+              render({ immediate: true });
+            }
+          } else {
+            state.isLoading = false;
             render({ immediate: true });
           }
         } catch (error) {
@@ -6629,6 +6741,7 @@
             errorMessage: describeAppError(error, "restore"),
             preserveInviteCode: false
           });
+          state.isLoading = false;
           render({ immediate: true });
         }
 

@@ -214,6 +214,22 @@ async function voteFor(handler, session, voterDisplayName, roundIndex, targetDis
   return body.data.room;
 }
 
+async function editCurrentVoteFor(handler, session, voterDisplayName) {
+  const voter = findPlayer(session, voterDisplayName);
+  const response = await handler(
+    createEvent("POST", `/v1/rooms/${session.roomId}/edit-vote`, {
+      headers: {
+        "X-Omojan-Player-Token": voter.playerToken
+      },
+      body: {}
+    })
+  );
+  const body = await parseResponse(response);
+  assert.equal(response.statusCode, 200);
+  assert.equal(body.ok, true);
+  return body.data.room;
+}
+
 async function hostDecisionFor(handler, session, roundIndex, winnerDisplayName) {
   const host = session.players[0];
   const winner = findPlayer(session, winnerDisplayName);
@@ -416,6 +432,7 @@ test("GET /v1/health returns lambda scaffold metadata", async () => {
     "rooms:join",
     "rooms:get",
     "rooms:reconnect",
+    "rooms:edit-vote",
     "rooms:reveal-close",
     "rooms:start-player",
     "rooms:player-role",
@@ -1048,6 +1065,22 @@ test("round vote can be changed before everyone finishes voting", async () => {
   assert.equal(room.game.rounds[0].myVoteTargetId, findPlayer(session, "ゲストB").playerId);
 });
 
+test("returning to round vote clears the previous vote from counting", async () => {
+  const handler = createTestHandler();
+  const session = await createSession(handler, ["ホスト", "ゲストA", "ゲストB"]);
+  await startGame(handler, session, "ホスト");
+  await submitAllForCurrentRound(handler, session, 0);
+
+  await voteFor(handler, session, "ホスト", 0, "ゲストA", "vote");
+  let room = await editCurrentVoteFor(handler, session, "ホスト");
+  assert.equal(room.game.phase, "round_vote");
+  assert.equal(room.game.rounds[0].myVoteTargetId, "");
+
+  room = await voteFor(handler, session, "ゲストA", 0, "ゲストB", "vote");
+  room = await voteFor(handler, session, "ゲストB", 0, "ゲストA", "vote");
+  assert.equal(room.game.phase, "round_vote");
+});
+
 test("tie can progress through revote and host decision", async () => {
   const handler = createTestHandler();
   const session = await createSession(handler, ["ホスト", "ゲストA", "ゲストB"]);
@@ -1207,6 +1240,21 @@ test("final vote can be changed before everyone finishes voting", async () => {
   room = await getRoom(handler, session.roomId, host.playerToken);
   assert.equal(room.game.phase, "final_vote");
   assert.equal(room.game.finalVote.myVoteCandidateId, secondCandidateId);
+});
+
+test("returning to final vote clears the previous vote from counting", async () => {
+  const handler = createTestHandler();
+  const session = await createSession(handler, ["ホスト", "ゲストA", "ゲストB"]);
+  let room = await reachFinalVote(handler, session);
+
+  room = await voteFinalFor(handler, session, room, "ホスト", "ゲストA", "vote");
+  room = await editCurrentVoteFor(handler, session, "ホスト");
+  assert.equal(room.game.phase, "final_vote");
+  assert.equal(room.game.finalVote.myVoteCandidateId, "");
+
+  room = await voteFinalFor(handler, session, room, "ゲストA", "ホスト", "vote");
+  room = await voteFinalFor(handler, session, room, "ゲストB", "ホスト", "vote");
+  assert.equal(room.game.phase, "final_vote");
 });
 
 test("recent champions includes newly finished game at the top", async () => {

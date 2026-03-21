@@ -85,16 +85,16 @@
 
       main {
         position: relative;
-        width: min(100%, 1100px);
+        width: min(100%, 1240px);
         margin: 0 auto;
-        padding: 28px 18px 56px;
+        padding: 24px 20px 64px;
         z-index: 1;
       }
 
       .page-header {
         text-align: center;
-        padding-top: 42px;
-        margin-bottom: 18px;
+        padding-top: 28px;
+        margin-bottom: 22px;
       }
 
       .page-header.is-hidden {
@@ -125,17 +125,17 @@
       .phone-shell {
         display: flex;
         justify-content: center;
-        padding-top: 8px;
+        padding-top: 4px;
       }
 
       .phone {
         position: relative;
         isolation: isolate;
         overflow: hidden;
-        width: min(100%, 430px);
+        width: min(100%, 540px);
         min-height: calc(100vh - 120px);
-        padding: 16px;
-        border-radius: 34px;
+        padding: 20px;
+        border-radius: 38px;
         border: 3px solid #1f1710;
         background:
           radial-gradient(circle at top, rgba(255, 247, 214, 0.92), transparent 34%),
@@ -178,7 +178,7 @@
         gap: 12px;
         color: var(--green);
         font-size: 12px;
-        min-height: 34px;
+        min-height: 40px;
       }
 
       .status-row.is-hidden {
@@ -256,7 +256,7 @@
         position: relative;
         overflow: hidden;
         margin-top: 14px;
-        padding: 18px;
+        padding: 20px;
         border-radius: 24px;
       }
 
@@ -401,6 +401,19 @@
 
       .button-row.align-right {
         justify-content: flex-end;
+      }
+
+      .screen-grid,
+      .screen-primary,
+      .screen-secondary,
+      .screen-column {
+        display: grid;
+        gap: 14px;
+        align-content: start;
+      }
+
+      .screen-grid {
+        gap: 16px;
       }
 
       .button-row.split-actions {
@@ -627,6 +640,10 @@
         display: grid;
         justify-items: end;
         gap: 8px;
+      }
+
+      .player-role-actions .chip-row.compact {
+        justify-content: flex-end;
       }
 
       .badge {
@@ -1230,7 +1247,7 @@
         position: relative;
         overflow: hidden;
         margin-top: 14px;
-        padding: 14px 16px 13px;
+        padding: 16px 18px 15px;
         border-radius: 22px;
         border: 2px solid rgba(118, 89, 63, 0.14);
         box-shadow:
@@ -1250,8 +1267,8 @@
         display: block;
         margin-top: 6px;
         color: var(--green-deep);
-        font-size: clamp(16px, 3.4vw, 22px);
-        line-height: 1.42;
+        font-size: clamp(16px, 3vw, 21px);
+        line-height: 1.36;
       }
 
       .decision-hero p {
@@ -1279,6 +1296,22 @@
         color: var(--green-deep);
         font-size: 12px;
         font-weight: 800;
+      }
+
+      .decision-layout,
+      .result-layout {
+        display: grid;
+        gap: 14px;
+        margin-top: 14px;
+      }
+
+      .decision-layout-main,
+      .decision-layout-cards,
+      .result-layout-main,
+      .result-layout-side {
+        display: grid;
+        gap: 14px;
+        align-content: start;
       }
 
       .decision-hero--round {
@@ -2152,6 +2185,109 @@
         .history-dialog,
         .reveal-card {
           width: min(96vw, 520px);
+        }
+      }
+
+      @media (min-width: 900px) {
+        main {
+          width: min(100%, 1460px);
+          padding-inline: 32px;
+          padding-bottom: 72px;
+        }
+
+        .page-header {
+          margin-bottom: 28px;
+        }
+
+        .phone {
+          width: min(100%, 1180px);
+          min-height: 0;
+          padding: 28px 30px 32px;
+          border-radius: 42px;
+        }
+
+        .status-row {
+          min-height: 44px;
+          margin-bottom: 8px;
+        }
+
+        .screen-grid {
+          gap: 22px;
+        }
+
+        .card,
+        .panel {
+          padding: 24px;
+        }
+
+        .screen-grid--landing {
+          grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+        }
+
+        .screen-grid--landing #landingChampionsSlot {
+          grid-column: 1 / -1;
+        }
+
+        .champion-overview {
+          grid-template-columns: minmax(0, 1.05fr) minmax(360px, 0.95fr);
+          align-items: start;
+        }
+
+        .screen-grid--lobby .champion-overview,
+        .screen-grid--submit .champion-overview,
+        .screen-grid--wait .champion-overview {
+          grid-template-columns: minmax(0, 1fr);
+        }
+
+        .screen-grid--lobby {
+          grid-template-columns: minmax(0, 0.94fr) minmax(360px, 1.06fr);
+          align-items: start;
+        }
+
+        .screen-grid--submit {
+          grid-template-columns: minmax(0, 1.08fr) minmax(360px, 0.92fr);
+          align-items: start;
+        }
+
+        .screen-grid--wait {
+          grid-template-columns: minmax(0, 0.92fr) minmax(360px, 1.08fr);
+          align-items: start;
+        }
+
+        .decision-layout {
+          grid-template-columns: minmax(300px, 0.66fr) minmax(0, 1.34fr);
+          align-items: start;
+        }
+
+        .result-layout {
+          grid-template-columns: minmax(0, 1.14fr) minmax(360px, 0.86fr);
+          align-items: start;
+        }
+
+        .action-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 14px;
+        }
+
+        .card h2 {
+          font-size: 32px;
+        }
+
+        .panel h3 {
+          font-size: 20px;
+        }
+
+        .history-dialog-body {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 18px;
+        }
+
+        .history-dialog {
+          width: min(94vw, 1080px);
+        }
+
+        .preview-card.is-sticky {
+          top: 16px;
         }
       }
     </style>
@@ -4473,9 +4609,11 @@
       function renderLandingShell() {
         return `
           ${renderScreenAlerts({ includeCopy: true })}
-          <div id="landingCreateSlot"></div>
-          <div id="landingJoinSlot"></div>
-          <div id="landingChampionsSlot"></div>
+          <div class="screen-grid screen-grid--landing">
+            <div id="landingCreateSlot"></div>
+            <div id="landingJoinSlot"></div>
+            <div id="landingChampionsSlot"></div>
+          </div>
         `;
       }
 
@@ -4567,15 +4705,20 @@
       function renderLobbyShell() {
         return `
           ${renderScreenAlerts({ includeCopy: true })}
-          <section class="card">
-            <h2>ルーム待機中</h2>
-            <div id="lobbyTopSlot"></div>
-            <div id="lobbyPlayersSlot"></div>
-            <div id="lobbyUtilitySlot"></div>
-          </section>
-
-          <div id="lobbyOrderSlot"></div>
-          <div id="lobbyChampionsSlot"></div>
+          <div class="screen-grid screen-grid--lobby">
+            <div class="screen-primary">
+              <section class="card">
+                <h2>ルーム待機中</h2>
+                <div id="lobbyTopSlot"></div>
+                <div id="lobbyPlayersSlot"></div>
+                <div id="lobbyUtilitySlot"></div>
+              </section>
+            </div>
+            <div class="screen-secondary">
+              <div id="lobbyOrderSlot"></div>
+              <div id="lobbyChampionsSlot"></div>
+            </div>
+          </div>
         `;
       }
 
@@ -4732,11 +4875,17 @@
       function renderSubmitShell(room) {
         return `
           ${renderScreenAlerts()}
-          <div id="submitTopSlot"></div>
-          <div id="submitHandSlot"></div>
-          <div id="submitLineModeSlot"></div>
-          <div id="submitSubmissionsSlot"></div>
-          <div id="submitUtilitySlot"></div>
+          <div class="screen-grid screen-grid--submit">
+            <div class="screen-primary">
+              <div id="submitTopSlot"></div>
+              <div id="submitHandSlot"></div>
+            </div>
+            <div class="screen-secondary">
+              <div id="submitLineModeSlot"></div>
+              <div id="submitSubmissionsSlot"></div>
+              <div id="submitUtilitySlot"></div>
+            </div>
+          </div>
         `;
       }
 
@@ -4951,13 +5100,18 @@
       function renderWait(room) {
         return `
           ${renderScreenAlerts()}
-          <section class="card">
-            <h2>${escapeHtml(getWaitHeading(room))}</h2>
-            <div id="waitFocusSlot"></div>
-          </section>
-
-          <div id="waitSubmissionsSlot"></div>
-          <div id="waitActionsSlot"></div>
+          <div class="screen-grid screen-grid--wait">
+            <div class="screen-primary">
+              <section class="card">
+                <h2>${escapeHtml(getWaitHeading(room))}</h2>
+                <div id="waitFocusSlot"></div>
+              </section>
+              <div id="waitActionsSlot"></div>
+            </div>
+            <div class="screen-secondary">
+              <div id="waitSubmissionsSlot"></div>
+            </div>
+          </div>
         `;
       }
 
@@ -5129,10 +5283,16 @@
           ${renderScreenAlerts()}
           <section class="card ${screenClass}">
             <h2>${escapeHtml(title)}</h2>
-            <div id="decisionFocusSlot"></div>
-            <div id="decisionSummarySlot"></div>
-            <div id="decisionCardsSlot"></div>
-            <div id="decisionActionsSlot"></div>
+            <div class="decision-layout">
+              <div class="decision-layout-main">
+                <div id="decisionFocusSlot"></div>
+                <div id="decisionSummarySlot"></div>
+              </div>
+              <div class="decision-layout-cards">
+                <div id="decisionCardsSlot"></div>
+                <div id="decisionActionsSlot"></div>
+              </div>
+            </div>
           </section>
         `;
       }
@@ -5292,10 +5452,16 @@
           ${renderScreenAlerts()}
           <section class="card ${screenClass}">
             <h2>${escapeHtml(title)}</h2>
-            <div id="resultHeroSlot"></div>
-            <div id="resultExtraSlot"></div>
-            <div id="resultCountsSlot"></div>
-            <div id="resultActionsSlot"></div>
+            <div class="result-layout">
+              <div class="result-layout-main">
+                <div id="resultHeroSlot"></div>
+                <div id="resultActionsSlot"></div>
+              </div>
+              <div class="result-layout-side">
+                <div id="resultExtraSlot"></div>
+                <div id="resultCountsSlot"></div>
+              </div>
+            </div>
           </section>
         `;
       }

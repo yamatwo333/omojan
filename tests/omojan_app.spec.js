@@ -664,6 +664,6 @@ test("app can like champion history items and show ranking", async ({ page }) =>
   const moreButton = page.getByRole("button", { name: "もっと見る" });
   if (await moreButton.count()) {
     await moreButton.click();
-    await expect(page.locator("#historyDialogBody .history-dialog-item")).toHaveCount(10);
+    await expect(page.locator("#historyDialogBody .history-dialog-item")).toHaveCount(20);
   }
 });

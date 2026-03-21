@@ -429,6 +429,10 @@
         justify-items: flex-end;
       }
 
+      .screen-grid--wait.is-complete .screen-secondary {
+        max-width: min(100%, 960px);
+      }
+
       .chip-row.compact {
         margin-top: 0;
       }
@@ -743,6 +747,12 @@
         color: var(--green);
         font-size: 18px;
         font-weight: 800;
+      }
+
+      .lobby-actions {
+        margin-top: 16px;
+        padding-top: 14px;
+        border-top: 1px solid rgba(184, 138, 50, 0.16);
       }
 
       .preview-card.is-floating {
@@ -1381,6 +1391,9 @@
       }
 
       .champion-overview > .panel {
+        display: grid;
+        grid-template-rows: auto 1fr;
+        align-content: start;
         height: 100%;
       }
 
@@ -1620,7 +1633,8 @@
 
       .history-ranking-list {
         display: grid;
-        gap: 8px;
+        gap: 10px;
+        align-content: start;
       }
 
       .history-ranking-card {
@@ -1628,7 +1642,8 @@
         grid-template-columns: auto minmax(0, 1fr) auto;
         align-items: center;
         gap: 10px;
-        min-height: 92px;
+        min-height: 96px;
+        height: 96px;
         padding: 14px 15px;
         border-radius: 16px;
         border: 1px solid rgba(118, 89, 63, 0.14);
@@ -1659,11 +1674,17 @@
 
       .history-ranking-main strong {
         display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
 
       .history-ranking-main span {
         color: var(--muted);
         font-size: 12px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
 
       .history-ranking-card--recent {
@@ -1671,7 +1692,7 @@
       }
 
       .history-ranking-rank--date {
-        min-width: 72px;
+        min-width: 56px;
         color: #6b5a42;
         font-size: 13px;
         font-weight: 800;
@@ -1725,6 +1746,14 @@
         align-items: flex-start;
         gap: 10px;
         margin-bottom: 18px;
+      }
+
+      .section-heading-spacer {
+        display: inline-flex;
+        min-height: 44px;
+        min-width: 118px;
+        justify-self: flex-end;
+        visibility: hidden;
       }
 
       .section-heading h3 {
@@ -2329,6 +2358,10 @@
           align-items: start;
         }
 
+        .screen-grid--wait.is-complete {
+          grid-template-columns: minmax(0, 1fr);
+        }
+
         .decision-layout {
           gap: 20px;
         }
@@ -2377,6 +2410,28 @@
           display: flex;
           align-items: flex-start;
           justify-content: space-between;
+        }
+      }
+
+      @media (max-width: 767px) {
+        .preview-card.is-live-preview {
+          padding: 10px 12px 8px;
+        }
+
+        .preview-card.is-live-preview .word-board {
+          width: 100%;
+          min-height: 132px;
+          margin-top: 10px;
+          padding: 6px 4px 0;
+        }
+
+        .preview-card.is-live-preview .preview-caption {
+          margin-top: 8px;
+          font-size: 15px;
+        }
+
+        .preview-word {
+          min-height: 132px;
         }
       }
     </style>
@@ -2469,9 +2524,9 @@
       ];
 
       const sizePresets = [
-        { id: "large", label: "大", singleMax: 182, multiMax: 130, singleMin: 22, multiMin: 18, renderScale: 1.5 },
-        { id: "medium", label: "中", singleMax: 92, multiMax: 60, singleMin: 13, multiMin: 11, renderScale: 0.78 },
-        { id: "tiny", label: "小", singleMax: 34, multiMax: 22, singleMin: 7, multiMin: 7, renderScale: 0.2 }
+        { id: "large", label: "大", singleMax: 182, multiMax: 130, singleMin: 22, multiMin: 18, renderScale: 1.48, previewScale: 1 },
+        { id: "medium", label: "中", singleMax: 132, multiMax: 94, singleMin: 10, multiMin: 9, renderScale: 0.8, previewScale: 0.5 },
+        { id: "tiny", label: "小", singleMax: 76, multiMax: 52, singleMin: 5, multiMin: 5, renderScale: 0.34, previewScale: 0.2 }
       ];
 
       const lineGapPresets = [
@@ -3149,9 +3204,20 @@
       }
 
       function computeDraftLayout() {
+        const sizePreset = getSizePreset(state.draftSizePreset);
         const text = state.draftLineMode === "single" ? getDraftDisplayText() : getDraftText();
         if (!text) {
-          return { lines: ["牌を2つ選ぶ"], fontSize: 36, effectiveBreaks: [], safetyAdjusted: false };
+          const emptySizeMap = {
+            large: 40,
+            medium: 26,
+            tiny: 12
+          };
+          return {
+            lines: ["牌を2つ選ぶ"],
+            fontSize: emptySizeMap[sizePreset.id] || 26,
+            effectiveBreaks: [],
+            safetyAdjusted: false
+          };
         }
 
         const previewBox = document.getElementById("previewWord");
@@ -3159,33 +3225,55 @@
         const height = previewBox?.clientHeight || 148;
         const chars = Array.from(text);
         const fontClass = getFontClass(state.draftFontId);
-        const sizePreset = getSizePreset(state.draftSizePreset);
-        const maxFontSize = state.draftLineMode === "single" ? sizePreset.singleMax : sizePreset.multiMax;
+        const largestPreset = sizePresets[0];
+        const universalMax = state.draftLineMode === "single" ? largestPreset.singleMax : largestPreset.multiMax;
         const minFontSize = getMinimumFontSize(chars.length, state.draftLineMode, state.draftSizePreset);
-        let fallbackLayout = null;
+        const manualBreaks = normalizeBreaks(state.draftManualBreaks, chars.length);
 
-        for (let fontSize = maxFontSize; fontSize >= minFontSize; fontSize -= 1) {
+        function buildLayoutForFont(fontSize, forceAdjusted = false) {
           const lines = buildDraftLines(chars, fontClass, fontSize, width, state.draftLineGapPreset);
           const effectiveBreaks = getBreaksFromLines(lines);
-          const manualBreaks = normalizeBreaks(state.draftManualBreaks, chars.length);
           const safetyAdjusted =
-            fontSize < maxFontSize ||
+            forceAdjusted ||
             (state.draftLineMode === "manual" && effectiveBreaks.some((point) => !manualBreaks.includes(point))) ||
             (state.draftLineMode === "boundary" && effectiveBreaks.some((point) => point !== getBoundaryIndex()));
-
-          if (doesWordFit(lines, fontClass, state.draftLineMode, fontSize, width, height, state.draftLineGapPreset)) {
-            return { lines, fontSize, effectiveBreaks, safetyAdjusted };
-          }
-
-          fallbackLayout = { lines, fontSize, effectiveBreaks, safetyAdjusted: true };
+          return { lines, fontSize, effectiveBreaks, safetyAdjusted };
         }
 
-        return fallbackLayout || {
-          lines: [text],
-          fontSize: minFontSize,
-          effectiveBreaks: [],
-          safetyAdjusted: true
-        };
+        let bestFitLayout = null;
+        let fallbackLayout = null;
+
+        for (let fontSize = universalMax; fontSize >= minFontSize; fontSize -= 1) {
+          const layout = buildLayoutForFont(fontSize, fontSize < universalMax);
+          if (doesWordFit(layout.lines, fontClass, state.draftLineMode, fontSize, width, height, state.draftLineGapPreset)) {
+            bestFitLayout = layout;
+            break;
+          }
+          fallbackLayout = { ...layout, safetyAdjusted: true };
+        }
+
+        if (!bestFitLayout) {
+          return fallbackLayout || {
+            lines: [text],
+            fontSize: minFontSize,
+            effectiveBreaks: [],
+            safetyAdjusted: true
+          };
+        }
+
+        const desiredFontSize = Math.max(
+          minFontSize,
+          Math.min(bestFitLayout.fontSize, Math.round(bestFitLayout.fontSize * (sizePreset.previewScale || 1)))
+        );
+
+        for (let fontSize = desiredFontSize; fontSize >= minFontSize; fontSize -= 1) {
+          const layout = buildLayoutForFont(fontSize, fontSize !== bestFitLayout.fontSize);
+          if (doesWordFit(layout.lines, fontClass, state.draftLineMode, fontSize, width, height, state.draftLineGapPreset)) {
+            return layout;
+          }
+        }
+
+        return bestFitLayout;
       }
 
       function renderWordBoard(lines, fontId, variant, options = {}) {
@@ -4219,6 +4307,7 @@
           <section class="panel">
             <div class="section-heading stack">
               <h3>いいね数ランキング</h3>
+              <span class="section-heading-spacer" aria-hidden="true"></span>
             </div>
             <div class="history-ranking-list">
               ${state.championRankingItems
@@ -4816,8 +4905,8 @@
                 <h2>ルーム待機中</h2>
                 <div id="lobbyTopSlot"></div>
                 <div id="lobbyPlayersSlot"></div>
+                <div id="lobbyUtilitySlot" class="lobby-actions"></div>
               </section>
-              <div id="lobbyUtilitySlot"></div>
             </div>
             <div class="screen-secondary">
               <div id="lobbyOrderSlot"></div>
@@ -5196,9 +5285,10 @@
       }
 
       function renderWait(room) {
+        const isComplete = Boolean(getDecisionCompletion(room));
         return `
           ${renderScreenAlerts()}
-          <div class="screen-grid screen-grid--wait">
+          <div class="screen-grid screen-grid--wait${isComplete ? " is-complete" : ""}">
             <div class="screen-primary">
               <section class="card">
                 <h2>${escapeHtml(getWaitHeading(room))}</h2>

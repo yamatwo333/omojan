@@ -85,16 +85,17 @@
 
       main {
         position: relative;
-        width: min(100%, 1240px);
+        width: min(100%, 1440px);
         margin: 0 auto;
-        padding: 24px 20px 64px;
+        padding: 18px 16px 56px;
         z-index: 1;
       }
 
       .page-header {
+        width: min(100%, 880px);
+        margin: 0 auto 24px;
         text-align: center;
-        padding-top: 28px;
-        margin-bottom: 22px;
+        padding-top: 18px;
       }
 
       .page-header.is-hidden {
@@ -123,52 +124,21 @@
       }
 
       .phone-shell {
-        display: flex;
-        justify-content: center;
-        padding-top: 4px;
+        display: block;
+        padding-top: 0;
       }
 
       .phone {
         position: relative;
         isolation: isolate;
-        overflow: hidden;
-        width: min(100%, 540px);
-        min-height: calc(100vh - 120px);
-        padding: 20px;
-        border-radius: 38px;
-        border: 3px solid #1f1710;
-        background:
-          radial-gradient(circle at top, rgba(255, 247, 214, 0.92), transparent 34%),
-          linear-gradient(180deg, rgba(250, 242, 221, 0.98), rgba(253, 247, 235, 0.99)),
-          var(--paper);
-        box-shadow:
-          var(--shadow-deep),
-          inset 0 1px 0 rgba(255, 255, 255, 0.92),
-          inset 0 -18px 40px rgba(178, 138, 50, 0.06);
-      }
-
-      .phone::before,
-      .phone::after {
-        content: "";
-        position: absolute;
-        pointer-events: none;
-        z-index: -1;
-      }
-
-      .phone::before {
-        inset: 12px;
-        border-radius: 26px;
-        border: 1px solid rgba(178, 138, 50, 0.18);
-        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.32);
-      }
-
-      .phone::after {
-        top: -80px;
-        right: -60px;
-        width: 220px;
-        height: 220px;
-        border-radius: 50%;
-        background: radial-gradient(circle, rgba(255, 228, 142, 0.26), rgba(255, 228, 142, 0));
+        overflow: visible;
+        width: 100%;
+        min-height: 0;
+        padding: 0;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        box-shadow: none;
       }
 
       .status-row {
@@ -179,6 +149,10 @@
         color: var(--green);
         font-size: 12px;
         min-height: 40px;
+        margin-bottom: 10px;
+        position: sticky;
+        top: 8px;
+        z-index: 14;
       }
 
       .status-row.is-hidden {
@@ -359,6 +333,11 @@
         margin-top: 14px;
       }
 
+      .card-stack {
+        display: grid;
+        gap: 16px;
+      }
+
       .field {
         display: grid;
         gap: 6px;
@@ -410,10 +389,24 @@
         display: grid;
         gap: 14px;
         align-content: start;
+        min-width: 0;
       }
 
       .screen-grid {
         gap: 16px;
+      }
+
+      .screen-grid > *,
+      .screen-primary > *,
+      .screen-secondary > *,
+      .screen-column > *,
+      .decision-layout > *,
+      .decision-layout-main > *,
+      .decision-layout-cards > *,
+      .result-layout > *,
+      .result-layout-main > *,
+      .result-layout-side > * {
+        min-width: 0;
       }
 
       .button-row.split-actions {
@@ -613,13 +606,13 @@
       }
 
       .like-btn {
-        min-width: 88px;
+        min-width: 90px;
         justify-content: center;
-        border-color: rgba(160, 112, 122, 0.34);
-        background: linear-gradient(180deg, rgba(255, 251, 251, 0.98), rgba(247, 237, 241, 0.94));
-        color: #7d3e58;
+        border-color: rgba(168, 143, 92, 0.28);
+        background: linear-gradient(180deg, rgba(255, 254, 248, 0.98), rgba(247, 239, 218, 0.94));
+        color: #715536;
         box-shadow:
-          0 12px 18px rgba(92, 54, 69, 0.1),
+          0 12px 18px rgba(92, 67, 35, 0.08),
           inset 0 1px 0 rgba(255, 255, 255, 0.88);
       }
 
@@ -716,6 +709,10 @@
           inset 0 1px 0 rgba(255, 255, 255, 0.78),
           0 16px 30px rgba(29, 22, 15, 0.12);
         backdrop-filter: blur(12px);
+      }
+
+      #submitTopSlot .preview-card {
+        margin-top: 0;
       }
 
       .preview-card.is-floating {
@@ -869,6 +866,12 @@
         display: grid;
         gap: 10px;
         grid-template-columns: minmax(0, 1fr);
+      }
+
+      .appearance-footer {
+        display: flex;
+        justify-content: flex-start;
+        margin-top: 2px;
       }
 
       .setting-group {
@@ -1032,7 +1035,7 @@
 
       .action-grid {
         display: grid;
-        gap: 10px;
+        gap: 12px;
       }
 
       .action-card {
@@ -1247,7 +1250,7 @@
         position: relative;
         overflow: hidden;
         margin-top: 14px;
-        padding: 16px 18px 15px;
+        padding: 18px 20px 18px;
         border-radius: 22px;
         border: 2px solid rgba(118, 89, 63, 0.14);
         box-shadow:
@@ -1267,8 +1270,8 @@
         display: block;
         margin-top: 6px;
         color: var(--green-deep);
-        font-size: clamp(16px, 3vw, 21px);
-        line-height: 1.36;
+        font-size: clamp(18px, 3vw, 28px);
+        line-height: 1.28;
       }
 
       .decision-hero p {
@@ -1303,6 +1306,7 @@
         display: grid;
         gap: 14px;
         margin-top: 14px;
+        min-width: 0;
       }
 
       .decision-layout-main,
@@ -1312,6 +1316,43 @@
         display: grid;
         gap: 14px;
         align-content: start;
+        min-width: 0;
+      }
+
+      .result-support-grid {
+        display: grid;
+        gap: 16px;
+        margin-top: 16px;
+      }
+
+      #decisionSummarySlot:empty,
+      #resultExtraSlot:empty,
+      #resultCountsSlot:empty,
+      #resultActionsSlot:empty {
+        display: none;
+      }
+
+      .result-support-grid > div:empty {
+        display: none;
+      }
+
+      .card.card--form {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+      }
+
+      .card.card--form .button-row.align-right {
+        margin-top: auto;
+      }
+
+      .champion-overview {
+        display: grid;
+        gap: 14px;
+      }
+
+      .champion-overview > .panel {
+        height: 100%;
       }
 
       .decision-hero--round {
@@ -1645,7 +1686,7 @@
       .section-heading h3 {
         margin: 0;
         color: var(--green);
-        font-size: 15px;
+        font-size: 17px;
         font-weight: 800;
       }
 
@@ -2058,22 +2099,15 @@
         }
 
         .page-header {
-          padding-top: calc(60px + env(safe-area-inset-top));
+          width: 100%;
+          padding-top: calc(56px + env(safe-area-inset-top));
         }
 
         .phone {
           width: 100%;
           min-height: 100vh;
-          border: 0;
-          border-radius: 0;
-          box-shadow: none;
           padding: 12px;
           overflow: visible;
-        }
-
-        .phone::before,
-        .phone::after {
-          display: none;
         }
 
         .phone-shell {
@@ -2188,59 +2222,58 @@
         }
       }
 
-      @media (min-width: 900px) {
+      @media (min-width: 1080px) {
         main {
-          width: min(100%, 1460px);
-          padding-inline: 32px;
-          padding-bottom: 72px;
+          width: min(100%, 1520px);
+          padding: 24px 32px 72px;
         }
 
         .page-header {
-          margin-bottom: 28px;
+          margin-bottom: 26px;
         }
 
         .phone {
-          width: min(100%, 1180px);
+          width: 100%;
           min-height: 0;
-          padding: 28px 30px 32px;
-          border-radius: 42px;
+          padding: 0;
+          border-radius: 0;
         }
 
         .status-row {
           min-height: 44px;
-          margin-bottom: 8px;
+          margin-bottom: 14px;
         }
 
         .screen-grid {
-          gap: 22px;
+          gap: 24px;
         }
 
         .card,
         .panel {
-          padding: 24px;
+          padding: 26px;
         }
 
         .screen-grid--landing {
-          grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          align-items: stretch;
         }
 
-        .screen-grid--landing #landingChampionsSlot {
-          grid-column: 1 / -1;
+        #landingCreateSlot,
+        #landingJoinSlot,
+        #landingRecentSlot,
+        #landingRankingSlot {
+          display: grid;
         }
 
-        .champion-overview {
-          grid-template-columns: minmax(0, 1.05fr) minmax(360px, 0.95fr);
-          align-items: start;
-        }
-
-        .screen-grid--lobby .champion-overview,
-        .screen-grid--submit .champion-overview,
-        .screen-grid--wait .champion-overview {
-          grid-template-columns: minmax(0, 1fr);
+        #landingCreateSlot > *,
+        #landingJoinSlot > *,
+        #landingRecentSlot > *,
+        #landingRankingSlot > * {
+          height: 100%;
         }
 
         .screen-grid--lobby {
-          grid-template-columns: minmax(0, 0.94fr) minmax(360px, 1.06fr);
+          grid-template-columns: repeat(2, minmax(0, 1fr));
           align-items: start;
         }
 
@@ -2250,31 +2283,34 @@
         }
 
         .screen-grid--wait {
-          grid-template-columns: minmax(0, 0.92fr) minmax(360px, 1.08fr);
+          grid-template-columns: repeat(2, minmax(0, 1fr));
           align-items: start;
         }
 
         .decision-layout {
-          grid-template-columns: minmax(300px, 0.66fr) minmax(0, 1.34fr);
+          gap: 20px;
+        }
+
+        .result-support-grid {
+          grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
           align-items: start;
         }
 
-        .result-layout {
-          grid-template-columns: minmax(0, 1.14fr) minmax(360px, 0.86fr);
-          align-items: start;
+        .screen-card--champion .result-support-grid {
+          grid-template-columns: minmax(0, 1fr);
         }
 
         .action-grid {
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 14px;
+          grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+          gap: 16px;
         }
 
         .card h2 {
-          font-size: 32px;
+          font-size: 34px;
         }
 
         .panel h3 {
-          font-size: 20px;
+          font-size: 22px;
         }
 
         .history-dialog-body {
@@ -2283,11 +2319,17 @@
         }
 
         .history-dialog {
-          width: min(94vw, 1080px);
+          width: min(94vw, 1120px);
         }
 
         .preview-card.is-sticky {
           top: 16px;
+        }
+
+        .section-heading.stack {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
         }
       }
     </style>
@@ -2446,6 +2488,8 @@
           landingShellKey: "",
           landingCreateKey: "",
           landingJoinKey: "",
+          landingRecentKey: "",
+          landingRankingKey: "",
           landingChampionsKey: "",
           lobbyShellKey: "",
           lobbyTopKey: "",
@@ -4166,6 +4210,18 @@
         `;
       }
 
+      function renderRecentChampionsSection(title = "最近の総合優勝ワード") {
+        return `
+          <section class="panel">
+            <div class="section-heading stack">
+              <h3>${escapeHtml(title)}</h3>
+              <button class="btn secondary compact" type="button" data-action="open-champion-history">一覧を見る</button>
+            </div>
+            ${renderRecentChampions()}
+          </section>
+        `;
+      }
+
       function formatChampionHistoryWonAtCompact(value) {
         if (!value) {
           return "日時不明";
@@ -4612,14 +4668,15 @@
           <div class="screen-grid screen-grid--landing">
             <div id="landingCreateSlot"></div>
             <div id="landingJoinSlot"></div>
-            <div id="landingChampionsSlot"></div>
+            <div id="landingRecentSlot"></div>
+            <div id="landingRankingSlot"></div>
           </div>
         `;
       }
 
       function renderLandingCreate() {
         return `
-          <section class="card">
+          <section class="card card--form">
             <h2>ルームを作る</h2>
             <div class="field-stack">
               <div class="field">
@@ -4648,10 +4705,10 @@
 
       function renderLandingJoin() {
         return `
-          <section class="card">
+          <section class="card card--form">
             <h2>招待 URL から参加</h2>
             ${
-              state.inviteCode
+              hasUsableInviteCode(state.inviteCode)
                 ? renderFocusCallout({
                     label: "招待コード入力済み",
                     title: state.inviteCode,
@@ -4677,7 +4734,7 @@
       }
 
       function renderLandingChampions() {
-        return renderChampionHistoryTrigger("最近の総合優勝ワード");
+        return renderRecentChampionsSection("最近の総合優勝ワード");
       }
 
       function updateLandingView() {
@@ -4685,17 +4742,20 @@
           state.renderCache.landingShellKey = "landing";
           state.renderCache.landingCreateKey = "";
           state.renderCache.landingJoinKey = "";
-          state.renderCache.landingChampionsKey = "";
+          state.renderCache.landingRecentKey = "";
+          state.renderCache.landingRankingKey = "";
           els.app.innerHTML = renderLandingShell();
         }
 
         const createKey = [state.createDisplayName, state.playerCount, state.pendingAction ? "pending" : "idle"].join("|");
         const joinKey = [state.inviteCode, state.joinDisplayName, state.pendingAction ? "pending" : "idle"].join("|");
-        const championsKey = `${getRecentChampionsStamp()}|${getChampionRankingStamp()}`;
+        const recentKey = getRecentChampionsStamp();
+        const rankingKey = getChampionRankingStamp();
 
         patchSlot(els.app, "#landingCreateSlot", "landingCreateKey", createKey, renderLandingCreate());
         patchSlot(els.app, "#landingJoinSlot", "landingJoinKey", joinKey, renderLandingJoin());
-        patchSlot(els.app, "#landingChampionsSlot", "landingChampionsKey", championsKey, renderLandingChampions());
+        patchSlot(els.app, "#landingRecentSlot", "landingRecentKey", recentKey, renderLandingChampions());
+        patchSlot(els.app, "#landingRankingSlot", "landingRankingKey", rankingKey, renderChampionRankingSection());
       }
 
       function renderLobby(room) {
@@ -4883,7 +4943,6 @@
             <div class="screen-secondary">
               <div id="submitLineModeSlot"></div>
               <div id="submitSubmissionsSlot"></div>
-              <div id="submitUtilitySlot"></div>
             </div>
           </div>
         `;
@@ -4910,14 +4969,6 @@
           renderSubmissionList(submissions, "まだ公開されたワードはありません。"),
           { className: "panel" }
         );
-      }
-
-      function renderSubmitUtility() {
-        return `
-          <div class="button-row align-left">
-            <button class="btn danger" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
-          </div>
-        `;
       }
 
       function renderSubmitLineMode(room) {
@@ -5017,6 +5068,9 @@
                 </div>
               </section>
             </div>
+            <div class="appearance-footer">
+              <button class="btn danger compact" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
+            </div>
           </section>
         `;
       }
@@ -5056,7 +5110,6 @@
           state.renderCache.submitSubmissionsKey = "";
           state.renderCache.submitLineModeKey = "";
           state.renderCache.submitHandKey = "";
-          state.renderCache.submitUtilityKey = "";
           els.app.innerHTML = renderSubmitShell(room);
         }
 
@@ -5088,13 +5141,10 @@
           state.pendingAction ? "pending" : "idle",
           room.myHand.map((tile) => `${tile.tileId}:${tile.isUsed ? 1 : 0}`).join("|")
         ].join("|");
-        const utilityKey = state.pendingAction ? "pending" : "idle";
-
         patchSlot(els.app, "#submitTopSlot", "submitTopKey", topKey, renderSubmitTop(room));
         patchSlot(els.app, "#submitLineModeSlot", "submitLineModeKey", lineModeKey, renderSubmitLineMode(room));
         patchSlot(els.app, "#submitHandSlot", "submitHandKey", handKey, renderSubmitHand(room));
         patchSlot(els.app, "#submitSubmissionsSlot", "submitSubmissionsKey", submissionsKey, renderSubmitSubmissions(room));
-        patchSlot(els.app, "#submitUtilitySlot", "submitUtilityKey", utilityKey, renderSubmitUtility());
       }
 
       function renderWait(room) {
@@ -5248,6 +5298,8 @@
         state.renderCache.landingShellKey = "";
         state.renderCache.landingCreateKey = "";
         state.renderCache.landingJoinKey = "";
+        state.renderCache.landingRecentKey = "";
+        state.renderCache.landingRankingKey = "";
         state.renderCache.landingChampionsKey = "";
         state.renderCache.lobbyShellKey = "";
         state.renderCache.lobbyTopKey = "";
@@ -5281,18 +5333,12 @@
       function renderDecisionShell(title, screenClass = "screen-card--round") {
         return `
           ${renderScreenAlerts()}
-          <section class="card ${screenClass}">
+          <section class="card ${screenClass} decision-shell-card">
             <h2>${escapeHtml(title)}</h2>
-            <div class="decision-layout">
-              <div class="decision-layout-main">
-                <div id="decisionFocusSlot"></div>
-                <div id="decisionSummarySlot"></div>
-              </div>
-              <div class="decision-layout-cards">
-                <div id="decisionCardsSlot"></div>
-                <div id="decisionActionsSlot"></div>
-              </div>
-            </div>
+            <div id="decisionFocusSlot"></div>
+            <div id="decisionSummarySlot"></div>
+            <div id="decisionCardsSlot"></div>
+            <div id="decisionActionsSlot"></div>
           </section>
         `;
       }
@@ -5452,16 +5498,12 @@
           ${renderScreenAlerts()}
           <section class="card ${screenClass}">
             <h2>${escapeHtml(title)}</h2>
-            <div class="result-layout">
-              <div class="result-layout-main">
-                <div id="resultHeroSlot"></div>
-                <div id="resultActionsSlot"></div>
-              </div>
-              <div class="result-layout-side">
-                <div id="resultExtraSlot"></div>
-                <div id="resultCountsSlot"></div>
-              </div>
+            <div id="resultHeroSlot"></div>
+            <div class="result-support-grid">
+              <div id="resultExtraSlot"></div>
+              <div id="resultCountsSlot"></div>
             </div>
+            <div id="resultActionsSlot"></div>
           </section>
         `;
       }
@@ -5832,6 +5874,8 @@
           state.renderCache.landingShellKey = "";
           state.renderCache.landingCreateKey = "";
           state.renderCache.landingJoinKey = "";
+          state.renderCache.landingRecentKey = "";
+          state.renderCache.landingRankingKey = "";
           state.renderCache.landingChampionsKey = "";
           state.renderCache.submitShellKey = "";
           state.renderCache.submitTopKey = "";
@@ -5859,6 +5903,8 @@
           state.renderCache.landingShellKey = "";
           state.renderCache.landingCreateKey = "";
           state.renderCache.landingJoinKey = "";
+          state.renderCache.landingRecentKey = "";
+          state.renderCache.landingRankingKey = "";
           state.renderCache.landingChampionsKey = "";
           state.renderCache.lobbyShellKey = "";
           state.renderCache.lobbyTopKey = "";
@@ -5887,6 +5933,8 @@
           state.renderCache.landingShellKey = "";
           state.renderCache.landingCreateKey = "";
           state.renderCache.landingJoinKey = "";
+          state.renderCache.landingRecentKey = "";
+          state.renderCache.landingRankingKey = "";
           state.renderCache.landingChampionsKey = "";
           state.renderCache.lobbyShellKey = "";
           state.renderCache.lobbyTopKey = "";
@@ -5916,6 +5964,8 @@
           state.renderCache.landingShellKey = "";
           state.renderCache.landingCreateKey = "";
           state.renderCache.landingJoinKey = "";
+          state.renderCache.landingRecentKey = "";
+          state.renderCache.landingRankingKey = "";
           state.renderCache.landingChampionsKey = "";
           state.renderCache.lobbyShellKey = "";
           state.renderCache.lobbyTopKey = "";
@@ -5944,6 +5994,8 @@
           state.renderCache.landingShellKey = "";
           state.renderCache.landingCreateKey = "";
           state.renderCache.landingJoinKey = "";
+          state.renderCache.landingRecentKey = "";
+          state.renderCache.landingRankingKey = "";
           state.renderCache.landingChampionsKey = "";
           state.renderCache.lobbyShellKey = "";
           state.renderCache.lobbyTopKey = "";
@@ -6023,9 +6075,8 @@
         }
 
         const slotRect = submitTopSlot.getBoundingClientRect();
-        const statusBottom = els.statusRow?.getBoundingClientRect().bottom || 0;
         const feedbackBottom = els.feedbackDock?.children.length ? els.feedbackDock.getBoundingClientRect().bottom : 0;
-        const floatTop = Math.max(8, statusBottom, feedbackBottom) + 8;
+        const floatTop = Math.max(8, feedbackBottom + 8);
         const cardHeight = previewCard.offsetHeight;
         const revealOpen = !els.revealOverlay.hidden;
         const hasScrolled = window.scrollY > 1 || document.documentElement.scrollTop > 1 || document.body.scrollTop > 1;

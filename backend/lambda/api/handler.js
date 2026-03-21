@@ -470,7 +470,7 @@ function buildStartedRoom(room, deck) {
   const fallbackStartPlayerId = updatedRoom.hostPlayerId;
   const playerOrder =
     Array.isArray(updatedRoom.playerOrder) && updatedRoom.playerOrder.length
-      ? updatedRoom.playerOrder
+      ? sanitizePlayerOrder(updatedRoom, updatedRoom.playerOrder)
       : rotatePlayerOrder(
           playersInSeatOrder.map((player) => player.playerId),
           updatedRoom.startPlayerId || fallbackStartPlayerId
@@ -512,7 +512,7 @@ function getCurrentRound(room) {
 function getRoundPlayerOrder(room, roundIndex) {
   const baseOrder =
     Array.isArray(room.playerOrder) && room.playerOrder.length
-      ? room.playerOrder
+      ? sanitizePlayerOrder(room, room.playerOrder)
       : derivePlayerOrder(room);
   if (!baseOrder.length) {
     return [];
@@ -1380,10 +1380,31 @@ function rotatePlayerOrder(playerIds, startPlayerId) {
   return [...playerIds.slice(startIndex), ...playerIds.slice(0, startIndex)];
 }
 
-function derivePlayerOrder(room) {
-  const playerIds = getActivePlayers(room)
+function sanitizePlayerOrder(room, candidateOrder = []) {
+  const activePlayerIds = getActivePlayers(room)
+    .slice()
     .sort((left, right) => left.seatOrder - right.seatOrder)
     .map((player) => player.playerId);
+  const activePlayerIdSet = new Set(activePlayerIds);
+  const normalized = [];
+
+  for (const playerId of Array.isArray(candidateOrder) ? candidateOrder : []) {
+    if (activePlayerIdSet.has(playerId) && !normalized.includes(playerId)) {
+      normalized.push(playerId);
+    }
+  }
+
+  for (const playerId of activePlayerIds) {
+    if (!normalized.includes(playerId)) {
+      normalized.push(playerId);
+    }
+  }
+
+  return normalized;
+}
+
+function derivePlayerOrder(room) {
+  const playerIds = sanitizePlayerOrder(room);
 
   if (room.startPlayerId) {
     return rotatePlayerOrder(playerIds, room.startPlayerId);
@@ -1485,7 +1506,7 @@ function mapRoomResponse(room, mePlayer) {
     activePlayerCount: activePlayers.length,
     spectatorCount: spectatorPlayers.length,
     startPlayerId: room.startPlayerId,
-    playerOrder: Array.isArray(room.playerOrder) && room.playerOrder.length ? room.playerOrder : derivePlayerOrder(room),
+    playerOrder: sanitizePlayerOrder(room, Array.isArray(room.playerOrder) && room.playerOrder.length ? room.playerOrder : derivePlayerOrder(room)),
     game: {
       phase: room.game?.phase || "lobby",
       roundIndex: room.game?.roundIndex ?? null,
@@ -2199,7 +2220,7 @@ async function createDynamoRoomRepository(options = {}) {
         const updatedRoom = clone(room);
         updatedRoom.startPlayerId = startPlayerId;
         updatedRoom.playerOrder = rotatePlayerOrder(
-          updatedRoom.players
+          getActivePlayers(updatedRoom)
             .slice()
             .sort((left, right) => left.seatOrder - right.seatOrder)
             .map((player) => player.playerId),
@@ -2891,7 +2912,7 @@ function createMemoryRoomRepository() {
       const updatedRoom = clone(room);
       updatedRoom.startPlayerId = startPlayerId;
       updatedRoom.playerOrder = rotatePlayerOrder(
-        updatedRoom.players
+        getActivePlayers(updatedRoom)
           .slice()
           .sort((left, right) => left.seatOrder - right.seatOrder)
           .map((player) => player.playerId),

@@ -1521,6 +1521,7 @@
         align-items: center;
         justify-content: center;
         padding: 18px;
+        overflow: auto;
         background:
           radial-gradient(circle at center, rgba(255, 215, 116, 0.12), transparent 32%),
           rgba(28, 21, 14, 0.34);
@@ -1549,7 +1550,7 @@
       }
 
       .history-dialog {
-        width: min(100%, 460px);
+        width: min(100%, 760px);
         max-height: min(88vh, 760px);
         padding: 18px 16px 16px;
         border-radius: 28px;
@@ -1576,7 +1577,8 @@
 
       .history-dialog-body {
         display: grid;
-        gap: 16px;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 14px;
         margin-top: 14px;
         max-height: min(64vh, 520px);
         overflow: auto;
@@ -1602,6 +1604,7 @@
       .history-dialog-section {
         display: grid;
         gap: 12px;
+        grid-template-columns: minmax(0, 1fr);
       }
 
       .champion-overview {
@@ -1634,7 +1637,9 @@
       .history-ranking-list {
         display: grid;
         gap: 10px;
+        margin-top: 14px;
         align-content: start;
+        grid-auto-rows: minmax(96px, auto);
       }
 
       .history-ranking-card {
@@ -1676,7 +1681,12 @@
         display: block;
         overflow: hidden;
         text-overflow: ellipsis;
-        white-space: nowrap;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        line-height: 1.2;
       }
 
       .history-ranking-main span {
@@ -1684,11 +1694,33 @@
         font-size: 12px;
         overflow: hidden;
         text-overflow: ellipsis;
-        white-space: nowrap;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        line-height: 1.28;
       }
 
       .history-ranking-card--recent {
         background: rgba(255, 255, 255, 0.84);
+      }
+
+      .history-ranking-card--history {
+        min-height: 104px;
+        height: auto;
+        padding-block: 16px;
+      }
+
+      .history-ranking-card--history .history-ranking-main strong,
+      .history-ranking-card--history .history-ranking-main span {
+        white-space: normal;
+        overflow: visible;
+        text-overflow: clip;
+      }
+
+      .history-ranking-card--history .history-ranking-main strong {
+        line-height: 1.28;
       }
 
       .history-ranking-rank--date {
@@ -2393,13 +2425,8 @@
           font-size: 22px;
         }
 
-        .history-dialog-body {
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 18px;
-        }
-
         .history-dialog {
-          width: min(94vw, 1120px);
+          width: min(92vw, 760px);
         }
 
         .preview-card.is-sticky {
@@ -2408,12 +2435,43 @@
 
         .section-heading.stack {
           display: flex;
-          align-items: flex-start;
+          align-items: center;
           justify-content: space-between;
+          min-height: 44px;
         }
       }
 
       @media (max-width: 767px) {
+        .reveal-overlay {
+          align-items: flex-start;
+          padding: 10px 10px 24px;
+        }
+
+        .reveal-card {
+          max-height: none;
+          padding: 16px 12px 18px;
+        }
+
+        .reveal-card .word-board {
+          min-height: 168px;
+          margin-top: 12px;
+          padding: 10px 8px 4px;
+        }
+
+        .reveal-card.is-submission .word-board {
+          min-height: min(34vh, 216px);
+          padding: 12px 8px 6px;
+        }
+
+        .reveal-card.is-submission .preview-caption {
+          margin-top: 10px;
+          font-size: 16px;
+        }
+
+        .reveal-card.is-champion .champion-word {
+          min-height: min(30vh, 176px);
+        }
+
         .preview-card.is-live-preview {
           padding: 10px 12px 8px;
         }
@@ -4387,6 +4445,21 @@
         });
       }
 
+      function formatChampionHistoryWonDate(value) {
+        if (!value) {
+          return "日時不明";
+        }
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) {
+          return value;
+        }
+        return date.toLocaleDateString("ja-JP", {
+          year: "numeric",
+          month: "numeric",
+          day: "numeric"
+        });
+      }
+
       function renderChampionHistoryOverlay() {
         if (!state.championHistoryOpen) {
           state.renderCache.championHistoryKey = "";
@@ -4416,21 +4489,13 @@
           ? state.championHistoryItems
               .map(
                 (item) => `
-                  <article class="history-dialog-item">
-                    ${renderWordBoard(item.renderedLines || [item.phrase], item.fontId || "classic", "result-word", {
-                      maxFont: 28,
-                      minFont: 16,
-                      lineGapPreset: item.lineGapPreset,
-                      sizePreset: item.sizePreset,
-                      fontSizeHint: item.fontSizeHint
-                    })}
-                    <div class="history-dialog-footer">
-                      <div class="history-dialog-meta">
-                        <strong>${escapeHtml(item.displayName)}</strong>
-                        <span>${escapeHtml(formatChampionHistoryWonAt(item.wonAt))}</span>
-                      </div>
-                      ${renderChampionLikeButton(item)}
+                  <article class="history-ranking-card history-ranking-card--recent history-ranking-card--history">
+                    <div class="history-ranking-rank history-ranking-rank--date">${escapeHtml(formatChampionHistoryWonAtCompact(item.wonAt))}</div>
+                    <div class="history-ranking-main">
+                      <strong>${escapeHtml(item.phrase)}</strong>
+                      <span>${escapeHtml(item.displayName)} ・ ${escapeHtml(formatChampionHistoryWonDate(item.wonAt))}</span>
                     </div>
+                    ${renderChampionLikeButton(item)}
                   </article>
                 `
               )
@@ -4441,10 +4506,6 @@
           ${state.championHistoryPending ? `<div class="info-box">履歴を読み込んでいます。</div>` : ""}
           ${state.championHistoryError ? `<div class="info-box">${escapeHtml(state.championHistoryError)}</div>` : ""}
           <section class="history-dialog-section">
-            <div class="section-heading stack">
-              <h3>すべての総合優勝ワード</h3>
-              <span class="muted">${state.championHistoryItems.length}件</span>
-            </div>
             ${listHtml}
           </section>
           ${
@@ -4459,7 +4520,6 @@
               : ""
           }
         `;
-        hydrateWordBoards(els.historyDialogBody);
         els.historyOverlay.hidden = false;
       }
 
@@ -4950,17 +5010,21 @@
           <div class="player-list">
             ${room.game.players
               .map(
-                (player) => `
+                (player) => {
+                  const isMe = player.playerId === room.me.playerId;
+                  const metaLabel =
+                    player.role === "spectator"
+                      ? isMe
+                        ? "観戦 ・ あなた"
+                        : "観戦"
+                      : isMe
+                        ? `席順 ${player.seatOrder} ・ あなた`
+                        : `席順 ${player.seatOrder}`;
+                  return `
                   <div class="player-card">
                     <div>
                       <strong>${escapeHtml(player.displayName)}</strong>
-                      <span>${
-                        player.playerId === room.me.playerId
-                          ? "あなた"
-                          : player.role === "spectator"
-                            ? "観戦"
-                            : `席順 ${player.seatOrder}`
-                      }</span>
+                      <span>${escapeHtml(metaLabel)}</span>
                     </div>
                     <div class="player-role-actions">
                       <span class="${getPlayerRoleBadge(player).className}">${getPlayerRoleBadge(player).label}</span>
@@ -4977,7 +5041,8 @@
                       }
                     </div>
                   </div>
-                `
+                `;
+                }
               )
               .join("")}
           </div>
@@ -7074,19 +7139,8 @@
             state.isLoading = false;
             render({ immediate: true });
           } else if (invite) {
-            try {
-              await autoJoinInviteRoom(state.inviteCode);
-              state.isLoading = false;
-              render({ immediate: true });
-            } catch (error) {
-              exitToWelcome({
-                errorMessage: describeAppError(error, "join"),
-                preserveInviteCode: true,
-                inviteCode: state.inviteCode
-              });
-              state.isLoading = false;
-              render({ immediate: true });
-            }
+            state.isLoading = false;
+            render({ immediate: true });
           } else {
             state.isLoading = false;
             render({ immediate: true });

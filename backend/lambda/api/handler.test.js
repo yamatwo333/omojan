@@ -870,6 +870,42 @@ test("host can switch lobby members between player and spectator", async () => {
   assert.equal(body.data.room.game.players.find((player) => player.playerId === spectator.playerId).role, "player");
 });
 
+test("spectators are excluded from player order and first turn", async () => {
+  const handler = createTestHandler();
+  const session = await createSession(handler, ["ホスト", "ゲストA"]);
+  const host = findPlayer(session, "ホスト");
+
+  const spectatorJoinResponse = await handler(
+    createEvent("POST", "/v1/rooms/join", {
+      body: { inviteCode: session.inviteCode, displayName: "観戦B" }
+    })
+  );
+  const spectatorJoinBody = await parseResponse(spectatorJoinResponse);
+  const spectator = spectatorJoinBody.data.room.game.players.find((player) => player.displayName === "観戦B");
+
+  const setStartPlayerResponse = await handler(
+    createEvent("POST", `/v1/rooms/${session.roomId}/start-player`, {
+      headers: { "X-Omojan-Player-Token": host.playerToken },
+      body: { startPlayerId: host.playerId }
+    })
+  );
+  const setStartPlayerBody = await parseResponse(setStartPlayerResponse);
+  assert.equal(setStartPlayerResponse.statusCode, 200);
+  assert.equal(setStartPlayerBody.data.room.playerOrder.includes(spectator.playerId), false);
+
+  const startResponse = await handler(
+    createEvent("POST", `/v1/rooms/${session.roomId}/start`, {
+      headers: { "X-Omojan-Player-Token": host.playerToken },
+      body: {}
+    })
+  );
+  const startBody = await parseResponse(startResponse);
+  assert.equal(startResponse.statusCode, 200);
+  assert.equal(startBody.data.room.playerOrder.includes(spectator.playerId), false);
+  assert.equal(startBody.data.room.game.activePlayerIds.includes(spectator.playerId), false);
+  assert.equal(startBody.data.room.game.currentTurnPlayerId, host.playerId);
+});
+
 test("host can transfer host role to another active player in lobby", async () => {
   const handler = createTestHandler();
   const session = await createSession(handler, ["ホスト", "ゲストA", "ゲストB"]);

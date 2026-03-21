@@ -149,10 +149,9 @@
         color: var(--green);
         font-size: 12px;
         min-height: 40px;
-        margin-bottom: 10px;
-        position: sticky;
-        top: 8px;
-        z-index: 14;
+        margin-bottom: 14px;
+        position: relative;
+        z-index: 4;
       }
 
       .status-row.is-hidden {
@@ -385,7 +384,8 @@
       .screen-grid,
       .screen-primary,
       .screen-secondary,
-      .screen-column {
+      .screen-column,
+      .screen-wide {
         display: grid;
         gap: 14px;
         align-content: start;
@@ -416,6 +416,17 @@
 
       .button-row.split-actions .btn.primary {
         margin-left: auto;
+      }
+
+      .button-stack {
+        display: grid;
+        gap: 10px;
+        margin-top: 12px;
+        justify-items: flex-start;
+      }
+
+      .button-stack.align-right {
+        justify-items: flex-end;
       }
 
       .chip-row.compact {
@@ -690,19 +701,13 @@
       .preview-card::before,
       .result-stage::before,
       .champion-stage::before {
-        content: "";
-        position: absolute;
-        inset: 10px;
-        border-radius: 18px;
-        border: 1px solid rgba(255, 255, 255, 0.46);
-        box-shadow: var(--frame-glow);
-        pointer-events: none;
+        display: none;
       }
 
       .preview-card.is-sticky {
         position: -webkit-sticky;
         position: sticky;
-        top: 8px;
+        top: 6px;
         z-index: 8;
         padding: 13px 12px;
         box-shadow:
@@ -713,6 +718,31 @@
 
       #submitTopSlot .preview-card {
         margin-top: 0;
+        transform: translateY(-2px);
+      }
+
+      .preview-card.is-live-preview {
+        display: grid;
+        justify-items: center;
+        gap: 0;
+      }
+
+      .preview-card.is-live-preview .reveal-badge {
+        justify-self: flex-start;
+      }
+
+      .preview-card.is-live-preview .word-board {
+        width: min(100%, 520px);
+        min-height: min(52vh, 340px);
+        margin-top: 16px;
+        padding: 12px 10px 4px;
+      }
+
+      .preview-card.is-live-preview .preview-caption {
+        margin-top: 12px;
+        color: var(--green);
+        font-size: 18px;
+        font-weight: 800;
       }
 
       .preview-card.is-floating {
@@ -751,14 +781,13 @@
       .champion-stage .word-board,
       .history-dialog-item .word-board,
       .reveal-card .word-board,
-      .round-winner-card .word-board {
-        padding: 18px 14px;
-        border-radius: 22px;
-        background: var(--mahjong-face);
-        border: 1px solid rgba(194, 160, 88, 0.22);
-        box-shadow:
-          inset 0 1px 0 rgba(255, 255, 255, 0.88),
-          0 16px 28px rgba(35, 22, 11, 0.08);
+      .round-winner-card .word-board,
+      .action-card .word-board {
+        padding: 10px 8px 4px;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        box-shadow: none;
       }
 
       .word-board.board-skin-bare {
@@ -1599,6 +1628,7 @@
         grid-template-columns: auto minmax(0, 1fr) auto;
         align-items: center;
         gap: 10px;
+        min-height: 92px;
         padding: 14px 15px;
         border-radius: 16px;
         border: 1px solid rgba(118, 89, 63, 0.14);
@@ -1634,6 +1664,18 @@
       .history-ranking-main span {
         color: var(--muted);
         font-size: 12px;
+      }
+
+      .history-ranking-card--recent {
+        background: rgba(255, 255, 255, 0.84);
+      }
+
+      .history-ranking-rank--date {
+        min-width: 72px;
+        color: #6b5a42;
+        font-size: 13px;
+        font-weight: 800;
+        background: rgba(255, 252, 245, 0.9);
       }
 
       .history-ranking-card.is-rank-1 {
@@ -1674,6 +1716,7 @@
         align-items: center;
         justify-content: space-between;
         gap: 12px;
+        margin-bottom: 16px;
       }
 
       .section-heading.stack {
@@ -1681,6 +1724,7 @@
         grid-template-columns: minmax(0, 1fr);
         align-items: flex-start;
         gap: 10px;
+        margin-bottom: 18px;
       }
 
       .section-heading h3 {
@@ -1727,12 +1771,7 @@
       }
 
       .reveal-card::after {
-        content: "";
-        position: absolute;
-        inset: 11px;
-        border-radius: 21px;
-        border: 1px solid rgba(255, 255, 255, 0.5);
-        pointer-events: none;
+        display: none;
       }
 
       .reveal-card.is-champion {
@@ -1781,10 +1820,7 @@
       }
 
       .reveal-card.is-champion::after {
-        inset: 10px;
-        border-radius: 22px;
-        border: 1px solid rgba(255, 243, 195, 0.65);
-        box-shadow: inset 0 0 22px rgba(255, 243, 195, 0.34);
+        display: none;
       }
 
       .reveal-badge {
@@ -1852,14 +1888,14 @@
 
       .reveal-card .word-board {
         min-height: 210px;
-        margin-top: 12px;
-        padding: 12px 14px 10px;
+        margin-top: 16px;
+        padding: 12px 10px 6px;
       }
 
       .reveal-card.is-submission .word-board {
         min-height: min(52vh, 340px);
-        margin-top: 0;
-        padding: 26px 28px 18px;
+        margin-top: 10px;
+        padding: 16px 12px 8px;
       }
 
       .reveal-card.is-submission .reveal-actions {
@@ -1968,6 +2004,8 @@
 
       .round-winner-card .word-board {
         min-height: 136px;
+        margin-top: 10px;
+        padding: 8px 6px 4px;
       }
 
       .champion-stage.is-grand {
@@ -2277,6 +2315,10 @@
           align-items: start;
         }
 
+        .screen-grid--lobby .screen-wide {
+          grid-column: 1 / -1;
+        }
+
         .screen-grid--submit {
           grid-template-columns: minmax(0, 1.08fr) minmax(360px, 0.92fr);
           align-items: start;
@@ -2298,6 +2340,11 @@
 
         .screen-card--champion .result-support-grid {
           grid-template-columns: minmax(0, 1fr);
+        }
+
+        .champion-overview {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          align-items: start;
         }
 
         .action-grid {
@@ -2323,7 +2370,7 @@
         }
 
         .preview-card.is-sticky {
-          top: 16px;
+          top: 12px;
         }
 
         .section-heading.stack {
@@ -3150,7 +3197,7 @@
         const maxFont = Math.max(minFontBase, Math.round(maxFontBase * sizePreset.renderScale), fontSizeHint);
         const minFont = Math.max(12, Math.round(minFontBase * Math.max(0.68, sizePreset.renderScale - 0.08)));
         const lineGapPreset = options.lineGapPreset || "none";
-        const boardSkin = options.boardSkin || "framed";
+        const boardSkin = options.boardSkin || "bare";
         return `
           <div
             class="word-board auto-fit-word ${variant} board-skin-${boardSkin} ${getFontClass(fontId)}${mode === "single" ? " is-single-line" : ""}"
@@ -3683,11 +3730,11 @@
 
       async function loadRecentChampions() {
         try {
-          const payload = await apiRequest("/champions/recent?limit=5", { playerToken: "" });
+          const payload = await apiRequest("/champions/recent?limit=10", { playerToken: "" });
           state.recentChampions = payload.data.items || [];
         } catch {
           const payload = await fetchJson(FIXTURE_CHAMPIONS_URL);
-          state.recentChampions = (payload.data.items || []).map((item) => ({
+          state.recentChampions = (payload.data.items || []).slice(0, 10).map((item) => ({
             ...item,
             likeCount: Number(item.likeCount || 0),
             likedByMe: false
@@ -4150,16 +4197,14 @@
         return renderHistoryList(
           state.recentChampions,
           (item) => `
-            <div class="history-card">
-              <div class="history-card-main">
+            <article class="history-ranking-card history-ranking-card--recent">
+              <div class="history-ranking-rank history-ranking-rank--date">${escapeHtml(formatChampionHistoryWonAtCompact(item.wonAt))}</div>
+              <div class="history-ranking-main">
                 <strong>${escapeHtml(item.phrase)}</strong>
                 <span>${escapeHtml(item.displayName)}</span>
               </div>
-              <div class="history-card-side">
-                <span>${escapeHtml(formatChampionHistoryWonAtCompact(item.wonAt))}</span>
-                ${renderChampionLikeButton(item)}
-              </div>
-            </div>
+              ${renderChampionLikeButton(item)}
+            </article>
           `,
           "最近の総合優勝ワードはまだありません。"
         );
@@ -4392,7 +4437,7 @@
           label,
           entry,
           wordClass,
-          boardSkin = "framed",
+          boardSkin = "bare",
           maxFont,
           minFont,
           emptyText,
@@ -4771,13 +4816,13 @@
                 <h2>ルーム待機中</h2>
                 <div id="lobbyTopSlot"></div>
                 <div id="lobbyPlayersSlot"></div>
-                <div id="lobbyUtilitySlot"></div>
               </section>
+              <div id="lobbyUtilitySlot"></div>
             </div>
             <div class="screen-secondary">
               <div id="lobbyOrderSlot"></div>
-              <div id="lobbyChampionsSlot"></div>
             </div>
+            <div class="screen-wide" id="lobbyChampionsSlot"></div>
           </div>
         `;
       }
@@ -4853,7 +4898,7 @@
       function renderLobbyUtility(room) {
         return `
           <div class="button-row align-left">
-            <button class="btn danger" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
+            <button class="btn danger compact" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
           </div>
         `;
       }
@@ -4949,8 +4994,10 @@
       }
 
       function renderSubmitTop(room) {
+        const roundLabel = getCurrentRound(room)?.label || "ラウンド";
         return `
-          <section class="preview-card is-sticky">
+          <section class="preview-card is-sticky is-live-preview">
+            <span class="reveal-badge">${escapeHtml(roundLabel)}</span>
             <div
               id="previewWord"
               class="word-board preview-word ${getFontClass(state.draftFontId)}${state.draftLineMode === "single" ? " is-single-line" : ""}"
@@ -4958,6 +5005,7 @@
             >
               ${computeDraftLayout().lines.map((line) => `<span class="word-line">${escapeHtml(line)}</span>`).join("")}
             </div>
+            <p class="preview-caption">${escapeHtml(room.me.displayName)}</p>
           </section>
         `;
       }
@@ -5195,14 +5243,14 @@
         const decisionCompletion = getDecisionCompletion(room);
         if (decisionCompletion) {
           return `
-            <div class="button-row align-left">
+            <div class="button-stack">
               <button class="btn secondary" type="button" data-action="edit-current-vote" ${state.pendingAction ? "disabled" : ""}>${escapeHtml(decisionCompletion.buttonLabel)}</button>
               <button class="btn ghost" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
             </div>
           `;
         }
         return `
-          <div class="button-row align-left">
+          <div class="button-stack">
             <button class="btn ghost" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
           </div>
         `;
@@ -6214,7 +6262,7 @@
           sizePreset: reveal.sizePreset || "large",
           fontSizeHint: reveal.fontSizeHint || 0,
           lineGapPreset: reveal.lineGapPreset || "none",
-          boardSkin: "framed",
+          boardSkin: "bare",
           meta: resolvePlayerDisplayName(room, reveal.playerId, reveal.displayName),
             buttonLabel: meAcknowledged ? "ほかの人を待っています" : "閉じる",
             acknowledged: meAcknowledged,
@@ -6231,7 +6279,7 @@
           sizePreset: normalizeSizePresetId(reveal.sizePreset || "large"),
           fontSizeHint: reveal.fontSizeHint || 0,
           lineGapPreset: reveal.lineGapPreset || "none",
-          boardSkin: "framed",
+          boardSkin: "bare",
           meta: resolvePlayerDisplayName(room, reveal.playerId, reveal.displayName),
           buttonLabel: meAcknowledged ? "ほかの人を待っています" : "閉じる",
           acknowledged: meAcknowledged,
@@ -6291,7 +6339,7 @@
         els.revealWord.dataset.fontSizeHint = presentation.fontSizeHint ? String(presentation.fontSizeHint) : "";
         els.revealWord.dataset.sizePreset = sizePreset.id;
         els.revealWord.dataset.lineGapPreset = presentation.lineGapPreset || "none";
-        els.revealWord.dataset.boardSkin = presentation.boardSkin || "framed";
+        els.revealWord.dataset.boardSkin = presentation.boardSkin || "bare";
         els.revealWord.className = `word-board auto-fit-word ${els.revealWord.dataset.variant}`;
         els.revealWord.innerHTML = presentation.lines.map((line) => `<span class="word-line">${escapeHtml(line)}</span>`).join("");
         hydrateWordBoard(els.revealWord);

@@ -738,13 +738,57 @@ test("host can reorder lobby player order directly inside the participant list",
   await third.getByRole("button", { name: "この表示名で参加" }).click();
 
   await host.reload();
-  await host.getByRole("button", { name: "OrderGuestを上へ移動" }).click();
+  const guestHandle = host
+    .locator(".player-card[data-order-player-id]", { hasText: "OrderGuest" })
+    .locator("[data-order-grab-player-id]")
+    .first();
+  const hostCard = host.locator(".player-card[data-order-player-id]", { hasText: "OrderHost" }).first();
+  const guestHandleBox = await guestHandle.boundingBox();
+  const hostCardBox = await hostCard.boundingBox();
+  if (!guestHandleBox || !hostCardBox) {
+    throw new Error("Lobby reorder handles are not visible.");
+  }
+  await host.mouse.move(guestHandleBox.x + guestHandleBox.width / 2, guestHandleBox.y + guestHandleBox.height / 2);
+  await host.mouse.down();
+  await host.mouse.move(hostCardBox.x + hostCardBox.width / 2, hostCardBox.y + hostCardBox.height / 2, { steps: 12 });
+  await host.mouse.up();
   await expect(host.locator(".player-card[data-order-player-id]").first()).toContainText("OrderGuest");
-  await expect(host.locator("body")).toContainText("あなたの席 2番手 OrderHost");
+  await expect(host.locator("body")).toContainText("2番手 / OrderHost");
 
   await hostContext.close();
   await guestContext.close();
   await thirdContext.close();
+});
+
+test("host leaving the lobby removes the player and transfers host to the next participant", async ({ browser }) => {
+  const hostContext = await browser.newContext();
+  const guestContext = await browser.newContext();
+  const host = await hostContext.newPage();
+  const guest = await guestContext.newPage();
+
+  await host.goto(STATIC_URL);
+  await host.fill("#createDisplayName", "LeaveHost");
+  await host.getByRole("button", { name: "2人" }).click();
+  await host.getByRole("button", { name: "ルームを作る" }).click();
+  const inviteCode = ((await host.locator(".room-code").textContent()) || "").trim();
+
+  await guest.goto(`${STATIC_URL}&invite=${encodeURIComponent(inviteCode)}`);
+  await guest.fill("#joinDisplayNameInvite", "LeaveGuest");
+  await guest.getByRole("button", { name: "この表示名で参加" }).click();
+  await expect(guest.getByRole("heading", { name: "ルーム待機中" })).toBeVisible();
+
+  host.once("dialog", (dialog) => dialog.accept());
+  await host.getByRole("button", { name: "退出する" }).click();
+  await expect(host.getByRole("heading", { name: "ルームを作る" })).toBeVisible({ timeout: 10000 });
+
+  await guest.reload();
+  await expect(guest.locator("body")).toContainText("ホスト LeaveGuest", { timeout: 10000 });
+  await expect(guest.locator(".player-card")).toHaveCount(1);
+  await expect(guest.locator(".player-card").first()).toContainText("LeaveGuest");
+  await expect(guest.locator("body")).not.toContainText("LeaveHost");
+
+  await hostContext.close();
+  await guestContext.close();
 });
 
 test("app shows a friendly message for an invalid invite code", async ({ page }) => {

@@ -97,6 +97,7 @@ function parseRoute(method, pathname) {
     { method: "GET", pattern: /^\/v1\/rooms\/([^/]+)$/, route: "getRoom" },
     { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/reconnect$/, route: "reconnectRoom" },
     { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/edit-vote$/, route: "editCurrentVote" },
+    { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/leave$/, route: "leaveRoom" },
     { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/reveal-close$/, route: "closeReveal" },
     { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/start-player$/, route: "startPlayer" },
     { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/player-order$/, route: "setPlayerOrder" },
@@ -163,6 +164,7 @@ function handleHealth() {
       "rooms:get",
       "rooms:reconnect",
       "rooms:edit-vote",
+      "rooms:leave",
       "rooms:reveal-close",
       "rooms:start-player",
       "rooms:player-order",
@@ -1259,6 +1261,303 @@ function buildRestartedRoom(room, mePlayer) {
   return updatedRoom;
 }
 
+function buildSingleSubmissionCounts(round) {
+  if (!round?.submissions?.length) {
+    return [];
+  }
+  return round.submissions.map((submission) => ({
+    playerId: submission.playerId,
+    displayName: submission.displayName || submission.playerId,
+    phrase: submission.phrase || submission.playerId,
+    count: 0
+  }));
+}
+
+function buildSingleCandidateCounts(finalVote) {
+  if (!finalVote?.candidates?.length) {
+    return [];
+  }
+  return finalVote.candidates.map((candidate) => ({
+    candidateId: candidate.candidateId,
+    displayName: candidate.displayName || candidate.playerId,
+    phrase: candidate.phrase || candidate.candidateId,
+    count: 0
+  }));
+}
+
+function assignFallbackHost(updatedRoom) {
+  let nextHost =
+    sanitizePlayerOrder(updatedRoom, updatedRoom.playerOrder || [])
+      .map((playerId) => updatedRoom.players.find((player) => player.playerId === playerId))
+      .find(Boolean) || null;
+
+  if (!nextHost) {
+    nextHost = updatedRoom.players.slice().sort((left, right) => left.seatOrder - right.seatOrder)[0] || null;
+  }
+
+  updatedRoom.players.forEach((player) => {
+    player.isHost = Boolean(nextHost && player.playerId === nextHost.playerId);
+  });
+  updatedRoom.hostPlayerId = nextHost?.playerId || null;
+
+  if (
+    nextHost &&
+    normalizePlayerRole(nextHost.role) === "spectator" &&
+    updatedRoom.game?.phase === "lobby" &&
+    getGamePlayerCount(updatedRoom) < updatedRoom.playerCount
+  ) {
+    nextHost.role = "player";
+  }
+
+  updatedRoom.playerOrder = derivePlayerOrder(updatedRoom);
+  if (!updatedRoom.playerOrder.includes(updatedRoom.startPlayerId)) {
+    updatedRoom.startPlayerId = updatedRoom.playerOrder[0] || updatedRoom.hostPlayerId || null;
+  }
+}
+
+function reconcileRoundAfterPlayerLeave(updatedRoom) {
+  const round = getCurrentRound(updatedRoom);
+  if (!round) {
+    return;
+  }
+
+  const activePlayerIds = getActivePlayers(updatedRoom).map((player) => player.playerId);
+  const activePlayerIdSet = new Set(activePlayerIds);
+  const phase = updatedRoom.game?.phase || "";
+
+  round.submissions = (round.submissions || []).filter((submission) => activePlayerIdSet.has(submission.playerId));
+  round.votes = Object.fromEntries(
+    Object.entries(round.votes || {}).filter(([playerId, targetId]) => activePlayerIdSet.has(playerId) && activePlayerIdSet.has(targetId))
+  );
+  round.revotes = Object.fromEntries(
+    Object.entries(round.revotes || {}).filter(([playerId, targetId]) => activePlayerIdSet.has(playerId) && activePlayerIdSet.has(targetId))
+  );
+
+  if (!activePlayerIds.length) {
+    updatedRoom.game.currentTurnPlayerId = null;
+    clearReveal(updatedRoom);
+    return;
+  }
+
+  if (phase === "round_submit") {
+    const roundOrder = getRoundPlayerOrder(updatedRoom, updatedRoom.game.roundIndex ?? round.roundIndex);
+    if (round.submissions.length === 1 && roundOrder.length === 1) {
+      setRoundWinner(updatedRoom, round, round.submissions[0].playerId, "leave", buildSingleSubmissionCounts(round));
+      return;
+    }
+    const nextTurnPlayerId =
+      roundOrder.find((playerId) => !round.submissions.some((submission) => submission.playerId === playerId)) || null;
+    if (nextTurnPlayerId) {
+      updatedRoom.game.currentTurnPlayerId = nextTurnPlayerId;
+      updatedRoom.game.phase = "round_submit";
+      round.phaseStatus = "submit";
+      return;
+    }
+    updatedRoom.game.currentTurnPlayerId = null;
+    updatedRoom.game.phase = "round_vote";
+    round.phaseStatus = "vote";
+    return;
+  }
+
+  if (!round.submissions.length) {
+    updatedRoom.game.currentTurnPlayerId = activePlayerIds[0] || null;
+    updatedRoom.game.phase = "round_submit";
+    round.phaseStatus = "submit";
+    round.voteSummary = null;
+    round.hostDecision = null;
+    return;
+  }
+
+  if (round.submissions.length === 1) {
+    setRoundWinner(updatedRoom, round, round.submissions[0].playerId, "leave", buildSingleSubmissionCounts(round));
+    return;
+  }
+
+  if (phase === "round_host_decide") {
+    const validTiedIds = (round.voteSummary?.tiedPlayerIds || []).filter((playerId) => activePlayerIdSet.has(playerId));
+    if (validTiedIds.length <= 1) {
+      setRoundWinner(updatedRoom, round, validTiedIds[0] || round.submissions[0].playerId, "leave", round.voteSummary?.counts || buildSingleSubmissionCounts(round));
+      return;
+    }
+    round.voteSummary = {
+      counts: (round.voteSummary?.counts || []).filter((item) => activePlayerIdSet.has(item.playerId)),
+      tiedPlayerIds: validTiedIds
+    };
+    updatedRoom.game.currentTurnPlayerId = null;
+    updatedRoom.game.phase = "round_host_decide";
+    round.phaseStatus = "host_decide";
+    return;
+  }
+
+  const isRevote = phase === "round_revote";
+  const ballotKey = isRevote ? "revotes" : "votes";
+  const validTargetIds = isRevote
+    ? (round.voteSummary?.tiedPlayerIds || []).filter((playerId) => activePlayerIdSet.has(playerId))
+    : round.submissions.map((submission) => submission.playerId);
+
+  const ballots = Object.fromEntries(
+    Object.entries(round[ballotKey] || {}).filter(([playerId, targetId]) => activePlayerIdSet.has(playerId) && validTargetIds.includes(targetId))
+  );
+  round[ballotKey] = ballots;
+  const expectedVoterCount = activePlayerIds.length;
+  if (Object.keys(ballots).length < expectedVoterCount) {
+    updatedRoom.game.currentTurnPlayerId = null;
+    updatedRoom.game.phase = isRevote ? "round_revote" : "round_vote";
+    round.phaseStatus = isRevote ? "revote" : "vote";
+    return;
+  }
+
+  const summary = summarizeRoundVotes(round, validTargetIds, ballots);
+  round.voteSummary = {
+    counts: summary.counts,
+    tiedPlayerIds: summary.tiedPlayerIds.length > 1 ? summary.tiedPlayerIds : []
+  };
+  if (summary.tiedPlayerIds.length > 1) {
+    updatedRoom.game.currentTurnPlayerId = null;
+    updatedRoom.game.phase = isRevote ? "round_host_decide" : "round_revote";
+    round.phaseStatus = isRevote ? "host_decide" : "revote";
+    if (!isRevote) {
+      round.revotes = {};
+    }
+    return;
+  }
+
+  setRoundWinner(updatedRoom, round, summary.winnerPlayerId, "leave", summary.counts);
+}
+
+function reconcileFinalVoteAfterPlayerLeave(updatedRoom) {
+  const finalVote = updatedRoom.game?.finalVote;
+  if (!finalVote) {
+    return;
+  }
+
+  const activePlayerIds = getActivePlayers(updatedRoom).map((player) => player.playerId);
+  const activePlayerIdSet = new Set(activePlayerIds);
+  const phase = updatedRoom.game?.phase || "";
+
+  finalVote.candidates = (finalVote.candidates || []).filter((candidate) => activePlayerIdSet.has(candidate.playerId));
+  finalVote.votes = Object.fromEntries(
+    Object.entries(finalVote.votes || {}).filter(([playerId, candidateId]) => activePlayerIdSet.has(playerId) && finalVote.candidates.some((candidate) => candidate.candidateId === candidateId))
+  );
+  finalVote.revotes = Object.fromEntries(
+    Object.entries(finalVote.revotes || {}).filter(([playerId, candidateId]) => activePlayerIdSet.has(playerId) && finalVote.candidates.some((candidate) => candidate.candidateId === candidateId))
+  );
+
+  if (!finalVote.candidates.length) {
+    updatedRoom.game.currentTurnPlayerId = null;
+    clearReveal(updatedRoom);
+    return;
+  }
+
+  if (finalVote.candidates.length === 1) {
+    setFinalWinner(updatedRoom, finalVote, finalVote.candidates[0].candidateId, "leave", buildSingleCandidateCounts(finalVote));
+    return;
+  }
+
+  if (phase === "final_host_decide") {
+    const validTiedIds = (finalVote.voteSummary?.tiedCandidateIds || []).filter((candidateId) =>
+      finalVote.candidates.some((candidate) => candidate.candidateId === candidateId)
+    );
+    if (validTiedIds.length <= 1) {
+      setFinalWinner(updatedRoom, finalVote, validTiedIds[0] || finalVote.candidates[0].candidateId, "leave", finalVote.voteSummary?.counts || buildSingleCandidateCounts(finalVote));
+      return;
+    }
+    finalVote.voteSummary = {
+      counts: (finalVote.voteSummary?.counts || []).filter((item) => validTiedIds.includes(item.candidateId)),
+      tiedCandidateIds: validTiedIds
+    };
+    updatedRoom.game.currentTurnPlayerId = null;
+    updatedRoom.game.phase = "final_host_decide";
+    finalVote.phaseStatus = "host_decide";
+    return;
+  }
+
+  const isRevote = phase === "final_revote";
+  const ballotKey = isRevote ? "revotes" : "votes";
+  const validTargetIds = isRevote
+    ? (finalVote.voteSummary?.tiedCandidateIds || []).filter((candidateId) => finalVote.candidates.some((candidate) => candidate.candidateId === candidateId))
+    : finalVote.candidates.map((candidate) => candidate.candidateId);
+  const ballots = Object.fromEntries(
+    Object.entries(finalVote[ballotKey] || {}).filter(([playerId, candidateId]) => activePlayerIdSet.has(playerId) && validTargetIds.includes(candidateId))
+  );
+  finalVote[ballotKey] = ballots;
+  const expectedVoterCount = getEligibleFinalVoterIds(finalVote, updatedRoom.players, isRevote ? "revote" : "vote").length;
+  if (Object.keys(ballots).length < expectedVoterCount) {
+    updatedRoom.game.currentTurnPlayerId = null;
+    updatedRoom.game.phase = isRevote ? "final_revote" : "final_vote";
+    finalVote.phaseStatus = isRevote ? "revote" : "vote";
+    return;
+  }
+
+  const summary = summarizeFinalVotes(finalVote, validTargetIds, ballots);
+  finalVote.voteSummary = {
+    counts: summary.counts,
+    tiedCandidateIds: summary.tiedCandidateIds.length > 1 ? summary.tiedCandidateIds : []
+  };
+  if (summary.tiedCandidateIds.length > 1) {
+    updatedRoom.game.currentTurnPlayerId = null;
+    updatedRoom.game.phase = isRevote ? "final_host_decide" : "final_revote";
+    finalVote.phaseStatus = isRevote ? "host_decide" : "revote";
+    if (!isRevote) {
+      finalVote.revotes = {};
+    }
+    return;
+  }
+
+  setFinalWinner(updatedRoom, finalVote, summary.winnerCandidateId, "leave", summary.counts);
+}
+
+function buildRoomAfterPlayerLeave(room, mePlayer) {
+  const updatedRoom = clone(room);
+  const leavingPlayerId = mePlayer.playerId;
+  const leavingPlayer = updatedRoom.players.find((player) => player.playerId === leavingPlayerId);
+  if (!leavingPlayer) {
+    throw domainError(404, "PLAYER_NOT_FOUND", "対象プレイヤーが見つかりません。");
+  }
+
+  updatedRoom.players = updatedRoom.players.filter((player) => player.playerId !== leavingPlayerId);
+  updatedRoom.playerOrder = (updatedRoom.playerOrder || []).filter((playerId) => playerId !== leavingPlayerId);
+  if (updatedRoom.startPlayerId === leavingPlayerId) {
+    updatedRoom.startPlayerId = updatedRoom.playerOrder[0] || null;
+  }
+  if (updatedRoom.game?.initialHands?.[leavingPlayerId]) {
+    delete updatedRoom.game.initialHands[leavingPlayerId];
+  }
+
+  if (updatedRoom.game?.reveal?.playerId === leavingPlayerId) {
+    clearReveal(updatedRoom);
+  } else if (updatedRoom.game?.reveal) {
+    updatedRoom.game.reveal.acknowledgedPlayerIds = (updatedRoom.game.reveal.acknowledgedPlayerIds || []).filter(
+      (playerId) => playerId !== leavingPlayerId
+    );
+  }
+
+  if (leavingPlayer.isHost || !updatedRoom.players.some((player) => player.isHost)) {
+    assignFallbackHost(updatedRoom);
+  } else {
+    updatedRoom.playerOrder = derivePlayerOrder(updatedRoom);
+    if (!updatedRoom.playerOrder.includes(updatedRoom.startPlayerId)) {
+      updatedRoom.startPlayerId = updatedRoom.playerOrder[0] || updatedRoom.hostPlayerId || null;
+    }
+  }
+
+  reconcileRoundAfterPlayerLeave(updatedRoom);
+  reconcileFinalVoteAfterPlayerLeave(updatedRoom);
+
+  if (!updatedRoom.players.length) {
+    updatedRoom.hostPlayerId = null;
+    updatedRoom.startPlayerId = null;
+    updatedRoom.playerOrder = [];
+    updatedRoom.game.currentTurnPlayerId = null;
+    clearReveal(updatedRoom);
+  }
+
+  updatedRoom.updatedAt = nowIso();
+  updatedRoom.expiresAt = Math.floor(Date.now() / 1000) + ROOM_TTL_SECONDS;
+  updatedRoom.revision += 1;
+  return updatedRoom;
+}
+
 function normalizeRequestedPlayerOrder(room, playerOrder) {
   const activePlayerIds = getActivePlayers(room)
     .slice()
@@ -2309,6 +2608,35 @@ async function createDynamoRoomRepository(options = {}) {
       throw domainError(409, "CONFLICT_RETRY", "開始順の更新が競合しました。もう一度お試しください。", true);
     },
 
+    async leaveRoom(roomId, playerToken) {
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        const room = await getRoomItem(roomId);
+        if (!room) {
+          throw domainError(404, "ROOM_NOT_FOUND", "指定された room は存在しません。");
+        }
+        const mePlayer = getPlayerByToken(room, playerToken);
+        if (!mePlayer) {
+          throw domainError(401, "PLAYER_TOKEN_INVALID", "playerToken が必要です。");
+        }
+
+        const updatedRoom = buildRoomAfterPlayerLeave(room, mePlayer);
+        try {
+          await putRoomItem(updatedRoom, room.revision);
+          return {
+            room: updatedRoom,
+            leftPlayerId: mePlayer.playerId
+          };
+        } catch (error) {
+          if (toConditionalFailure(error)) {
+            continue;
+          }
+          throw error;
+        }
+      }
+
+      throw domainError(409, "CONFLICT_RETRY", "退出処理が競合しました。もう一度お試しください。", true);
+    },
+
     async setPlayerRole(roomId, playerToken, targetPlayerId, nextRole) {
       for (let attempt = 0; attempt < 5; attempt += 1) {
         const room = await getRoomItem(roomId);
@@ -3006,6 +3334,24 @@ function createMemoryRoomRepository() {
       return { room: clone(updatedRoom), mePlayer: clone(updatedMePlayer) };
     },
 
+    async leaveRoom(roomId, playerToken) {
+      const room = rooms.get(roomId);
+      if (!room) {
+        throw domainError(404, "ROOM_NOT_FOUND", "指定された room は存在しません。");
+      }
+      const mePlayer = getPlayerByToken(room, playerToken);
+      if (!mePlayer) {
+        throw domainError(401, "PLAYER_TOKEN_INVALID", "playerToken が必要です。");
+      }
+
+      const updatedRoom = buildRoomAfterPlayerLeave(room, mePlayer);
+      saveRoom(updatedRoom);
+      return {
+        room: clone(updatedRoom),
+        leftPlayerId: mePlayer.playerId
+      };
+    },
+
     async setPlayerRole(roomId, playerToken, targetPlayerId, nextRole) {
       const room = rooms.get(roomId);
       if (!room) {
@@ -3434,6 +3780,18 @@ function createHandler(options = {}) {
           }
           const result = await repository.editCurrentVote(matched.params[0], playerToken);
           return ok(toRoomPayload(result.room, result.mePlayer));
+        }
+        case "leaveRoom": {
+          const repository = await roomRepositoryPromise;
+          const playerToken = getHeader(event, "X-Omojan-Player-Token");
+          if (!playerToken) {
+            return fail(401, "PLAYER_TOKEN_INVALID", "playerToken が必要です。");
+          }
+          const result = await repository.leaveRoom(matched.params[0], playerToken);
+          return ok({
+            roomId: matched.params[0],
+            leftPlayerId: result.leftPlayerId
+          });
         }
         case "closeReveal": {
           const body = parseBody(event);

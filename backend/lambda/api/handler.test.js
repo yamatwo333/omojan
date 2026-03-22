@@ -265,6 +265,21 @@ async function proceedRound(handler, session, roundIndex) {
   return body.data.room;
 }
 
+async function leaveRoomFor(handler, session, player) {
+  const response = await handler(
+    createEvent("POST", `/v1/rooms/${session.roomId}/leave`, {
+      headers: {
+        "X-Omojan-Player-Token": player.playerToken
+      },
+      body: {}
+    })
+  );
+  const body = await parseResponse(response);
+  assert.equal(response.statusCode, 200);
+  assert.equal(body.ok, true);
+  return body.data;
+}
+
 async function closeRevealFor(handler, session, player) {
   const response = await handler(
     createEvent("POST", `/v1/rooms/${session.roomId}/reveal-close`, {
@@ -433,6 +448,7 @@ test("GET /v1/health returns lambda scaffold metadata", async () => {
     "rooms:get",
     "rooms:reconnect",
     "rooms:edit-vote",
+    "rooms:leave",
     "rooms:reveal-close",
     "rooms:start-player",
     "rooms:player-order",
@@ -926,6 +942,36 @@ test("host can transfer host role to another active player in lobby", async () =
   assert.equal(body.data.room.hostPlayerId, nextHost.playerId);
   assert.equal(body.data.room.game.players.find((player) => player.playerId === nextHost.playerId).isHost, true);
   assert.equal(body.data.room.game.players.find((player) => player.playerId === host.playerId).isHost, false);
+});
+
+test("leave removes the player and automatically transfers host in lobby", async () => {
+  const handler = createTestHandler();
+  const session = await createSession(handler, ["ホスト", "ゲストA", "ゲストB"]);
+  const host = findPlayer(session, "ホスト");
+  const guestA = findPlayer(session, "ゲストA");
+
+  const leaveBody = await leaveRoomFor(handler, session, host);
+  assert.equal(leaveBody.leftPlayerId, host.playerId);
+
+  const guestRoom = await getRoom(handler, session.roomId, guestA.playerToken);
+  assert.equal(guestRoom.hostPlayerId, guestA.playerId);
+  assert.equal(guestRoom.game.players.some((player) => player.playerId === host.playerId), false);
+  assert.deepEqual(guestRoom.playerOrder, [guestA.playerId, findPlayer(session, "ゲストB").playerId]);
+});
+
+test("leave during round vote removes the player and lets the round continue", async () => {
+  const handler = createTestHandler();
+  const session = await createSession(handler, ["ホスト", "ゲストA"]);
+  const host = findPlayer(session, "ホスト");
+  const guest = findPlayer(session, "ゲストA");
+
+  await startGame(handler, session, "ホスト");
+  await submitAllForCurrentRound(handler, session, 0);
+
+  let room = await leaveRoomFor(handler, session, guest).then(() => getRoom(handler, session.roomId, host.playerToken));
+  assert.equal(room.game.phase, "round_result");
+  assert.equal(room.game.rounds[0].winner.playerId, host.playerId);
+  assert.equal(room.game.players.some((player) => player.playerId === guest.playerId), false);
 });
 
 test("get room returns notModified when client revision is current", async () => {

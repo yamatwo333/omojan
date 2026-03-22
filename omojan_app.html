@@ -693,6 +693,27 @@
         margin-left: auto;
       }
 
+      .order-grab {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 30px;
+        min-height: 30px;
+        padding: 0 8px;
+        border-radius: 999px;
+        border: 1px dashed rgba(184, 138, 50, 0.26);
+        background: rgba(255, 252, 245, 0.92);
+        color: #725726;
+        font-size: 13px;
+        font-weight: 900;
+        cursor: grab;
+        touch-action: none;
+      }
+
+      .order-grab:active {
+        cursor: grabbing;
+      }
+
       .order-tool {
         display: inline-flex;
         align-items: center;
@@ -766,6 +787,14 @@
         border-color: rgba(184, 68, 49, 0.32);
       }
 
+      .player-card--order.is-drop-target {
+        border-color: rgba(35, 87, 60, 0.34);
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.86),
+          0 0 0 2px rgba(62, 142, 97, 0.14),
+          0 16px 26px rgba(24, 47, 34, 0.1);
+      }
+
       .player-card--spectator {
         background:
           linear-gradient(180deg, rgba(252, 252, 252, 0.9), rgba(243, 244, 246, 0.84)),
@@ -787,6 +816,10 @@
 
       .lobby-control-row {
         align-items: center;
+      }
+
+      .lobby-control-row .btn + .btn {
+        margin-left: 8px;
       }
 
       .screen-grid--invite-entry {
@@ -895,6 +928,10 @@
         margin-top: 18px;
         padding-top: 16px;
         border-top: 1px solid rgba(184, 138, 50, 0.16);
+      }
+
+      .lobby-leave {
+        margin-top: 14px;
       }
 
       .preview-card.is-floating {
@@ -2527,7 +2564,7 @@
         }
 
         .screen-grid--lobby {
-          grid-template-columns: minmax(0, 1.12fr) minmax(420px, 0.88fr);
+          grid-template-columns: minmax(0, 1fr);
           align-items: start;
         }
 
@@ -2787,6 +2824,7 @@
         playerCount: 4,
         selectedStartPlayerId: "",
         draggingLobbyPlayerId: "",
+        dragTargetLobbyPlayerId: "",
         draftSelectedTileIds: [],
         draftFontId: "broadcast",
         draftSizePreset: "medium",
@@ -5214,13 +5252,13 @@
         const activePlayerCount = getActivePlayerCount(room);
         const spectatorCount = Number(room.spectatorCount || room.game?.spectatorPlayerIds?.length || 0);
         const mySeatLabel = getLobbySeatLabel(room, room.me.playerId);
-        const mySeatValue = room.me.role === "spectator" ? `観戦 ${room.me.displayName}` : `${mySeatLabel} ${room.me.displayName}`;
+        const mySeatValue = room.me.role === "spectator" ? `${room.me.displayName} / 観戦` : `${mySeatLabel} / ${room.me.displayName}`;
         return `
           ${renderSummaryPills([
             { label: "ROOM", value: room.inviteCode },
             { label: "参加", value: `${activePlayerCount}/${room.playerCount}人` },
             ...(spectatorCount ? [{ label: "観戦", value: `${spectatorCount}人` }] : []),
-            { label: "あなたの席", value: mySeatValue },
+            { label: "あなた", value: mySeatValue },
             ...(hostPlayer ? [{ label: "ホスト", value: hostPlayer.displayName }] : [])
           ])}
             <div class="button-row align-left">
@@ -5265,20 +5303,19 @@
                     <div class="player-card-main">
                       <div class="player-card-heading">
                         <span class="order-badge">${escapeHtml(seatLabel)}</span>
-                        ${isMe ? `<span class="badge badge--you">あなたの席</span>` : ""}
+                        ${isMe ? `<span class="badge badge--you">あなた</span>` : ""}
                         ${
                           canReorder
                             ? `
                               <span class="player-order-tools">
-                                <button class="order-tool" type="button" draggable="false" data-action="move-player-order" data-target-player-id="${player.playerId}" data-direction="up" ${index === 0 || state.pendingAction ? "disabled" : ""} aria-label="${escapeHtml(player.displayName)}を上へ移動">↑</button>
-                                <button class="order-tool" type="button" draggable="false" data-action="move-player-order" data-target-player-id="${player.playerId}" data-direction="down" ${index === orderedPlayers.length - 1 || state.pendingAction ? "disabled" : ""} aria-label="${escapeHtml(player.displayName)}を下へ移動">↓</button>
+                                <button class="order-grab" type="button" draggable="false" data-order-grab-player-id="${player.playerId}" aria-label="${escapeHtml(player.displayName)}をドラッグして並び替え">⇅</button>
                               </span>
                             `
                             : ""
                         }
                       </div>
                       <strong>${escapeHtml(player.displayName)}</strong>
-                      <span>${escapeHtml(isMe ? `あなたは ${seatLabel}` : seatLabel)}</span>
+                      <span>${escapeHtml(isMe ? `席順 ${index + 1} / あなた` : `席順 ${index + 1}`)}</span>
                     </div>
                     <div class="player-role-actions">
                       <span class="${getPlayerRoleBadge(player).className}">${getPlayerRoleBadge(player).label}</span>
@@ -5304,7 +5341,7 @@
               spectatorPlayers.length
                 ? `
                   <div class="player-section">
-                    <div class="player-section-label">観戦</div>
+                    <div class="player-section-label">観戦者</div>
                     ${spectatorPlayers
                       .map((player) => {
                         const isMe = player.playerId === room.me.playerId;
@@ -5312,19 +5349,17 @@
                           <div class="player-card player-card--spectator${isMe ? " player-card--me" : ""}">
                             <div class="player-card-main">
                               <div class="player-card-heading">
-                                <span class="order-badge order-badge--spectator">観戦</span>
                                 ${isMe ? `<span class="badge badge--you">あなた</span>` : ""}
                               </div>
                               <strong>${escapeHtml(player.displayName)}</strong>
-                              <span>${escapeHtml(isMe ? "この端末は観戦" : "観戦中")}</span>
+                              <span>${escapeHtml(isMe ? "この端末は観戦モードです" : "見守り中")}</span>
                             </div>
                             <div class="player-role-actions">
-                              <span class="${getPlayerRoleBadge(player).className}">${getPlayerRoleBadge(player).label}</span>
                               ${
                                 room.me.isHost && !player.isHost
                                   ? `
                                     <div class="chip-row compact">
-                                      <button class="chip" type="button" data-action="set-player-role" data-target-player-id="${player.playerId}" data-role="player" ${state.pendingAction ? "disabled" : ""}>参加</button>
+                                      <button class="chip" type="button" data-action="set-player-role" data-target-player-id="${player.playerId}" data-role="player" ${state.pendingAction ? "disabled" : ""}>参加にする</button>
                                     </div>
                                   `
                                   : ""
@@ -5358,13 +5393,15 @@
                 `
                 : `<div class="info-box">${room.me.role === "spectator" ? "観戦として待機中です。" : "ホストの開始待ちです。"}</div>`
             }
-            <button class="btn ghost compact" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
+            <div class="lobby-leave">
+              <button class="btn ghost compact" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
+            </div>
           </div>
         `;
       }
 
       function renderLobbyChampions() {
-        return renderLobbyChampionPanels();
+        return renderChampionHistoryTrigger("最近の総合優勝ワード");
       }
 
       function updateLobbyView(room) {
@@ -6999,6 +7036,20 @@
         return nextOrder;
       }
 
+      function clearLobbyDragUi() {
+        state.draggingLobbyPlayerId = "";
+        state.dragTargetLobbyPlayerId = "";
+        document.querySelectorAll("[data-order-player-id].is-dragging").forEach((node) => node.classList.remove("is-dragging"));
+        document.querySelectorAll("[data-order-player-id].is-drop-target").forEach((node) => node.classList.remove("is-drop-target"));
+      }
+
+      function updateLobbyDropTarget(targetId) {
+        state.dragTargetLobbyPlayerId = targetId || "";
+        document.querySelectorAll("[data-order-player-id]").forEach((node) => {
+          node.classList.toggle("is-drop-target", Boolean(targetId) && node.dataset.orderPlayerId === targetId);
+        });
+      }
+
       async function persistLobbyPlayerOrder(playerOrder) {
         if (!state.roomId || !state.playerToken || !Array.isArray(playerOrder) || !playerOrder.length) {
           return;
@@ -7164,6 +7215,17 @@
           );
           if (!confirmed) {
             return;
+          }
+          const roomId = state.roomId;
+          const playerToken = state.playerToken;
+          try {
+            if (roomId && playerToken) {
+              await postApi(`/rooms/${encodeURIComponent(roomId)}/leave`, {});
+            }
+          } catch (error) {
+            if (!recoverLostSession(error, "leave")) {
+              throw error;
+            }
           }
           exitToWelcome({
             copyMessage: "退出しました。必要なら招待コードですぐ入り直せます。",
@@ -7418,6 +7480,7 @@
         }
         event.preventDefault();
         event.dataTransfer.dropEffect = "move";
+        updateLobbyDropTarget(card.dataset.orderPlayerId || "");
       });
 
       document.addEventListener("drop", async (event) => {
@@ -7428,8 +7491,7 @@
         event.preventDefault();
         const draggedId = state.draggingLobbyPlayerId;
         const targetId = card.dataset.orderPlayerId || "";
-        state.draggingLobbyPlayerId = "";
-        document.querySelectorAll("[data-order-player-id].is-dragging").forEach((node) => node.classList.remove("is-dragging"));
+        clearLobbyDragUi();
         if (!targetId || draggedId === targetId) {
           return;
         }
@@ -7442,8 +7504,51 @@
       });
 
       document.addEventListener("dragend", () => {
-        state.draggingLobbyPlayerId = "";
-        document.querySelectorAll("[data-order-player-id].is-dragging").forEach((node) => node.classList.remove("is-dragging"));
+        clearLobbyDragUi();
+      });
+
+      document.addEventListener("pointerdown", (event) => {
+        const handle = event.target.closest?.("[data-order-grab-player-id]");
+        if (!handle || deriveView() !== "lobby" || !state.room?.me?.isHost) {
+          return;
+        }
+        state.draggingLobbyPlayerId = handle.dataset.orderGrabPlayerId || "";
+        const card = handle.closest("[data-order-player-id]");
+        card?.classList.add("is-dragging");
+        handle.setPointerCapture?.(event.pointerId);
+        event.preventDefault();
+      });
+
+      document.addEventListener("pointermove", (event) => {
+        if (!state.draggingLobbyPlayerId || deriveView() !== "lobby" || !state.room?.me?.isHost) {
+          return;
+        }
+        const target = document.elementFromPoint(event.clientX, event.clientY)?.closest?.("[data-order-player-id]");
+        updateLobbyDropTarget(target?.dataset.orderPlayerId || "");
+        event.preventDefault();
+      });
+
+      document.addEventListener("pointerup", async (event) => {
+        if (!state.draggingLobbyPlayerId || deriveView() !== "lobby" || !state.room?.me?.isHost) {
+          return;
+        }
+        const draggedId = state.draggingLobbyPlayerId;
+        const target = document.elementFromPoint(event.clientX, event.clientY)?.closest?.("[data-order-player-id]");
+        const targetId = target?.dataset.orderPlayerId || state.dragTargetLobbyPlayerId || "";
+        clearLobbyDragUi();
+        if (!targetId || draggedId === targetId) {
+          return;
+        }
+        const nextOrder = reorderLobbyPlayerIds(
+          getLobbyPlayerOrder(state.room).map((player) => player.playerId),
+          draggedId,
+          targetId
+        );
+        await persistLobbyPlayerOrder(nextOrder);
+      });
+
+      document.addEventListener("pointercancel", () => {
+        clearLobbyDragUi();
       });
 
       els.closeRevealBtn.addEventListener("click", () => {

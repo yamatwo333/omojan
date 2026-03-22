@@ -147,7 +147,7 @@ async function setupRoundVoteRoom() {
   await api(`/rooms/${encodeURIComponent(roomId)}/reveal-close`, { method: "POST", body: JSON.stringify({}) }, hostToken);
   await api(`/rooms/${encodeURIComponent(roomId)}/reveal-close`, { method: "POST", body: JSON.stringify({}) }, guestToken);
 
-  return { roomId, hostToken };
+  return { roomId, hostToken, guestToken };
 }
 
 async function createTwoPlayerRoom(browser) {
@@ -364,6 +364,37 @@ test("app shows a vote complete screen and lets the player return to change the 
   await expect(page.locator("[data-vote-id][aria-pressed='true']")).toHaveCount(0);
 });
 
+test("vote selection stays selected while another player submits a vote", async ({ page }) => {
+  const session = await setupRoundVoteRoom();
+
+  await page.goto(STATIC_URL);
+  await page.evaluate(({ roomId, hostToken }) => {
+    window.localStorage.setItem("omojan-app-room-id", roomId);
+    window.localStorage.setItem("omojan-app-player-token", hostToken);
+  }, session);
+  await page.reload();
+
+  await expect(page.getByRole("heading", { name: "投票" })).toBeVisible();
+  const hostCandidate = page.locator("[data-vote-id]:not([disabled])", { hasText: "HostAppTest" }).first();
+  await hostCandidate.click();
+  await expect(hostCandidate).toHaveAttribute("aria-pressed", "true");
+
+  const guestRoom = await api(`/rooms/${encodeURIComponent(session.roomId)}/reconnect`, { method: "POST" }, session.guestToken);
+  const guestTarget = guestRoom.room.game.rounds[0].submissions.find((item) => item.playerId !== guestRoom.room.me.playerId);
+  await api(
+    `/rooms/${encodeURIComponent(session.roomId)}/rounds/0/vote`,
+    {
+      method: "POST",
+      body: JSON.stringify({ targetPlayerId: guestTarget.playerId })
+    },
+    session.guestToken
+  );
+
+  await page.getByRole("button", { name: "更新" }).click();
+  await expect(page.getByRole("heading", { name: "投票" })).toBeVisible();
+  await expect(page.locator("[data-vote-id][aria-pressed='true']", { hasText: "HostAppTest" }).first()).toBeVisible();
+});
+
 test("app can complete create, join, start, submit, vote, host decision, and show round result", async ({ browser }) => {
   const { hostContext, guestContext, host, guest } = await createTwoPlayerRoom(browser);
 
@@ -483,8 +514,8 @@ test("mobile submit view keeps a floating preview and uses unified reveal labels
   await host.locator('[data-size-preset="tiny"]').click();
   await host.waitForTimeout(200);
   const smallFontSize = await host.locator("#previewWord .word-line").first().evaluate((node) => Number.parseFloat(getComputedStyle(node).fontSize));
-  expect(largeFontSize - mediumFontSize).toBeGreaterThanOrEqual(12);
-  expect(mediumFontSize - smallFontSize).toBeGreaterThanOrEqual(12);
+  expect(largeFontSize / mediumFontSize).toBeGreaterThanOrEqual(1.8);
+  expect(mediumFontSize / smallFontSize).toBeGreaterThanOrEqual(1.8);
   const noOverflow = await host.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1);
   expect(noOverflow).toBeTruthy();
 
@@ -738,15 +769,12 @@ test("host can reorder lobby player order directly inside the participant list",
   await third.getByRole("button", { name: "この表示名で参加" }).click();
 
   await host.reload();
-  const guestHandle = host
-    .locator(".player-card[data-order-player-id]", { hasText: "OrderGuest" })
-    .locator("[data-order-grab-player-id]")
-    .first();
+  const guestCard = host.locator(".player-card[data-order-player-id]", { hasText: "OrderGuest" }).first();
   const hostCard = host.locator(".player-card[data-order-player-id]", { hasText: "OrderHost" }).first();
-  const guestHandleBox = await guestHandle.boundingBox();
+  const guestHandleBox = await guestCard.boundingBox();
   const hostCardBox = await hostCard.boundingBox();
   if (!guestHandleBox || !hostCardBox) {
-    throw new Error("Lobby reorder handles are not visible.");
+    throw new Error("Lobby reorder cards are not visible.");
   }
   await host.mouse.move(guestHandleBox.x + guestHandleBox.width / 2, guestHandleBox.y + guestHandleBox.height / 2);
   await host.mouse.down();
@@ -758,6 +786,34 @@ test("host can reorder lobby player order directly inside the participant list",
   await hostContext.close();
   await guestContext.close();
   await thirdContext.close();
+});
+
+test("host can kick another player from the lobby", async ({ browser }) => {
+  const hostContext = await browser.newContext();
+  const guestContext = await browser.newContext();
+  const host = await hostContext.newPage();
+  const guest = await guestContext.newPage();
+
+  await host.goto(STATIC_URL);
+  await host.fill("#createDisplayName", "KickHost");
+  await host.getByRole("button", { name: "2人" }).click();
+  await host.getByRole("button", { name: "ルームを作る" }).click();
+  const inviteCode = ((await host.locator(".room-code").textContent()) || "").trim();
+
+  await guest.goto(`${STATIC_URL}&invite=${encodeURIComponent(inviteCode)}`);
+  await guest.fill("#joinDisplayNameInvite", "KickGuest");
+  await guest.getByRole("button", { name: "この表示名で参加" }).click();
+  await expect(guest.getByRole("heading", { name: "ルーム待機中" })).toBeVisible();
+
+  host.once("dialog", (dialog) => dialog.accept());
+  await host.locator(".player-card", { hasText: "KickGuest" }).getByRole("button", { name: "退出させる" }).click();
+  await expect(host.locator("body")).not.toContainText("KickGuest");
+
+  await guest.reload();
+  await expect(guest.getByRole("heading", { name: "このルームに参加" })).toBeVisible({ timeout: 10000 });
+
+  await hostContext.close();
+  await guestContext.close();
 });
 
 test("host leaving the lobby removes the player and transfers host to the next participant", async ({ browser }) => {

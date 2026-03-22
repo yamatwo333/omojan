@@ -98,6 +98,7 @@ function parseRoute(method, pathname) {
     { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/reconnect$/, route: "reconnectRoom" },
     { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/edit-vote$/, route: "editCurrentVote" },
     { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/leave$/, route: "leaveRoom" },
+    { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/kick-player$/, route: "kickPlayer" },
     { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/reveal-close$/, route: "closeReveal" },
     { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/start-player$/, route: "startPlayer" },
     { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/player-order$/, route: "setPlayerOrder" },
@@ -165,6 +166,7 @@ function handleHealth() {
       "rooms:reconnect",
       "rooms:edit-vote",
       "rooms:leave",
+      "rooms:kick-player",
       "rooms:reveal-close",
       "rooms:start-player",
       "rooms:player-order",
@@ -1507,9 +1509,9 @@ function reconcileFinalVoteAfterPlayerLeave(updatedRoom) {
   setFinalWinner(updatedRoom, finalVote, summary.winnerCandidateId, "leave", summary.counts);
 }
 
-function buildRoomAfterPlayerLeave(room, mePlayer) {
+function buildRoomAfterPlayerRemoval(room, playerId) {
   const updatedRoom = clone(room);
-  const leavingPlayerId = mePlayer.playerId;
+  const leavingPlayerId = playerId;
   const leavingPlayer = updatedRoom.players.find((player) => player.playerId === leavingPlayerId);
   if (!leavingPlayer) {
     throw domainError(404, "PLAYER_NOT_FOUND", "対象プレイヤーが見つかりません。");
@@ -1556,6 +1558,10 @@ function buildRoomAfterPlayerLeave(room, mePlayer) {
   updatedRoom.expiresAt = Math.floor(Date.now() / 1000) + ROOM_TTL_SECONDS;
   updatedRoom.revision += 1;
   return updatedRoom;
+}
+
+function buildRoomAfterPlayerLeave(room, mePlayer) {
+  return buildRoomAfterPlayerRemoval(room, mePlayer.playerId);
 }
 
 function normalizeRequestedPlayerOrder(room, playerOrder) {
@@ -2637,6 +2643,47 @@ async function createDynamoRoomRepository(options = {}) {
       throw domainError(409, "CONFLICT_RETRY", "退出処理が競合しました。もう一度お試しください。", true);
     },
 
+    async kickPlayer(roomId, playerToken, targetPlayerId) {
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        const room = await getRoomItem(roomId);
+        if (!room) {
+          throw domainError(404, "ROOM_NOT_FOUND", "指定された room は存在しません。");
+        }
+        const mePlayer = getPlayerByToken(room, playerToken);
+        if (!mePlayer) {
+          throw domainError(401, "PLAYER_TOKEN_INVALID", "playerToken が必要です。");
+        }
+        if (!mePlayer.isHost) {
+          throw domainError(403, "NOT_HOST", "ホストのみ実行できます。");
+        }
+        if (room.game?.phase !== "lobby") {
+          throw domainError(409, "INVALID_PHASE", "lobby でのみ退出させられます。");
+        }
+        if (!targetPlayerId || targetPlayerId === mePlayer.playerId) {
+          throw domainError(400, "INVALID_TARGET", "対象プレイヤーが不正です。");
+        }
+
+        const targetPlayer = room.players.find((player) => player.playerId === targetPlayerId);
+        if (!targetPlayer) {
+          throw domainError(404, "PLAYER_NOT_FOUND", "対象プレイヤーが見つかりません。");
+        }
+
+        const updatedRoom = buildRoomAfterPlayerRemoval(room, targetPlayerId);
+        try {
+          await putRoomItem(updatedRoom, room.revision);
+          const updatedMePlayer = updatedRoom.players.find((player) => player.playerId === mePlayer.playerId);
+          return { room: updatedRoom, mePlayer: updatedMePlayer, kickedPlayerId: targetPlayerId };
+        } catch (error) {
+          if (toConditionalFailure(error)) {
+            continue;
+          }
+          throw error;
+        }
+      }
+
+      throw domainError(409, "CONFLICT_RETRY", "退出処理が競合しました。もう一度お試しください。", true);
+    },
+
     async setPlayerRole(roomId, playerToken, targetPlayerId, nextRole) {
       for (let attempt = 0; attempt < 5; attempt += 1) {
         const room = await getRoomItem(roomId);
@@ -3352,6 +3399,36 @@ function createMemoryRoomRepository() {
       };
     },
 
+    async kickPlayer(roomId, playerToken, targetPlayerId) {
+      const room = rooms.get(roomId);
+      if (!room) {
+        throw domainError(404, "ROOM_NOT_FOUND", "指定された room は存在しません。");
+      }
+      const mePlayer = getPlayerByToken(room, playerToken);
+      if (!mePlayer) {
+        throw domainError(401, "PLAYER_TOKEN_INVALID", "playerToken が必要です。");
+      }
+      if (!mePlayer.isHost) {
+        throw domainError(403, "NOT_HOST", "ホストのみ実行できます。");
+      }
+      if (room.game?.phase !== "lobby") {
+        throw domainError(409, "INVALID_PHASE", "lobby でのみ退出させられます。");
+      }
+      if (!targetPlayerId || targetPlayerId === mePlayer.playerId) {
+        throw domainError(400, "INVALID_TARGET", "対象プレイヤーが不正です。");
+      }
+
+      const targetPlayer = room.players.find((player) => player.playerId === targetPlayerId);
+      if (!targetPlayer) {
+        throw domainError(404, "PLAYER_NOT_FOUND", "対象プレイヤーが見つかりません。");
+      }
+
+      const updatedRoom = buildRoomAfterPlayerRemoval(room, targetPlayerId);
+      saveRoom(updatedRoom);
+      const updatedMePlayer = updatedRoom.players.find((player) => player.playerId === mePlayer.playerId);
+      return { room: clone(updatedRoom), mePlayer: clone(updatedMePlayer), kickedPlayerId: targetPlayerId };
+    },
+
     async setPlayerRole(roomId, playerToken, targetPlayerId, nextRole) {
       const room = rooms.get(roomId);
       if (!room) {
@@ -3792,6 +3869,23 @@ function createHandler(options = {}) {
             roomId: matched.params[0],
             leftPlayerId: result.leftPlayerId
           });
+        }
+        case "kickPlayer": {
+          const body = parseBody(event);
+          if (!body) {
+            return fail(400, "INVALID_JSON", "JSON の形式が不正です。");
+          }
+          const playerToken = getHeader(event, "X-Omojan-Player-Token");
+          if (!playerToken) {
+            return fail(401, "PLAYER_TOKEN_INVALID", "playerToken が必要です。");
+          }
+          const targetPlayerId = String(body.targetPlayerId || "").trim();
+          if (!targetPlayerId) {
+            return fail(400, "INVALID_TARGET", "対象プレイヤーが不正です。");
+          }
+          const repository = await roomRepositoryPromise;
+          const result = await repository.kickPlayer(matched.params[0], playerToken, targetPlayerId);
+          return ok(toRoomPayload(result.room, result.mePlayer));
         }
         case "closeReveal": {
           const body = parseBody(event);

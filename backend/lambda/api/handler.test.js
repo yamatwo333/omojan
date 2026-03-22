@@ -449,6 +449,7 @@ test("GET /v1/health returns lambda scaffold metadata", async () => {
     "rooms:reconnect",
     "rooms:edit-vote",
     "rooms:leave",
+    "rooms:kick-player",
     "rooms:reveal-close",
     "rooms:start-player",
     "rooms:player-order",
@@ -942,6 +943,26 @@ test("host can transfer host role to another active player in lobby", async () =
   assert.equal(body.data.room.hostPlayerId, nextHost.playerId);
   assert.equal(body.data.room.game.players.find((player) => player.playerId === nextHost.playerId).isHost, true);
   assert.equal(body.data.room.game.players.find((player) => player.playerId === host.playerId).isHost, false);
+});
+
+test("host can kick another player in lobby", async () => {
+  const handler = createTestHandler();
+  const session = await createSession(handler, ["ホスト", "ゲストA", "ゲストB"]);
+  const host = findPlayer(session, "ホスト");
+  const kicked = findPlayer(session, "ゲストA");
+
+  const response = await handler(
+    createEvent("POST", `/v1/rooms/${session.roomId}/kick-player`, {
+      headers: { "X-Omojan-Player-Token": host.playerToken },
+      body: { targetPlayerId: kicked.playerId }
+    })
+  );
+  const body = await parseResponse(response);
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(body.ok, true);
+  assert.equal(body.data.room.game.players.some((player) => player.playerId === kicked.playerId), false);
+  assert.equal(body.data.room.playerOrder.includes(kicked.playerId), false);
 });
 
 test("leave removes the player and automatically transfers host in lobby", async () => {

@@ -648,10 +648,31 @@
         display: grid;
         justify-items: end;
         gap: 8px;
+        align-content: start;
+        flex: 0 0 auto;
       }
 
       .player-role-actions .chip-row.compact {
         justify-content: flex-end;
+      }
+
+      .player-admin-actions {
+        display: grid;
+        gap: 6px;
+        justify-items: end;
+      }
+
+      .player-admin-actions .button-row,
+      .player-admin-actions .chip-row {
+        margin-top: 0;
+      }
+
+      .player-card-side {
+        display: grid;
+        justify-items: end;
+        align-content: start;
+        gap: 8px;
+        min-width: 0;
       }
 
       .player-section {
@@ -673,9 +694,22 @@
         text-transform: uppercase;
       }
 
+      .player-section-heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .player-section-note {
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
       .player-card-main {
         display: grid;
-        gap: 4px;
+        gap: 6px;
         min-width: 0;
       }
 
@@ -691,6 +725,24 @@
         align-items: center;
         gap: 6px;
         margin-left: auto;
+      }
+
+      .player-card--order {
+        cursor: grab;
+        touch-action: none;
+      }
+
+      .player-card--order:active {
+        cursor: grabbing;
+      }
+
+      .player-card--order.is-ordering::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        border: 1px dashed rgba(184, 138, 50, 0.22);
+        pointer-events: none;
       }
 
       .order-grab {
@@ -748,6 +800,12 @@
         font-size: 11px;
         font-weight: 900;
         white-space: nowrap;
+      }
+
+      .order-badge.is-you {
+        border-color: rgba(63, 122, 93, 0.24);
+        background: linear-gradient(180deg, rgba(234, 248, 240, 0.98), rgba(205, 232, 217, 0.96));
+        color: #24553d;
       }
 
       .order-badge--spectator {
@@ -1819,7 +1877,7 @@
 
       .history-ranking-list {
         display: grid;
-        gap: 10px;
+        gap: 14px;
         align-content: start;
         grid-auto-rows: minmax(96px, auto);
       }
@@ -1831,7 +1889,7 @@
         gap: 10px;
         min-height: 96px;
         height: 96px;
-        padding: 14px 15px;
+        padding: 16px 18px;
         border-radius: 16px;
         border: 1px solid rgba(118, 89, 63, 0.14);
         background: rgba(255, 255, 255, 0.84);
@@ -1856,6 +1914,8 @@
       }
 
       .history-ranking-main {
+        display: grid;
+        gap: 12px;
         min-width: 0;
         padding-right: 6px;
       }
@@ -1872,6 +1932,8 @@
       .history-ranking-main strong {
         display: block;
         font-size: 18px;
+        margin: 0;
+        line-height: 1.08;
         overflow: hidden;
         text-overflow: ellipsis;
         display: -webkit-box;
@@ -1885,6 +1947,8 @@
       .history-ranking-main span {
         color: var(--muted);
         font-size: 12px;
+        margin: 0;
+        line-height: 1.45;
         overflow: hidden;
         text-overflow: ellipsis;
         display: -webkit-box;
@@ -1950,7 +2014,8 @@
         align-items: center;
         justify-content: space-between;
         gap: 12px;
-        margin-bottom: 16px;
+        min-height: 46px;
+        margin-bottom: 18px;
       }
 
       .section-heading.stack {
@@ -1983,6 +2048,66 @@
 
       .dialog-actions.align-right {
         justify-content: flex-end;
+      }
+
+      .lobby-layout {
+        display: grid;
+        gap: 18px;
+        margin-top: 14px;
+      }
+
+      .lobby-layout-main,
+      .lobby-layout-side {
+        display: grid;
+        gap: 16px;
+        align-content: start;
+        min-width: 0;
+      }
+
+      .lobby-top-stack {
+        display: grid;
+        gap: 14px;
+      }
+
+      .lobby-top-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .lobby-status-grid {
+        display: grid;
+        gap: 12px;
+      }
+
+      .lobby-inline-actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .lobby-utility-stack {
+        display: grid;
+        gap: 12px;
+      }
+
+      .lobby-utility-actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .lobby-players-panel {
+        display: grid;
+        gap: 14px;
+      }
+
+      .lobby-players-panel .player-list {
+        margin-top: 0;
       }
 
       .submit-actions {
@@ -2459,6 +2584,38 @@
           justify-self: flex-end;
         }
 
+        .lobby-top-actions {
+          align-items: stretch;
+        }
+
+        .lobby-top-actions .btn,
+        .lobby-top-actions .room-code {
+          width: 100%;
+          justify-content: center;
+        }
+
+        .lobby-inline-actions,
+        .lobby-utility-actions {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .player-card {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .player-card-side,
+        .player-role-actions,
+        .player-admin-actions {
+          justify-items: stretch;
+        }
+
+        .player-role-actions .chip-row.compact,
+        .player-admin-actions .chip-row {
+          justify-content: flex-start;
+        }
+
         .tile {
           min-height: 92px;
           font-size: 18px;
@@ -2485,9 +2642,9 @@
 
         .preview-card.is-live-preview .word-board {
           width: 100%;
-          min-height: 118px;
+          min-height: 88px;
           margin-top: 12px;
-          padding: 8px 6px 4px;
+          padding: 4px 2px 0;
         }
 
         .preview-card.is-live-preview .preview-caption {
@@ -2510,6 +2667,10 @@
         .history-dialog,
         .reveal-card {
           width: min(96vw, 520px);
+        }
+
+        .lobby-layout {
+          gap: 16px;
         }
       }
 
@@ -2565,6 +2726,11 @@
 
         .screen-grid--lobby {
           grid-template-columns: minmax(0, 1fr);
+          align-items: start;
+        }
+
+        .lobby-layout {
+          grid-template-columns: minmax(380px, 0.92fr) minmax(520px, 1.08fr);
           align-items: start;
         }
 
@@ -2681,9 +2847,9 @@
 
         .preview-card.is-live-preview .word-board {
           width: 100%;
-          min-height: 132px;
+          min-height: 96px;
           margin-top: 10px;
-          padding: 6px 4px 0;
+          padding: 4px 2px 0;
         }
 
         .preview-card.is-live-preview .preview-caption {
@@ -2785,9 +2951,9 @@
       ];
 
       const sizePresets = [
-        { id: "large", label: "大", singleMax: 188, multiMax: 142, singleMin: 28, multiMin: 22, renderScale: 1.02 },
-        { id: "medium", label: "中", singleMax: 92, multiMax: 66, singleMin: 14, multiMin: 11, renderScale: 0.52 },
-        { id: "tiny", label: "小", singleMax: 42, multiMax: 30, singleMin: 7, multiMin: 6, renderScale: 0.24 }
+        { id: "large", label: "大", singleMax: 196, multiMax: 148, singleMin: 28, multiMin: 22, renderScale: 1.06 },
+        { id: "medium", label: "中", singleMax: 76, multiMax: 54, singleMin: 12, multiMin: 10, renderScale: 0.42 },
+        { id: "tiny", label: "小", singleMax: 28, multiMax: 20, singleMin: 6, multiMin: 5, renderScale: 0.16 }
       ];
 
       const lineGapPresets = [
@@ -3211,10 +3377,10 @@
       function getSizePresetScale(sizePresetId) {
         const normalizedId = normalizeSizePresetId(sizePresetId);
         if (normalizedId === "medium") {
-          return 0.5;
+          return 0.6;
         }
         if (normalizedId === "tiny") {
-          return 0.24;
+          return 0.12;
         }
         return 1;
       }
@@ -3331,6 +3497,22 @@
         container.style.fontSize = `${fontSize}px`;
         container.style.setProperty("--word-line-gap", getLineGapPreset(lineGapPreset).value);
         container.innerHTML = lines.map((line) => `<span class="word-line">${escapeHtml(line)}</span>`).join("");
+      }
+
+      function getWordBoardInnerSize(node, fallbackWidth = 320, fallbackHeight = 148) {
+        if (!node) {
+          return {
+            width: fallbackWidth,
+            height: fallbackHeight
+          };
+        }
+        const styles = window.getComputedStyle(node);
+        const horizontalPadding = Number.parseFloat(styles.paddingLeft || "0") + Number.parseFloat(styles.paddingRight || "0");
+        const verticalPadding = Number.parseFloat(styles.paddingTop || "0") + Number.parseFloat(styles.paddingBottom || "0");
+        return {
+          width: Math.max(24, Math.round((node.clientWidth || fallbackWidth) - horizontalPadding)),
+          height: Math.max(24, Math.round((node.clientHeight || fallbackHeight) - verticalPadding))
+        };
       }
 
       function doesWordFit(lines, fontClass, lineMode, fontSize, width, height, lineGapPreset = "none") {
@@ -3496,8 +3678,7 @@
         }
 
         const previewBox = document.getElementById("previewWord");
-        const width = previewBox?.clientWidth || 320;
-        const height = previewBox?.clientHeight || 148;
+        const { width, height } = getWordBoardInnerSize(previewBox, 320, 148);
         const chars = Array.from(text);
         const fontClass = getFontClass(state.draftFontId);
         const universalMax = Math.max(
@@ -3595,8 +3776,7 @@
         const maxFont = Number(node.dataset.maxFont || "46");
         const minFont = Number(node.dataset.minFont || "18");
         const fontSizeHint = Number(node.dataset.fontSizeHint || "0");
-        const width = node.clientWidth || 300;
-        const height = node.clientHeight || 120;
+        const { width, height } = getWordBoardInnerSize(node, 300, 120);
         let chosen = minFont;
         if (fontSizeHint >= minFont && fontSizeHint <= maxFont && doesWordFit(lines, fontClass, lineMode, fontSizeHint, width, height, lineGapPreset)) {
           chosen = fontSizeHint;
@@ -4180,6 +4360,10 @@
         const round = getCurrentRound(room);
         const phase = room.game?.phase || "";
         const isEditingCurrentPhase = state.decisionEditPhase === phase;
+        const roundVoteCandidateIds = getVoteCandidates(room, "vote").map((item) => item.playerId);
+        const roundRevoteCandidateIds = getVoteCandidates(room, "revote").map((item) => item.playerId);
+        const finalVoteCandidateIds = getFinalCandidates(room, "vote").map((item) => item.candidateId);
+        const finalRevoteCandidateIds = getFinalCandidates(room, "revote").map((item) => item.candidateId);
         if (!["round_vote", "round_revote", "final_vote", "final_revote"].includes(phase)) {
           state.decisionEditPhase = "";
         } else if (state.decisionEditPhase && state.decisionEditPhase !== phase) {
@@ -4187,28 +4371,36 @@
         }
         switch (room.game?.phase) {
           case "round_vote":
-            if (!isEditingCurrentPhase) {
+            if (isEditingCurrentPhase) {
+              state.selectedVoteTarget = roundVoteCandidateIds.includes(state.selectedVoteTarget) ? state.selectedVoteTarget : "";
+            } else {
               state.selectedVoteTarget = round?.myVoteTargetId || "";
             }
             state.selectedHostTarget = "";
             state.selectedFinalTarget = "";
             return;
           case "round_revote":
-            if (!isEditingCurrentPhase) {
+            if (isEditingCurrentPhase) {
+              state.selectedHostTarget = roundRevoteCandidateIds.includes(state.selectedHostTarget) ? state.selectedHostTarget : "";
+            } else {
               state.selectedHostTarget = round?.myRevoteTargetId || "";
             }
             state.selectedVoteTarget = "";
             state.selectedFinalTarget = "";
             return;
           case "final_vote":
-            if (!isEditingCurrentPhase) {
+            if (isEditingCurrentPhase) {
+              state.selectedFinalTarget = finalVoteCandidateIds.includes(state.selectedFinalTarget) ? state.selectedFinalTarget : "";
+            } else {
               state.selectedFinalTarget = room.game.finalVote?.myVoteCandidateId || "";
             }
             state.selectedVoteTarget = "";
             state.selectedHostTarget = "";
             return;
           case "final_revote":
-            if (!isEditingCurrentPhase) {
+            if (isEditingCurrentPhase) {
+              state.selectedFinalTarget = finalRevoteCandidateIds.includes(state.selectedFinalTarget) ? state.selectedFinalTarget : "";
+            } else {
               state.selectedFinalTarget = room.game.finalVote?.myRevoteCandidateId || "";
             }
             state.selectedVoteTarget = "";
@@ -4608,6 +4800,7 @@
           <section class="panel">
             <div class="section-heading">
               <h3>いいね数ランキング</h3>
+              <span class="section-heading-spacer" aria-hidden="true"></span>
             </div>
             <div class="history-ranking-list">
               ${rankingItems
@@ -5237,9 +5430,17 @@
             <div class="screen-primary">
               <section class="card">
                 <h2>ルーム待機中</h2>
-                <div id="lobbyTopSlot"></div>
-                <div id="lobbyPlayersSlot"></div>
-                <div id="lobbyUtilitySlot" class="lobby-actions"></div>
+                <div class="lobby-layout">
+                  <div class="lobby-layout-main">
+                    <div id="lobbyTopSlot"></div>
+                    <div id="lobbyUtilitySlot" class="lobby-actions"></div>
+                  </div>
+                  <div class="lobby-layout-side">
+                    <section class="panel lobby-players-panel">
+                      <div id="lobbyPlayersSlot"></div>
+                    </section>
+                  </div>
+                </div>
               </section>
             </div>
             <div class="screen-secondary" id="lobbyChampionsSlot"></div>
@@ -5254,17 +5455,19 @@
         const mySeatLabel = getLobbySeatLabel(room, room.me.playerId);
         const mySeatValue = room.me.role === "spectator" ? `${room.me.displayName} / 観戦` : `${mySeatLabel} / ${room.me.displayName}`;
         return `
-          ${renderSummaryPills([
-            { label: "ROOM", value: room.inviteCode },
-            { label: "参加", value: `${activePlayerCount}/${room.playerCount}人` },
-            ...(spectatorCount ? [{ label: "観戦", value: `${spectatorCount}人` }] : []),
-            { label: "あなた", value: mySeatValue },
-            ...(hostPlayer ? [{ label: "ホスト", value: hostPlayer.displayName }] : [])
-          ])}
-            <div class="button-row align-left">
+          <div class="lobby-status-grid">
+            ${renderSummaryPills([
+              { label: "ROOM", value: room.inviteCode },
+              { label: "参加", value: `${activePlayerCount}/${room.playerCount}人` },
+              ...(spectatorCount ? [{ label: "観戦", value: `${spectatorCount}人` }] : []),
+              { label: "あなた", value: mySeatValue },
+              ...(hostPlayer ? [{ label: "ホスト", value: hostPlayer.displayName }] : [])
+            ])}
+            <div class="lobby-inline-actions">
               <span class="room-code">${escapeHtml(room.inviteCode)}</span>
               <button class="btn secondary" type="button" data-action="copy-invite-url">招待URLをコピー</button>
             </div>
+          </div>
         `;
       }
 
@@ -5288,7 +5491,10 @@
         return `
           <div class="player-list">
             <div class="player-section">
-              <div class="player-section-label">参加プレイヤー</div>
+              <div class="player-section-heading">
+                <div class="player-section-label">参加プレイヤー</div>
+                ${canReorder ? `<div class="player-section-note">カードをドラッグして 1 ラウンド目の順番を決めます。</div>` : ""}
+              </div>
               ${orderedPlayers
               .map(
                 (player, index) => {
@@ -5302,31 +5508,26 @@
                   >
                     <div class="player-card-main">
                       <div class="player-card-heading">
-                        <span class="order-badge">${escapeHtml(seatLabel)}</span>
+                        <span class="order-badge${isMe ? " is-you" : ""}">${escapeHtml(seatLabel)}</span>
                         ${isMe ? `<span class="badge badge--you">あなた</span>` : ""}
-                        ${
-                          canReorder
-                            ? `
-                              <span class="player-order-tools">
-                                <button class="order-grab" type="button" draggable="false" data-order-grab-player-id="${player.playerId}" aria-label="${escapeHtml(player.displayName)}をドラッグして並び替え">⇅</button>
-                              </span>
-                            `
-                            : ""
-                        }
                       </div>
                       <strong>${escapeHtml(player.displayName)}</strong>
-                      <span>${escapeHtml(isMe ? `席順 ${index + 1} / あなた` : `席順 ${index + 1}`)}</span>
+                      <span>${escapeHtml(isMe ? `あなたの席は ${index + 1} 番手です。` : `席順 ${index + 1}`)}</span>
                     </div>
-                    <div class="player-role-actions">
-                      <span class="${getPlayerRoleBadge(player).className}">${getPlayerRoleBadge(player).label}</span>
+                    <div class="player-card-side">
+                      ${player.isHost ? `<span class="badge badge--host">ホスト</span>` : ""}
                       ${
                         room.me.isHost && !player.isHost
                           ? `
-                            <div class="chip-row compact">
-                              <button class="chip${player.role !== "spectator" ? " active" : ""}" type="button" data-action="set-player-role" data-target-player-id="${player.playerId}" data-role="player" ${state.pendingAction ? "disabled" : ""}>参加</button>
-                              <button class="chip${player.role === "spectator" ? " active" : ""}" type="button" data-action="set-player-role" data-target-player-id="${player.playerId}" data-role="spectator" ${state.pendingAction ? "disabled" : ""}>観戦</button>
+                            <div class="player-admin-actions">
+                              <div class="chip-row compact">
+                                <button class="chip" type="button" data-action="set-player-role" data-target-player-id="${player.playerId}" data-role="spectator" ${state.pendingAction ? "disabled" : ""}>観戦にする</button>
+                              </div>
+                              <div class="button-row align-right">
+                                <button class="btn neutral compact" type="button" data-action="set-host-player" data-target-player-id="${player.playerId}" ${state.pendingAction ? "disabled" : ""}>ホストにする</button>
+                                <button class="btn ghost compact" type="button" data-action="kick-player" data-target-player-id="${player.playerId}" ${state.pendingAction ? "disabled" : ""}>退出させる</button>
+                              </div>
                             </div>
-                            ${player.role !== "spectator" ? `<button class="btn neutral compact" type="button" data-action="set-host-player" data-target-player-id="${player.playerId}" ${state.pendingAction ? "disabled" : ""}>ホストにする</button>` : ""}
                           `
                           : ""
                       }
@@ -5341,7 +5542,9 @@
               spectatorPlayers.length
                 ? `
                   <div class="player-section">
-                    <div class="player-section-label">観戦者</div>
+                    <div class="player-section-heading">
+                      <div class="player-section-label">観戦者</div>
+                    </div>
                     ${spectatorPlayers
                       .map((player) => {
                         const isMe = player.playerId === room.me.playerId;
@@ -5352,14 +5555,17 @@
                                 ${isMe ? `<span class="badge badge--you">あなた</span>` : ""}
                               </div>
                               <strong>${escapeHtml(player.displayName)}</strong>
-                              <span>${escapeHtml(isMe ? "この端末は観戦モードです" : "見守り中")}</span>
+                              <span>${escapeHtml(isMe ? "この端末は観戦中です。" : "見守り中")}</span>
                             </div>
-                            <div class="player-role-actions">
+                            <div class="player-card-side">
                               ${
                                 room.me.isHost && !player.isHost
                                   ? `
-                                    <div class="chip-row compact">
-                                      <button class="chip" type="button" data-action="set-player-role" data-target-player-id="${player.playerId}" data-role="player" ${state.pendingAction ? "disabled" : ""}>参加にする</button>
+                                    <div class="player-admin-actions">
+                                      <div class="chip-row compact">
+                                        <button class="chip" type="button" data-action="set-player-role" data-target-player-id="${player.playerId}" data-role="player" ${state.pendingAction ? "disabled" : ""}>参加にする</button>
+                                      </div>
+                                      <button class="btn ghost compact" type="button" data-action="kick-player" data-target-player-id="${player.playerId}" ${state.pendingAction ? "disabled" : ""}>退出させる</button>
                                     </div>
                                   `
                                   : ""
@@ -5381,13 +5587,17 @@
         const activePlayers = getLobbyPlayerOrder(room);
         const ready = activePlayers.length === room.playerCount;
         return `
-          <div class="button-stack">
+          <div class="lobby-utility-stack">
             ${
               room.me.isHost
                 ? `
-                  <div class="button-row align-left lobby-control-row">
-                    <button class="btn neutral compact" type="button" data-action="randomize-player-order" ${activePlayers.length > 1 && !state.pendingAction ? "" : "disabled"}>ランダムに並び替え</button>
-                    <button class="btn primary compact" type="button" data-action="start-game" ${ready && !state.pendingAction ? "" : "disabled"}>この順で開始</button>
+                  <div class="lobby-utility-actions">
+                    <div class="button-row align-left lobby-control-row">
+                      <button class="btn neutral compact" type="button" data-action="randomize-player-order" ${activePlayers.length > 1 && !state.pendingAction ? "" : "disabled"}>ランダムに並び替え</button>
+                    </div>
+                    <div class="button-row align-right">
+                      <button class="btn primary compact" type="button" data-action="start-game" ${ready && !state.pendingAction ? "" : "disabled"}>この順で開始</button>
+                    </div>
                   </div>
                   ${ready ? "" : `<div class="info-box">参加プレイヤーが ${room.playerCount} 人そろうと開始できます。</div>`}
                 `
@@ -6567,10 +6777,8 @@
         previewWord.dataset.sizePreset = sizePreset.id;
         previewWord.dataset.variant = "preview-word";
         previewWord.dataset.lineGapPreset = state.draftLineGapPreset;
-        previewWord.dataset.maxFont = String(
-          Math.max(layout.fontSize, state.draftLineMode === "single" ? sizePreset.singleMax : sizePreset.multiMax)
-        );
-        previewWord.dataset.minFont = String(getMinimumFontSize(chars.length, state.draftLineMode, state.draftSizePreset));
+        previewWord.dataset.maxFont = String(layout.fontSize);
+        previewWord.dataset.minFont = String(layout.fontSize);
         previewWord.dataset.fontSizeHint = String(layout.fontSize);
         applyWordMarkup(previewWord, layout.lines, getFontClass(state.draftFontId), state.draftLineMode, layout.fontSize, state.draftLineGapPreset);
         window.requestAnimationFrame(() => syncSubmitPreviewFloating(room));
@@ -6724,8 +6932,8 @@
             acknowledged: meAcknowledged,
             kind: "champion",
             variant: "champion-word",
-            maxFont: 64,
-            minFont: 28
+            maxFont: 60,
+            minFont: 24
           };
         }
         if (reveal.kind === "round_winner") {
@@ -6742,8 +6950,8 @@
             acknowledged: meAcknowledged,
             kind: "round_winner",
             variant: "result-word",
-            maxFont: 54,
-            minFont: 22
+            maxFont: 50,
+            minFont: 20
           };
         }
         return {
@@ -6759,8 +6967,8 @@
           acknowledged: meAcknowledged,
           kind: "submission",
           variant: "preview-word",
-          maxFont: 84,
-          minFont: 32
+          maxFont: 72,
+          minFont: 22
         };
       }
 
@@ -6795,6 +7003,14 @@
         const sizePreset = getSizePreset(presentation.sizePreset || "large");
         const revealMaxFontBase = presentation.maxFont || (presentation.kind === "champion" ? 56 : 50);
         const revealMinFontBase = presentation.minFont || (presentation.kind === "champion" ? 24 : 22);
+        const mobileViewport = window.innerWidth <= 767;
+        const viewportFontCap = mobileViewport
+          ? presentation.kind === "submission"
+            ? 54
+            : presentation.kind === "champion"
+              ? 48
+              : 44
+          : Infinity;
         const preferredRevealFont = presentation.fontSizeHint
           ? Math.round(Math.max(revealMinFontBase, presentation.fontSizeHint))
           : Math.round(revealMaxFontBase * sizePreset.renderScale);
@@ -6808,8 +7024,11 @@
         els.revealWord.dataset.variant = presentation.variant || (presentation.kind === "champion" ? "champion-word" : "result-word");
         els.revealWord.dataset.fontId = presentation.fontId || "classic";
         els.revealWord.dataset.lineMode = presentation.lines.length <= 1 ? "single" : "manual";
-        els.revealWord.dataset.maxFont = String(Math.max(revealMinFontBase, preferredRevealFont));
-        els.revealWord.dataset.minFont = String(Math.max(12, Math.round(revealMinFontBase * Math.max(0.68, sizePreset.renderScale - 0.08))));
+        const revealHint = Number.isFinite(Number(presentation.fontSizeHint)) ? Math.round(Number(presentation.fontSizeHint)) : 0;
+        const computedRevealMin = Math.max(6, Math.min(viewportFontCap - 8, Math.round(revealMinFontBase * Math.max(0.64, sizePreset.renderScale - 0.1))));
+        const effectiveRevealMin = revealHint ? Math.min(computedRevealMin, Math.max(4, revealHint)) : computedRevealMin;
+        els.revealWord.dataset.maxFont = String(Math.min(viewportFontCap, Math.max(effectiveRevealMin, preferredRevealFont)));
+        els.revealWord.dataset.minFont = String(effectiveRevealMin);
         els.revealWord.dataset.fontSizeHint = presentation.fontSizeHint ? String(presentation.fontSizeHint) : "";
         els.revealWord.dataset.sizePreset = sizePreset.id;
         els.revealWord.dataset.lineGapPreset = presentation.lineGapPreset || "none";
@@ -6819,6 +7038,8 @@
         hydrateWordBoard(els.revealWord);
         window.requestAnimationFrame(() => hydrateWordBoard(els.revealWord));
         window.setTimeout(() => hydrateWordBoard(els.revealWord), 60);
+        window.setTimeout(() => hydrateWordBoard(els.revealWord), 180);
+        window.setTimeout(() => hydrateWordBoard(els.revealWord), 360);
         ensureFontsReady([presentation.fontId || "classic"]).then(() => {
           hydrateWordBoard(els.revealWord);
         }).catch(() => {});
@@ -7129,6 +7350,7 @@
         {
           selector: "[data-vote-id]",
           handle: (button) => {
+            state.decisionEditPhase = state.room?.game?.phase || "";
             state.selectedVoteTarget = button.dataset.voteId;
             renderCurrentView({ includeReveal: false });
           }
@@ -7136,6 +7358,7 @@
         {
           selector: "[data-revote-id]",
           handle: (button) => {
+            state.decisionEditPhase = state.room?.game?.phase || "";
             state.selectedHostTarget = button.dataset.revoteId;
             renderCurrentView({ includeReveal: false });
           }
@@ -7150,6 +7373,7 @@
         {
           selector: "[data-final-vote-id]",
           handle: (button) => {
+            state.decisionEditPhase = state.room?.game?.phase || "";
             state.selectedFinalTarget = button.dataset.finalVoteId;
             renderCurrentView({ includeReveal: false });
           }
@@ -7281,6 +7505,18 @@
         "set-host-player": async (button) => {
           await runAction(async () => {
             const payload = await postApi(`/rooms/${encodeURIComponent(state.roomId)}/host-transfer`, {
+              targetPlayerId: button.dataset.targetPlayerId
+            });
+            setRoom(payload.data.room);
+          });
+        },
+        "kick-player": async (button) => {
+          const displayName = button.closest("[data-order-player-id], .player-card")?.querySelector("strong")?.textContent?.trim() || "このユーザー";
+          if (!window.confirm(`${displayName} をこのルームから退出させます。続けますか？`)) {
+            return;
+          }
+          await runAction(async () => {
+            const payload = await postApi(`/rooms/${encodeURIComponent(state.roomId)}/kick-player`, {
               targetPlayerId: button.dataset.targetPlayerId
             });
             setRoom(payload.data.room);
@@ -7460,7 +7696,7 @@
       });
 
       document.addEventListener("dragstart", (event) => {
-        if (event.target.closest?.(".player-order-tools, .player-role-actions, button, .chip")) {
+        if (event.target.closest?.(".player-role-actions, .player-card-side, button, .chip")) {
           return;
         }
         const card = event.target.closest?.("[data-order-player-id]");
@@ -7508,14 +7744,19 @@
       });
 
       document.addEventListener("pointerdown", (event) => {
-        const handle = event.target.closest?.("[data-order-grab-player-id]");
-        if (!handle || deriveView() !== "lobby" || !state.room?.me?.isHost) {
+        if (event.button !== undefined && event.button !== 0) {
           return;
         }
-        state.draggingLobbyPlayerId = handle.dataset.orderGrabPlayerId || "";
-        const card = handle.closest("[data-order-player-id]");
+        if (event.target.closest?.(".player-role-actions, .player-card-side, button, .chip")) {
+          return;
+        }
+        const card = event.target.closest?.("[data-order-player-id]");
+        if (!card || deriveView() !== "lobby" || !state.room?.me?.isHost) {
+          return;
+        }
+        state.draggingLobbyPlayerId = card.dataset.orderPlayerId || "";
         card?.classList.add("is-dragging");
-        handle.setPointerCapture?.(event.pointerId);
+        card?.setPointerCapture?.(event.pointerId);
         event.preventDefault();
       });
 

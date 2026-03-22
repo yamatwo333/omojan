@@ -532,10 +532,10 @@
 
       .btn.ghost {
         border-color: rgba(142, 118, 67, 0.26);
-        background: linear-gradient(180deg, rgba(255, 252, 245, 0.82), rgba(245, 236, 212, 0.74));
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 242, 227, 0.92));
         color: #5f4c25;
         box-shadow:
-          0 10px 20px rgba(62, 45, 20, 0.08),
+          0 8px 16px rgba(62, 45, 20, 0.06),
           inset 0 1px 0 rgba(255, 255, 255, 0.88);
       }
 
@@ -644,34 +644,9 @@
         filter: saturate(0.94);
       }
 
-      .player-role-actions {
-        display: grid;
-        justify-items: end;
-        gap: 8px;
-        align-content: start;
-        flex: 0 0 auto;
-      }
-
-      .player-role-actions .chip-row.compact {
-        justify-content: flex-end;
-      }
-
-      .player-admin-actions {
-        display: grid;
-        gap: 6px;
-        justify-items: end;
-      }
-
-      .player-admin-actions .button-row,
-      .player-admin-actions .chip-row {
-        margin-top: 0;
-      }
-
+      .player-role-actions,
+      .player-admin-actions,
       .player-card-side {
-        display: grid;
-        justify-items: end;
-        align-content: start;
-        gap: 8px;
         min-width: 0;
       }
 
@@ -720,16 +695,10 @@
         gap: 6px;
       }
 
-      .player-order-tools {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        margin-left: auto;
-      }
-
       .player-card--order {
         cursor: grab;
         touch-action: none;
+        user-select: none;
       }
 
       .player-card--order:active {
@@ -749,17 +718,18 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        min-width: 30px;
-        min-height: 30px;
+        gap: 0;
+        min-width: 34px;
+        min-height: 40px;
         padding: 0 8px;
-        border-radius: 999px;
-        border: 1px dashed rgba(184, 138, 50, 0.26);
-        background: rgba(255, 252, 245, 0.92);
-        color: #725726;
-        font-size: 13px;
-        font-weight: 900;
+        border-radius: 14px;
+        border: 1px dashed rgba(184, 138, 50, 0.28);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(249, 242, 223, 0.9));
         cursor: grab;
         touch-action: none;
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.86),
+          0 10px 16px rgba(45, 31, 14, 0.06);
       }
 
       .order-grab:active {
@@ -820,6 +790,12 @@
         color: #33517d;
       }
 
+      .badge--seat {
+        background: linear-gradient(180deg, rgba(245, 251, 247, 0.98), rgba(227, 240, 232, 0.94));
+        border-color: rgba(35, 87, 60, 0.16);
+        color: #2d6347;
+      }
+
       .player-card--order.is-ordering {
         transition:
           transform 150ms ease,
@@ -840,9 +816,15 @@
       }
 
       .player-card--order.is-dragging {
-        opacity: 0.72;
-        transform: scale(0.985);
+        opacity: 0.96;
+        transition: none;
+        transform: translate3d(0, var(--drag-offset-y, 0px), 0) scale(1.035) rotate(0.35deg);
         border-color: rgba(184, 68, 49, 0.32);
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.88),
+          0 28px 42px rgba(31, 24, 18, 0.22);
+        pointer-events: none;
+        z-index: 18;
       }
 
       .player-card--order.is-drop-target {
@@ -1631,6 +1613,10 @@
         grid-template-columns: minmax(0, 1fr);
       }
 
+      .champion-overview--lobby {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
       .champion-overview > .panel {
         display: grid;
         grid-template-rows: auto 1fr;
@@ -1877,18 +1863,18 @@
 
       .history-ranking-list {
         display: grid;
-        gap: 14px;
+        gap: 18px;
         align-content: start;
-        grid-auto-rows: minmax(96px, auto);
+        grid-auto-rows: minmax(100px, auto);
       }
 
       .history-ranking-card {
         display: grid;
         grid-template-columns: auto minmax(0, 1fr) auto;
         align-items: center;
-        gap: 10px;
-        min-height: 96px;
-        height: 96px;
+        gap: 12px;
+        min-height: 100px;
+        height: 100px;
         padding: 16px 18px;
         border-radius: 16px;
         border: 1px solid rgba(118, 89, 63, 0.14);
@@ -1915,9 +1901,10 @@
 
       .history-ranking-main {
         display: grid;
-        gap: 12px;
+        gap: 10px;
         min-width: 0;
-        padding-right: 6px;
+        padding-right: 14px;
+        align-content: center;
       }
 
       .history-ranking-main--wide strong {
@@ -1933,7 +1920,7 @@
         display: block;
         font-size: 18px;
         margin: 0;
-        line-height: 1.08;
+        line-height: 1.18;
         overflow: hidden;
         text-overflow: ellipsis;
         display: -webkit-box;
@@ -1946,9 +1933,9 @@
 
       .history-ranking-main span {
         color: var(--muted);
-        font-size: 12px;
+        font-size: 13px;
         margin: 0;
-        line-height: 1.45;
+        line-height: 1.4;
         overflow: hidden;
         text-overflow: ellipsis;
         display: -webkit-box;
@@ -1956,7 +1943,7 @@
         -webkit-box-orient: vertical;
         white-space: normal;
         overflow-wrap: anywhere;
-        line-height: 1.28;
+        line-height: 1.34;
       }
 
       .history-ranking-card--recent {
@@ -2014,8 +2001,8 @@
         align-items: center;
         justify-content: space-between;
         gap: 12px;
-        min-height: 46px;
-        margin-bottom: 18px;
+        min-height: 54px;
+        margin-bottom: 22px;
       }
 
       .section-heading.stack {
@@ -2023,12 +2010,13 @@
         align-items: center;
         justify-content: space-between;
         gap: 12px;
-        margin-bottom: 16px;
+        min-height: 54px;
+        margin-bottom: 22px;
       }
 
       .section-heading-spacer {
         display: inline-flex;
-        min-height: 44px;
+        min-height: 46px;
         min-width: 118px;
         visibility: hidden;
       }
@@ -2050,23 +2038,42 @@
         justify-content: flex-end;
       }
 
-      .lobby-layout {
+      .lobby-room-card,
+      .lobby-players-panel,
+      .lobby-panel {
         display: grid;
         gap: 18px;
-        margin-top: 14px;
-      }
-
-      .lobby-layout-main,
-      .lobby-layout-side {
-        display: grid;
-        gap: 16px;
         align-content: start;
         min-width: 0;
       }
 
+      .lobby-stage-heading {
+        grid-column: 1 / -1;
+      }
+
+      .lobby-stage-heading .section-heading {
+        margin-bottom: 0;
+      }
+
+      .lobby-room-card,
+      .lobby-players-panel {
+        padding: 22px;
+        border-radius: 26px;
+        border: 1px solid rgba(184, 138, 50, 0.16);
+        background:
+          radial-gradient(circle at top right, rgba(255, 238, 188, 0.18), transparent 34%),
+          linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(250, 243, 228, 0.88)),
+          rgba(255, 255, 255, 0.78);
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.88),
+          0 18px 26px rgba(31, 24, 18, 0.08);
+      }
+
       .lobby-top-stack {
         display: grid;
-        gap: 14px;
+        gap: 18px;
+        align-content: start;
+        min-height: 100%;
       }
 
       .lobby-top-actions {
@@ -2078,22 +2085,109 @@
 
       .lobby-status-grid {
         display: grid;
-        gap: 12px;
+        gap: 16px;
       }
 
       .lobby-inline-actions {
         display: flex;
         flex-wrap: wrap;
         align-items: center;
-        gap: 10px;
+        gap: 12px;
       }
 
-      .lobby-utility-stack {
+      .lobby-player-panel {
+        display: grid;
+        gap: 20px;
+        grid-template-rows: auto 1fr auto;
+        height: 100%;
+      }
+
+      .lobby-player-panel-header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid rgba(184, 138, 50, 0.14);
+      }
+
+      .lobby-player-panel-header .section-heading {
+        flex: 1 1 auto;
+        min-width: 0;
+        margin-bottom: 0;
+      }
+
+      .lobby-player-panel-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        justify-content: flex-end;
+      }
+
+      .lobby-player-list {
+        display: grid;
+        gap: 14px;
+        align-content: start;
+        min-height: 0;
+      }
+
+      .lobby-player-footer {
+        display: grid;
+        gap: 16px;
+        padding-top: 16px;
+        border-top: 1px solid rgba(184, 138, 50, 0.16);
+      }
+
+      .lobby-player-footer-main {
         display: grid;
         gap: 12px;
       }
 
-      .lobby-utility-actions {
+      .lobby-player-footer-actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 12px;
+      }
+
+      .lobby-player-footer-leave {
+        display: flex;
+        justify-content: flex-start;
+      }
+
+      .lobby-player-card {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        align-items: flex-start;
+        gap: 16px;
+        padding: 18px 18px 18px;
+      }
+
+      .lobby-player-card .player-card-handle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding-top: 6px;
+      }
+
+      .lobby-player-card .player-card-main {
+        gap: 12px;
+        justify-content: start;
+      }
+
+      .lobby-player-card .player-card-main strong {
+        font-size: 20px;
+        line-height: 1.22;
+      }
+
+      .lobby-player-card .player-card-main span {
+        font-size: 13px;
+        line-height: 1.45;
+      }
+
+      .lobby-player-card .player-card-topline {
         display: flex;
         flex-wrap: wrap;
         align-items: center;
@@ -2101,13 +2195,136 @@
         gap: 10px;
       }
 
-      .lobby-players-panel {
-        display: grid;
-        gap: 14px;
+      .lobby-player-card .player-card-heading {
+        gap: 8px;
       }
 
-      .lobby-players-panel .player-list {
-        margin-top: 0;
+      .lobby-player-card .player-card-role {
+        display: inline-flex;
+        align-items: center;
+      }
+
+      .lobby-player-card .player-card-subtitle {
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.45;
+      }
+
+      .lobby-player-card .player-card-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 4px;
+      }
+
+      .lobby-player-card .player-card-actions .btn.compact {
+        min-width: 112px;
+      }
+
+      .lobby-player-card .order-grab::before {
+        content: "";
+        display: block;
+        width: 16px;
+        height: 26px;
+        background: radial-gradient(circle, rgba(87, 67, 30, 0.86) 1.3px, transparent 1.4px) 0 0 / 6px 6px;
+      }
+
+      .lobby-player-card .order-badge,
+      .lobby-player-card .badge {
+        min-height: 30px;
+      }
+
+      .lobby-spectator-card .player-card-main span {
+        color: #72757d;
+      }
+
+      .lobby-player-card .badge--player,
+      .lobby-player-card .badge--spectator,
+      .lobby-player-card .badge--host {
+        min-height: 34px;
+        padding-inline: 12px;
+      }
+
+      .lobby-player-panel .btn.primary {
+        min-width: 136px;
+      }
+
+      .lobby-player-panel .btn.ghost.compact {
+        border-color: rgba(185, 139, 47, 0.24);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(251, 245, 230, 0.92));
+        color: #73572a;
+      }
+
+      .lobby-player-panel .btn.secondary.compact {
+        background: linear-gradient(180deg, #2f744f, #173f2c 88%);
+        color: #fff8ef;
+      }
+
+      .lobby-player-panel .btn.neutral.compact {
+        border-color: rgba(143, 152, 166, 0.28);
+        background: linear-gradient(180deg, rgba(252, 252, 253, 0.98), rgba(239, 241, 244, 0.94));
+        color: #495260;
+      }
+
+      .lobby-player-panel .btn.danger.compact {
+        border-color: rgba(176, 59, 40, 0.28);
+        background: linear-gradient(180deg, rgba(255, 248, 245, 0.98), rgba(253, 228, 220, 0.96));
+        color: #9d3829;
+        box-shadow:
+          0 8px 14px rgba(176, 59, 40, 0.08),
+          inset 0 1px 0 rgba(255, 255, 255, 0.9);
+      }
+
+      .lobby-player-panel .badge {
+        box-shadow: none;
+      }
+
+      .lobby-player-panel .badge--host {
+        background: linear-gradient(180deg, rgba(255, 244, 228, 0.98), rgba(249, 226, 192, 0.96));
+        border-color: rgba(188, 139, 50, 0.22);
+        color: #845622;
+      }
+
+      .lobby-player-panel .badge--player {
+        background: linear-gradient(180deg, rgba(237, 248, 241, 0.98), rgba(216, 236, 223, 0.96));
+        border-color: rgba(45, 117, 79, 0.18);
+        color: #2d6b4a;
+      }
+
+      .lobby-player-panel .badge--spectator {
+        background: linear-gradient(180deg, rgba(247, 248, 250, 0.98), rgba(231, 234, 239, 0.95));
+        border-color: rgba(111, 121, 138, 0.18);
+        color: #626975;
+      }
+
+      .lobby-room-card h3,
+      .lobby-players-panel h3 {
+        margin: 0;
+        color: var(--green);
+        font-size: 16px;
+        font-weight: 900;
+      }
+
+      .lobby-player-panel .badge {
+        box-shadow: none;
+      }
+
+      .lobby-player-panel .badge--host {
+        background: linear-gradient(180deg, rgba(255, 244, 228, 0.98), rgba(249, 226, 192, 0.96));
+        border-color: rgba(188, 139, 50, 0.22);
+        color: #845622;
+      }
+
+      .lobby-player-panel .badge--player {
+        background: linear-gradient(180deg, rgba(237, 248, 241, 0.98), rgba(216, 236, 223, 0.96));
+        border-color: rgba(45, 117, 79, 0.18);
+        color: #2d6b4a;
+      }
+
+      .lobby-player-panel .badge--spectator {
+        background: linear-gradient(180deg, rgba(247, 248, 250, 0.98), rgba(231, 234, 239, 0.95));
+        border-color: rgba(111, 121, 138, 0.18);
+        color: #626975;
       }
 
       .submit-actions {
@@ -2595,25 +2812,33 @@
         }
 
         .lobby-inline-actions,
-        .lobby-utility-actions {
+        .lobby-player-panel-header,
+        .lobby-player-footer-actions {
           flex-direction: column;
           align-items: stretch;
         }
 
-        .player-card {
-          flex-direction: column;
+        .lobby-player-card {
+          grid-template-columns: auto minmax(0, 1fr);
           align-items: stretch;
         }
 
-        .player-card-side,
-        .player-role-actions,
-        .player-admin-actions {
-          justify-items: stretch;
+        .lobby-player-card .player-card-handle {
+          padding-top: 4px;
         }
 
-        .player-role-actions .chip-row.compact,
-        .player-admin-actions .chip-row {
-          justify-content: flex-start;
+        .lobby-player-card .player-card-actions {
+          width: 100%;
+        }
+
+        .lobby-player-card .player-card-actions .btn.compact {
+          width: 100%;
+          min-width: 0;
+        }
+
+        .lobby-player-card .order-grab {
+          min-width: 34px;
+          min-height: 34px;
         }
 
         .tile {
@@ -2642,7 +2867,8 @@
 
         .preview-card.is-live-preview .word-board {
           width: 100%;
-          min-height: 88px;
+          min-height: 64px;
+          max-height: 104px;
           margin-top: 12px;
           padding: 4px 2px 0;
         }
@@ -2669,8 +2895,8 @@
           width: min(96vw, 520px);
         }
 
-        .lobby-layout {
-          gap: 16px;
+        .lobby-player-card .badge--host {
+          min-width: 0;
         }
       }
 
@@ -2725,22 +2951,31 @@
         }
 
         .screen-grid--lobby {
-          grid-template-columns: minmax(0, 1fr);
+          grid-template-columns: repeat(2, minmax(0, 1fr));
           align-items: start;
         }
 
-        .lobby-layout {
-          grid-template-columns: minmax(380px, 0.92fr) minmax(520px, 1.08fr);
-          align-items: start;
+        .lobby-stage-heading {
+          grid-column: 1 / -1;
         }
 
         .screen-grid--invite-entry {
           grid-template-columns: minmax(0, 1fr);
         }
 
-        .screen-grid--lobby > .screen-primary,
-        .screen-grid--lobby > .screen-secondary {
+        #lobbyRoomSlot,
+        #lobbyPlayersPanelSlot,
+        #lobbyRecentSlot,
+        #lobbyRankingSlot {
           min-height: 0;
+          display: grid;
+        }
+
+        #lobbyRoomSlot > *,
+        #lobbyPlayersPanelSlot > *,
+        #lobbyRecentSlot > *,
+        #lobbyRankingSlot > * {
+          height: 100%;
         }
 
         .screen-grid--submit {
@@ -2951,9 +3186,9 @@
       ];
 
       const sizePresets = [
-        { id: "large", label: "大", singleMax: 196, multiMax: 148, singleMin: 28, multiMin: 22, renderScale: 1.06 },
-        { id: "medium", label: "中", singleMax: 76, multiMax: 54, singleMin: 12, multiMin: 10, renderScale: 0.42 },
-        { id: "tiny", label: "小", singleMax: 28, multiMax: 20, singleMin: 6, multiMin: 5, renderScale: 0.16 }
+        { id: "large", label: "大", singleMax: 196, multiMax: 148, singleMin: 30, multiMin: 24, renderScale: 1 },
+        { id: "medium", label: "中", singleMax: 120, multiMax: 84, singleMin: 16, multiMin: 12, renderScale: 0.54 },
+        { id: "tiny", label: "小", singleMax: 62, multiMax: 42, singleMin: 8, multiMin: 6, renderScale: 0.24 }
       ];
 
       const lineGapPresets = [
@@ -2991,6 +3226,8 @@
         selectedStartPlayerId: "",
         draggingLobbyPlayerId: "",
         dragTargetLobbyPlayerId: "",
+        dragPointerId: 0,
+        dragPointerStartY: 0,
         draftSelectedTileIds: [],
         draftFontId: "broadcast",
         draftSizePreset: "medium",
@@ -3024,11 +3261,10 @@
           landingRankingKey: "",
           landingChampionsKey: "",
           lobbyShellKey: "",
-          lobbyTopKey: "",
-          lobbyPlayersKey: "",
-          lobbyUtilityKey: "",
-          lobbyOrderKey: "",
-          lobbyChampionsKey: "",
+          lobbyRoomKey: "",
+          lobbyPlayersPanelKey: "",
+          lobbyRecentKey: "",
+          lobbyRankingKey: "",
           submitShellKey: "",
           submitTopKey: "",
           submitSubmissionsKey: "",
@@ -3377,12 +3613,36 @@
       function getSizePresetScale(sizePresetId) {
         const normalizedId = normalizeSizePresetId(sizePresetId);
         if (normalizedId === "medium") {
-          return 0.6;
+          return 0.54;
         }
         if (normalizedId === "tiny") {
-          return 0.12;
+          return 0.24;
         }
         return 1;
+      }
+
+      function getDraftReferenceBoardSize(previewNode) {
+        const previewSize = getWordBoardInnerSize(previewNode, 320, 148);
+        if (window.innerWidth > 767) {
+          return previewSize;
+        }
+        const popupCardWidth = Math.min(window.innerWidth * 0.92, 520);
+        return {
+          width: Math.max(220, Math.round(popupCardWidth - 32)),
+          height: Math.max(220, Math.round(Math.min(window.innerHeight * 0.42, 300)))
+        };
+      }
+
+      function getPreviewDisplayFontSize(fontSize) {
+        if (window.innerWidth > 767) {
+          return fontSize;
+        }
+        const previewNode = document.getElementById("previewWord");
+        const previewSize = getWordBoardInnerSize(previewNode, 280, 96);
+        const referenceSize = getDraftReferenceBoardSize(previewNode);
+        const widthScale = referenceSize.width ? previewSize.width / referenceSize.width : 0.76;
+        const scale = Math.max(0.9, Math.min(1.02, widthScale * 0.98));
+        return Math.max(14, Math.min(128, Math.round(fontSize * scale)));
       }
 
       function getLineGapPreset(lineGapPresetId) {
@@ -3516,7 +3776,7 @@
       }
 
       function doesWordFit(lines, fontClass, lineMode, fontSize, width, height, lineGapPreset = "none") {
-        const tolerance = 6;
+        const tolerance = 1;
         els.measureWord.dataset.variant = "";
         els.measureWord.style.width = `${width}px`;
         els.measureWord.style.height = `${height}px`;
@@ -3678,7 +3938,7 @@
         }
 
         const previewBox = document.getElementById("previewWord");
-        const { width, height } = getWordBoardInnerSize(previewBox, 320, 148);
+        const { width, height } = getDraftReferenceBoardSize(previewBox);
         const chars = Array.from(text);
         const fontClass = getFontClass(state.draftFontId);
         const universalMax = Math.max(
@@ -3710,9 +3970,16 @@
         }
 
         if (!bestFitLayout) {
+          for (let fontSize = minFontSize - 1; fontSize >= 4; fontSize -= 1) {
+            const layout = buildLayoutForFont(fontSize, true);
+            if (doesWordFit(layout.lines, fontClass, state.draftLineMode, fontSize, width, height, state.draftLineGapPreset)) {
+              return layout;
+            }
+            fallbackLayout = { ...layout, safetyAdjusted: true };
+          }
           return fallbackLayout || {
             lines: [text],
-            fontSize: minFontSize,
+            fontSize: 4,
             effectiveBreaks: [],
             safetyAdjusted: true
           };
@@ -3785,6 +4052,14 @@
           if (doesWordFit(lines, fontClass, lineMode, fontSize, width, height, lineGapPreset)) {
             chosen = fontSize;
             break;
+          }
+        }
+        if (!doesWordFit(lines, fontClass, lineMode, chosen, width, height, lineGapPreset)) {
+          for (let fontSize = minFont - 1; fontSize >= 4; fontSize -= 1) {
+            if (doesWordFit(lines, fontClass, lineMode, fontSize, width, height, lineGapPreset)) {
+              chosen = fontSize;
+              break;
+            }
           }
         }
         node.dataset.variant = Array.from(node.classList).find((className) => className.endsWith("-word")) || node.dataset.variant || "";
@@ -4371,7 +4646,9 @@
         }
         switch (room.game?.phase) {
           case "round_vote":
-            if (isEditingCurrentPhase) {
+            if (state.selectedVoteTarget && roundVoteCandidateIds.includes(state.selectedVoteTarget)) {
+              state.selectedVoteTarget = state.selectedVoteTarget;
+            } else if (isEditingCurrentPhase) {
               state.selectedVoteTarget = roundVoteCandidateIds.includes(state.selectedVoteTarget) ? state.selectedVoteTarget : "";
             } else {
               state.selectedVoteTarget = round?.myVoteTargetId || "";
@@ -4380,7 +4657,9 @@
             state.selectedFinalTarget = "";
             return;
           case "round_revote":
-            if (isEditingCurrentPhase) {
+            if (state.selectedHostTarget && roundRevoteCandidateIds.includes(state.selectedHostTarget)) {
+              state.selectedHostTarget = state.selectedHostTarget;
+            } else if (isEditingCurrentPhase) {
               state.selectedHostTarget = roundRevoteCandidateIds.includes(state.selectedHostTarget) ? state.selectedHostTarget : "";
             } else {
               state.selectedHostTarget = round?.myRevoteTargetId || "";
@@ -4389,7 +4668,9 @@
             state.selectedFinalTarget = "";
             return;
           case "final_vote":
-            if (isEditingCurrentPhase) {
+            if (state.selectedFinalTarget && finalVoteCandidateIds.includes(state.selectedFinalTarget)) {
+              state.selectedFinalTarget = state.selectedFinalTarget;
+            } else if (isEditingCurrentPhase) {
               state.selectedFinalTarget = finalVoteCandidateIds.includes(state.selectedFinalTarget) ? state.selectedFinalTarget : "";
             } else {
               state.selectedFinalTarget = room.game.finalVote?.myVoteCandidateId || "";
@@ -4398,7 +4679,9 @@
             state.selectedHostTarget = "";
             return;
           case "final_revote":
-            if (isEditingCurrentPhase) {
+            if (state.selectedFinalTarget && finalRevoteCandidateIds.includes(state.selectedFinalTarget)) {
+              state.selectedFinalTarget = state.selectedFinalTarget;
+            } else if (isEditingCurrentPhase) {
               state.selectedFinalTarget = finalRevoteCandidateIds.includes(state.selectedFinalTarget) ? state.selectedFinalTarget : "";
             } else {
               state.selectedFinalTarget = room.game.finalVote?.myRevoteCandidateId || "";
@@ -4798,9 +5081,9 @@
 
         return `
           <section class="panel">
-            <div class="section-heading">
+            <div class="section-heading stack">
               <h3>いいね数ランキング</h3>
-              <span class="section-heading-spacer" aria-hidden="true"></span>
+              <span class="btn secondary compact section-heading-spacer" aria-hidden="true">一覧を見る</span>
             </div>
             <div class="history-ranking-list">
               ${rankingItems
@@ -5427,23 +5710,15 @@
         return `
           ${renderScreenAlerts({ includeCopy: true })}
           <div class="screen-grid screen-grid--lobby">
-            <div class="screen-primary">
-              <section class="card">
+            <div class="lobby-stage-heading">
+              <div class="section-heading">
                 <h2>ルーム待機中</h2>
-                <div class="lobby-layout">
-                  <div class="lobby-layout-main">
-                    <div id="lobbyTopSlot"></div>
-                    <div id="lobbyUtilitySlot" class="lobby-actions"></div>
-                  </div>
-                  <div class="lobby-layout-side">
-                    <section class="panel lobby-players-panel">
-                      <div id="lobbyPlayersSlot"></div>
-                    </section>
-                  </div>
-                </div>
-              </section>
+              </div>
             </div>
-            <div class="screen-secondary" id="lobbyChampionsSlot"></div>
+            <div id="lobbyRoomSlot"></div>
+            <div id="lobbyPlayersPanelSlot"></div>
+            <div id="lobbyRecentSlot"></div>
+            <div id="lobbyRankingSlot"></div>
           </div>
         `;
       }
@@ -5455,19 +5730,22 @@
         const mySeatLabel = getLobbySeatLabel(room, room.me.playerId);
         const mySeatValue = room.me.role === "spectator" ? `${room.me.displayName} / 観戦` : `${mySeatLabel} / ${room.me.displayName}`;
         return `
-          <div class="lobby-status-grid">
-            ${renderSummaryPills([
-              { label: "ROOM", value: room.inviteCode },
-              { label: "参加", value: `${activePlayerCount}/${room.playerCount}人` },
-              ...(spectatorCount ? [{ label: "観戦", value: `${spectatorCount}人` }] : []),
-              { label: "あなた", value: mySeatValue },
-              ...(hostPlayer ? [{ label: "ホスト", value: hostPlayer.displayName }] : [])
-            ])}
-            <div class="lobby-inline-actions">
-              <span class="room-code">${escapeHtml(room.inviteCode)}</span>
-              <button class="btn secondary" type="button" data-action="copy-invite-url">招待URLをコピー</button>
+          <section class="lobby-room-card">
+            <h3>ルーム情報</h3>
+            <div class="lobby-top-stack">
+              ${renderSummaryPills([
+                { label: "ROOM", value: room.inviteCode },
+                { label: "参加", value: `${activePlayerCount}/${room.playerCount}人` },
+                ...(spectatorCount ? [{ label: "観戦", value: `${spectatorCount}人` }] : []),
+                { label: "あなた", value: mySeatValue },
+                ...(hostPlayer ? [{ label: "ホスト", value: hostPlayer.displayName }] : [])
+              ])}
+              <div class="lobby-inline-actions">
+                <span class="room-code">${escapeHtml(room.inviteCode)}</span>
+                <button class="btn secondary" type="button" data-action="copy-invite-url">招待URLをコピー</button>
+              </div>
             </div>
-          </div>
+          </section>
         `;
       }
 
@@ -5483,93 +5761,102 @@
 
       function renderLobbyPlayers(room) {
         const orderedPlayers = getLobbyPlayerOrder(room);
-        const orderedPlayerIds = orderedPlayers.map((player) => player.playerId);
         const canReorder = room.me.isHost && orderedPlayers.length > 1;
+        const ready = orderedPlayers.length === room.playerCount;
         const spectatorPlayers = [...room.game.players]
           .filter((player) => player.role === "spectator")
           .sort((left, right) => left.seatOrder - right.seatOrder);
+        const randomizeButton = room.me.isHost
+          ? `<button class="btn neutral compact" type="button" data-action="randomize-player-order" ${canReorder && !state.pendingAction ? "" : "disabled"}>ランダムに並び替え</button>`
+          : "";
         return `
-          <div class="player-list">
-            <div class="player-section">
-              <div class="player-section-heading">
-                <div class="player-section-label">参加プレイヤー</div>
-                ${canReorder ? `<div class="player-section-note">カードをドラッグして 1 ラウンド目の順番を決めます。</div>` : ""}
+          <section class="lobby-players-panel">
+            <div class="lobby-player-panel">
+              <div class="lobby-player-panel-header">
+                <div class="section-heading">
+                  <h3>参加プレイヤー</h3>
+                </div>
+                ${room.me.isHost && randomizeButton ? `<div class="lobby-player-panel-toolbar">${randomizeButton}</div>` : ""}
               </div>
+              <div class="lobby-player-list">
               ${orderedPlayers
-              .map(
-                (player, index) => {
+                .map((player, index) => {
                   const isMe = player.playerId === room.me.playerId;
-                  const seatLabel = `${index + 1}番手`;
+                  const roleBadge = getPlayerRoleBadge(player);
+                  const seatNumber = index + 1;
+                  const roleToggle =
+                    room.me.isHost && !player.isHost
+                      ? player.role === "spectator"
+                        ? `<button class="btn secondary compact" type="button" data-action="set-player-role" data-target-player-id="${player.playerId}" data-role="player" ${state.pendingAction ? "disabled" : ""}>参加にする</button>`
+                        : `<button class="btn neutral compact" type="button" data-action="set-player-role" data-target-player-id="${player.playerId}" data-role="spectator" ${state.pendingAction ? "disabled" : ""}>観戦にする</button>`
+                      : "";
+                  const hostTransfer =
+                    room.me.isHost && !player.isHost
+                      ? `<button class="btn ghost compact" type="button" data-action="set-host-player" data-target-player-id="${player.playerId}" ${state.pendingAction ? "disabled" : ""}>ホストにする</button>`
+                      : "";
+                  const kickButton =
+                    room.me.isHost && !player.isHost
+                      ? `<button class="btn danger compact" type="button" data-action="kick-player" data-target-player-id="${player.playerId}" ${state.pendingAction ? "disabled" : ""}>退出させる</button>`
+                      : "";
+                  const actionButtons = [roleToggle, hostTransfer, kickButton].filter(Boolean).join("");
                   return `
                   <div
-                    class="player-card player-card--order${isMe ? " player-card--me" : ""}${room.me.isHost ? " is-ordering" : ""}${state.draggingLobbyPlayerId === player.playerId ? " is-dragging" : ""}"
+                    class="player-card lobby-player-card player-card--order${isMe ? " player-card--me" : ""}${room.me.isHost ? " is-ordering" : ""}${state.draggingLobbyPlayerId === player.playerId ? " is-dragging" : ""}"
                     data-order-player-id="${player.playerId}"
-                    draggable="${room.me.isHost && orderedPlayerIds.length > 1 ? "true" : "false"}"
+                    draggable="false"
                   >
+                    <div class="player-card-handle">
+                      ${canReorder ? `<span class="order-grab" data-order-handle="true" aria-label="順番をドラッグして変更"></span>` : ""}
+                    </div>
                     <div class="player-card-main">
-                      <div class="player-card-heading">
-                        <span class="order-badge${isMe ? " is-you" : ""}">${escapeHtml(seatLabel)}</span>
-                        ${isMe ? `<span class="badge badge--you">あなた</span>` : ""}
+                      <div class="player-card-topline">
+                        <div class="player-card-heading">
+                          <span class="order-badge badge--seat${isMe ? " is-you" : ""}">${escapeHtml(`${seatNumber}番手`)}</span>
+                          ${isMe ? `<span class="badge badge--you">あなた</span>` : ""}
+                        </div>
+                        <span class="${roleBadge.className} player-card-role">${escapeHtml(roleBadge.label)}</span>
                       </div>
                       <strong>${escapeHtml(player.displayName)}</strong>
-                      <span>${escapeHtml(isMe ? `あなたの席は ${index + 1} 番手です。` : `席順 ${index + 1}`)}</span>
-                    </div>
-                    <div class="player-card-side">
-                      ${player.isHost ? `<span class="badge badge--host">ホスト</span>` : ""}
-                      ${
-                        room.me.isHost && !player.isHost
-                          ? `
-                            <div class="player-admin-actions">
-                              <div class="chip-row compact">
-                                <button class="chip" type="button" data-action="set-player-role" data-target-player-id="${player.playerId}" data-role="spectator" ${state.pendingAction ? "disabled" : ""}>観戦にする</button>
-                              </div>
-                              <div class="button-row align-right">
-                                <button class="btn neutral compact" type="button" data-action="set-host-player" data-target-player-id="${player.playerId}" ${state.pendingAction ? "disabled" : ""}>ホストにする</button>
-                                <button class="btn ghost compact" type="button" data-action="kick-player" data-target-player-id="${player.playerId}" ${state.pendingAction ? "disabled" : ""}>退出させる</button>
-                              </div>
-                            </div>
-                          `
-                          : ""
-                      }
+                      <span class="player-card-subtitle">${escapeHtml(`座順 ${seatNumber}`)}</span>
+                      ${actionButtons ? `<div class="player-card-actions">${actionButtons}</div>` : ""}
                     </div>
                   </div>
                 `;
-                }
-              )
-              .join("")}
-            </div>
+                })
+                .join("")}
+              </div>
             ${
               spectatorPlayers.length
                 ? `
                   <div class="player-section">
-                    <div class="player-section-heading">
-                      <div class="player-section-label">観戦者</div>
-                    </div>
-                    ${spectatorPlayers
-                      .map((player) => {
+                      <div class="player-section-heading">
+                        <div class="player-section-label">観戦者</div>
+                      </div>
+                      ${spectatorPlayers
+                        .map((player) => {
                         const isMe = player.playerId === room.me.playerId;
+                        const roleToggle =
+                          room.me.isHost && !player.isHost
+                            ? `<button class="btn secondary compact" type="button" data-action="set-player-role" data-target-player-id="${player.playerId}" data-role="player" ${state.pendingAction ? "disabled" : ""}>参加にする</button>`
+                            : "";
+                        const kickButton =
+                          room.me.isHost && !player.isHost
+                            ? `<button class="btn danger compact" type="button" data-action="kick-player" data-target-player-id="${player.playerId}" ${state.pendingAction ? "disabled" : ""}>退出させる</button>`
+                            : "";
+                        const actionButtons = [roleToggle, kickButton].filter(Boolean).join("");
                         return `
-                          <div class="player-card player-card--spectator${isMe ? " player-card--me" : ""}">
+                          <div class="player-card lobby-player-card lobby-spectator-card player-card--spectator${isMe ? " player-card--me" : ""}">
+                            <div class="player-card-handle"></div>
                             <div class="player-card-main">
-                              <div class="player-card-heading">
-                                ${isMe ? `<span class="badge badge--you">あなた</span>` : ""}
+                              <div class="player-card-topline">
+                                <div class="player-card-heading">
+                                  <span class="order-badge order-badge--spectator">観戦席</span>
+                                  ${isMe ? `<span class="badge badge--you">あなた</span>` : ""}
+                                </div>
                               </div>
                               <strong>${escapeHtml(player.displayName)}</strong>
-                              <span>${escapeHtml(isMe ? "この端末は観戦中です。" : "見守り中")}</span>
-                            </div>
-                            <div class="player-card-side">
-                              ${
-                                room.me.isHost && !player.isHost
-                                  ? `
-                                    <div class="player-admin-actions">
-                                      <div class="chip-row compact">
-                                        <button class="chip" type="button" data-action="set-player-role" data-target-player-id="${player.playerId}" data-role="player" ${state.pendingAction ? "disabled" : ""}>参加にする</button>
-                                      </div>
-                                      <button class="btn ghost compact" type="button" data-action="kick-player" data-target-player-id="${player.playerId}" ${state.pendingAction ? "disabled" : ""}>退出させる</button>
-                                    </div>
-                                  `
-                                  : ""
-                              }
+                              <span class="player-card-subtitle">${escapeHtml("観戦中")}</span>
+                              ${actionButtons ? `<div class="player-card-actions">${actionButtons}</div>` : ""}
                             </div>
                           </div>
                         `;
@@ -5579,39 +5866,32 @@
                 `
                 : ""
             }
-          </div>
-        `;
-      }
-
-      function renderLobbyUtility(room) {
-        const activePlayers = getLobbyPlayerOrder(room);
-        const ready = activePlayers.length === room.playerCount;
-        return `
-          <div class="lobby-utility-stack">
-            ${
-              room.me.isHost
-                ? `
-                  <div class="lobby-utility-actions">
-                    <div class="button-row align-left lobby-control-row">
-                      <button class="btn neutral compact" type="button" data-action="randomize-player-order" ${activePlayers.length > 1 && !state.pendingAction ? "" : "disabled"}>ランダムに並び替え</button>
-                    </div>
-                    <div class="button-row align-right">
-                      <button class="btn primary compact" type="button" data-action="start-game" ${ready && !state.pendingAction ? "" : "disabled"}>この順で開始</button>
-                    </div>
+              <div class="lobby-player-footer">
+                <div class="lobby-player-footer-main">
+                  ${
+                    room.me.isHost
+                      ? `
+                        <div class="lobby-player-footer-actions">
+                          <button class="btn primary compact" type="button" data-action="start-game" ${ready && !state.pendingAction ? "" : "disabled"}>この順で開始</button>
+                        </div>
+                      `
+                      : ""
+                  }
+                  ${
+                    room.me.isHost
+                      ? `
+                        ${ready ? "" : `<div class="info-box">参加プレイヤーが ${room.playerCount} 人そろうと開始できます。</div>`}
+                      `
+                      : `<div class="info-box">${room.me.role === "spectator" ? "観戦として待機中です。" : "ホストの開始待ちです。"}</div>`
+                  }
+                  <div class="lobby-player-footer-leave">
+                    <button class="btn neutral compact" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
                   </div>
-                  ${ready ? "" : `<div class="info-box">参加プレイヤーが ${room.playerCount} 人そろうと開始できます。</div>`}
-                `
-                : `<div class="info-box">${room.me.role === "spectator" ? "観戦として待機中です。" : "ホストの開始待ちです。"}</div>`
-            }
-            <div class="lobby-leave">
-              <button class="btn ghost compact" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
+                </div>
+              </div>
             </div>
-          </div>
+          </section>
         `;
-      }
-
-      function renderLobbyChampions() {
-        return renderChampionHistoryTrigger("最近の総合優勝ワード");
       }
 
       function updateLobbyView(room) {
@@ -5623,11 +5903,10 @@
         const shellKey = `${room.roomId}|${room.me.playerId}`;
         if (state.renderCache.lobbyShellKey !== shellKey) {
           state.renderCache.lobbyShellKey = shellKey;
-          state.renderCache.lobbyTopKey = "";
-          state.renderCache.lobbyPlayersKey = "";
-          state.renderCache.lobbyUtilityKey = "";
-          state.renderCache.lobbyOrderKey = "";
-          state.renderCache.lobbyChampionsKey = "";
+          state.renderCache.lobbyRoomKey = "";
+          state.renderCache.lobbyPlayersPanelKey = "";
+          state.renderCache.lobbyRecentKey = "";
+          state.renderCache.lobbyRankingKey = "";
           els.app.innerHTML = renderLobbyShell();
         }
 
@@ -5635,16 +5914,19 @@
           room.playerOrder?.join(",") || "",
           room.game.players
             .map((player) => `${player.playerId}:${player.displayName}:${player.seatOrder}:${player.isHost ? 1 : 0}:${player.role || "player"}`)
-            .join("|")
+            .join("|"),
+          state.pendingAction ? "pending" : "idle",
+          state.draggingLobbyPlayerId,
+          state.dragTargetLobbyPlayerId
         ].join("|");
-        const topKey = `${room.inviteCode}|${room.playerCount}|${room.activePlayerCount || 0}|${room.spectatorCount || 0}|${room.me.playerId}|${room.me.displayName}|${room.me.isHost ? 1 : 0}|${room.me.role || "player"}|${getHostPlayer(room)?.playerId || ""}|${getHostPlayer(room)?.displayName || ""}|${room.playerOrder?.join(",") || ""}|${mySeatLabel}`;
-        const utilityKey = `${room.me.isHost ? "host" : "guest"}|${room.me.role || "player"}|${room.playerOrder?.join(",") || ""}|${state.pendingAction ? "pending" : "idle"}`;
-        const championsKey = `${getRecentChampionsStamp()}|${getChampionRankingStamp()}`;
+        const roomKey = `${room.inviteCode}|${room.playerCount}|${room.activePlayerCount || 0}|${room.spectatorCount || 0}|${room.me.playerId}|${room.me.displayName}|${room.me.isHost ? 1 : 0}|${room.me.role || "player"}|${getHostPlayer(room)?.playerId || ""}|${getHostPlayer(room)?.displayName || ""}|${room.playerOrder?.join(",") || ""}|${mySeatLabel}`;
+        const recentKey = getRecentChampionsStamp();
+        const rankingKey = getChampionRankingStamp();
 
-        patchSlot(els.app, "#lobbyTopSlot", "lobbyTopKey", topKey, renderLobbyTop(room));
-        patchSlot(els.app, "#lobbyPlayersSlot", "lobbyPlayersKey", playersKey, renderLobbyPlayers(room));
-        patchSlot(els.app, "#lobbyUtilitySlot", "lobbyUtilityKey", utilityKey, renderLobbyUtility(room));
-        patchSlot(els.app, "#lobbyChampionsSlot", "lobbyChampionsKey", championsKey, renderLobbyChampions());
+        patchSlot(els.app, "#lobbyRoomSlot", "lobbyRoomKey", roomKey, renderLobbyTop(room));
+        patchSlot(els.app, "#lobbyPlayersPanelSlot", "lobbyPlayersPanelKey", playersKey, renderLobbyPlayers(room));
+        patchSlot(els.app, "#lobbyRecentSlot", "lobbyRecentKey", recentKey, renderRecentChampionsSection("最近の総合優勝ワード"));
+        patchSlot(els.app, "#lobbyRankingSlot", "lobbyRankingKey", rankingKey, renderChampionRankingSection());
       }
 
       function renderSubmit(room) {
@@ -5993,7 +6275,7 @@
         }
 
         if (isLobbyView(view)) {
-          patchSlot(els.app, "#lobbyUtilitySlot", "lobbyUtilityKey", state.pendingAction ? "pending" : "idle", renderLobbyUtility(room));
+          syncSubmitPreviewFloating(null);
         }
       }
 
@@ -6025,11 +6307,10 @@
         state.renderCache.landingRankingKey = "";
         state.renderCache.landingChampionsKey = "";
         state.renderCache.lobbyShellKey = "";
-        state.renderCache.lobbyTopKey = "";
-        state.renderCache.lobbyPlayersKey = "";
-        state.renderCache.lobbyUtilityKey = "";
-        state.renderCache.lobbyOrderKey = "";
-        state.renderCache.lobbyChampionsKey = "";
+        state.renderCache.lobbyRoomKey = "";
+        state.renderCache.lobbyPlayersPanelKey = "";
+        state.renderCache.lobbyRecentKey = "";
+        state.renderCache.lobbyRankingKey = "";
         state.renderCache.submitShellKey = "";
         state.renderCache.submitTopKey = "";
         state.renderCache.submitSubmissionsKey = "";
@@ -6567,11 +6848,10 @@
         if (isLandingView(view)) {
           state.renderCache.appKey = appKey;
           state.renderCache.lobbyShellKey = "";
-          state.renderCache.lobbyTopKey = "";
-          state.renderCache.lobbyPlayersKey = "";
-          state.renderCache.lobbyUtilityKey = "";
-          state.renderCache.lobbyOrderKey = "";
-          state.renderCache.lobbyChampionsKey = "";
+          state.renderCache.lobbyRoomKey = "";
+          state.renderCache.lobbyPlayersPanelKey = "";
+          state.renderCache.lobbyRecentKey = "";
+          state.renderCache.lobbyRankingKey = "";
           state.renderCache.submitShellKey = "";
           state.renderCache.submitTopKey = "";
           state.renderCache.submitSubmissionsKey = "";
@@ -6636,11 +6916,10 @@
           state.renderCache.landingRankingKey = "";
           state.renderCache.landingChampionsKey = "";
           state.renderCache.lobbyShellKey = "";
-          state.renderCache.lobbyTopKey = "";
-          state.renderCache.lobbyPlayersKey = "";
-          state.renderCache.lobbyUtilityKey = "";
-          state.renderCache.lobbyOrderKey = "";
-          state.renderCache.lobbyChampionsKey = "";
+          state.renderCache.lobbyRoomKey = "";
+          state.renderCache.lobbyPlayersPanelKey = "";
+          state.renderCache.lobbyRecentKey = "";
+          state.renderCache.lobbyRankingKey = "";
           state.renderCache.waitShellKey = "";
           state.renderCache.waitFocusKey = "";
           state.renderCache.waitSyncKey = "";
@@ -6666,11 +6945,10 @@
           state.renderCache.landingRankingKey = "";
           state.renderCache.landingChampionsKey = "";
           state.renderCache.lobbyShellKey = "";
-          state.renderCache.lobbyTopKey = "";
-          state.renderCache.lobbyPlayersKey = "";
-          state.renderCache.lobbyUtilityKey = "";
-          state.renderCache.lobbyOrderKey = "";
-          state.renderCache.lobbyChampionsKey = "";
+          state.renderCache.lobbyRoomKey = "";
+          state.renderCache.lobbyPlayersPanelKey = "";
+          state.renderCache.lobbyRecentKey = "";
+          state.renderCache.lobbyRankingKey = "";
           state.renderCache.submitShellKey = "";
           state.renderCache.submitTopKey = "";
           state.renderCache.submitSubmissionsKey = "";
@@ -6697,11 +6975,10 @@
           state.renderCache.landingRankingKey = "";
           state.renderCache.landingChampionsKey = "";
           state.renderCache.lobbyShellKey = "";
-          state.renderCache.lobbyTopKey = "";
-          state.renderCache.lobbyPlayersKey = "";
-          state.renderCache.lobbyUtilityKey = "";
-          state.renderCache.lobbyOrderKey = "";
-          state.renderCache.lobbyChampionsKey = "";
+          state.renderCache.lobbyRoomKey = "";
+          state.renderCache.lobbyPlayersPanelKey = "";
+          state.renderCache.lobbyRecentKey = "";
+          state.renderCache.lobbyRankingKey = "";
           state.renderCache.submitShellKey = "";
           state.renderCache.submitTopKey = "";
           state.renderCache.submitSubmissionsKey = "";
@@ -6727,11 +7004,10 @@
           state.renderCache.landingRankingKey = "";
           state.renderCache.landingChampionsKey = "";
           state.renderCache.lobbyShellKey = "";
-          state.renderCache.lobbyTopKey = "";
-          state.renderCache.lobbyPlayersKey = "";
-          state.renderCache.lobbyUtilityKey = "";
-          state.renderCache.lobbyOrderKey = "";
-          state.renderCache.lobbyChampionsKey = "";
+          state.renderCache.lobbyRoomKey = "";
+          state.renderCache.lobbyPlayersPanelKey = "";
+          state.renderCache.lobbyRecentKey = "";
+          state.renderCache.lobbyRankingKey = "";
           state.renderCache.submitShellKey = "";
           state.renderCache.submitTopKey = "";
           state.renderCache.submitSubmissionsKey = "";
@@ -6772,15 +7048,16 @@
         const text = state.draftLineMode === "single" ? getDraftDisplayText(room) : getDraftText(room);
         const chars = Array.from(text);
         const sizePreset = getSizePreset(state.draftSizePreset);
+        const previewFontSize = getPreviewDisplayFontSize(layout.fontSize);
         previewWord.dataset.fontId = state.draftFontId;
         previewWord.dataset.lineMode = state.draftLineMode;
         previewWord.dataset.sizePreset = sizePreset.id;
         previewWord.dataset.variant = "preview-word";
         previewWord.dataset.lineGapPreset = state.draftLineGapPreset;
-        previewWord.dataset.maxFont = String(layout.fontSize);
-        previewWord.dataset.minFont = String(layout.fontSize);
-        previewWord.dataset.fontSizeHint = String(layout.fontSize);
-        applyWordMarkup(previewWord, layout.lines, getFontClass(state.draftFontId), state.draftLineMode, layout.fontSize, state.draftLineGapPreset);
+        previewWord.dataset.maxFont = String(previewFontSize);
+        previewWord.dataset.minFont = String(previewFontSize);
+        previewWord.dataset.fontSizeHint = String(previewFontSize);
+        applyWordMarkup(previewWord, layout.lines, getFontClass(state.draftFontId), state.draftLineMode, previewFontSize, state.draftLineGapPreset);
         window.requestAnimationFrame(() => syncSubmitPreviewFloating(room));
         window.setTimeout(() => syncSubmitPreviewFloating(room), 120);
       }
@@ -7004,16 +7281,19 @@
         const revealMaxFontBase = presentation.maxFont || (presentation.kind === "champion" ? 56 : 50);
         const revealMinFontBase = presentation.minFont || (presentation.kind === "champion" ? 24 : 22);
         const mobileViewport = window.innerWidth <= 767;
+        const revealCardWidth = els.revealCard?.clientWidth || Math.min(window.innerWidth * 0.96, 520);
+        const revealInnerWidth = Math.max(208, Math.round(revealCardWidth - (presentation.kind === "submission" ? 52 : 44)));
+        const revealWidthFactor = mobileViewport ? Math.max(0.96, Math.min(1.18, revealInnerWidth / 340)) : 1;
         const viewportFontCap = mobileViewport
           ? presentation.kind === "submission"
-            ? 54
+            ? 124
             : presentation.kind === "champion"
-              ? 48
-              : 44
+              ? 116
+              : 104
           : Infinity;
         const preferredRevealFont = presentation.fontSizeHint
-          ? Math.round(Math.max(revealMinFontBase, presentation.fontSizeHint))
-          : Math.round(revealMaxFontBase * sizePreset.renderScale);
+          ? Math.round(Math.max(revealMinFontBase, presentation.fontSizeHint * revealWidthFactor))
+          : Math.round(revealMaxFontBase * sizePreset.renderScale * revealWidthFactor);
         els.revealCard.classList.toggle("is-champion", presentation.kind === "champion");
         els.revealCard.classList.toggle("is-submission", presentation.kind === "submission");
         els.revealCard.classList.toggle("is-round-winner", presentation.kind === "round_winner");
@@ -7025,7 +7305,7 @@
         els.revealWord.dataset.fontId = presentation.fontId || "classic";
         els.revealWord.dataset.lineMode = presentation.lines.length <= 1 ? "single" : "manual";
         const revealHint = Number.isFinite(Number(presentation.fontSizeHint)) ? Math.round(Number(presentation.fontSizeHint)) : 0;
-        const computedRevealMin = Math.max(6, Math.min(viewportFontCap - 8, Math.round(revealMinFontBase * Math.max(0.64, sizePreset.renderScale - 0.1))));
+        const computedRevealMin = Math.max(6, Math.min(viewportFontCap - 8, Math.round(revealMinFontBase * Math.max(0.72, sizePreset.renderScale - 0.04))));
         const effectiveRevealMin = revealHint ? Math.min(computedRevealMin, Math.max(4, revealHint)) : computedRevealMin;
         els.revealWord.dataset.maxFont = String(Math.min(viewportFontCap, Math.max(effectiveRevealMin, preferredRevealFont)));
         els.revealWord.dataset.minFont = String(effectiveRevealMin);
@@ -7258,9 +7538,14 @@
       }
 
       function clearLobbyDragUi() {
+        state.dragPointerId = 0;
+        state.dragPointerStartY = 0;
         state.draggingLobbyPlayerId = "";
         state.dragTargetLobbyPlayerId = "";
-        document.querySelectorAll("[data-order-player-id].is-dragging").forEach((node) => node.classList.remove("is-dragging"));
+        document.querySelectorAll("[data-order-player-id].is-dragging").forEach((node) => {
+          node.classList.remove("is-dragging");
+          node.style.removeProperty("--drag-offset-y");
+        });
         document.querySelectorAll("[data-order-player-id].is-drop-target").forEach((node) => node.classList.remove("is-drop-target"));
       }
 
@@ -7269,6 +7554,27 @@
         document.querySelectorAll("[data-order-player-id]").forEach((node) => {
           node.classList.toggle("is-drop-target", Boolean(targetId) && node.dataset.orderPlayerId === targetId);
         });
+      }
+
+      function getNearestLobbyDropTarget(clientY) {
+        const candidates = Array.from(document.querySelectorAll("[data-order-player-id]")).filter(
+          (node) => node.dataset.orderPlayerId && node.dataset.orderPlayerId !== state.draggingLobbyPlayerId
+        );
+        if (!candidates.length) {
+          return "";
+        }
+        let bestTargetId = "";
+        let bestDistance = Number.POSITIVE_INFINITY;
+        candidates.forEach((node) => {
+          const rect = node.getBoundingClientRect();
+          const middle = rect.top + rect.height / 2;
+          const distance = Math.abs(clientY - middle);
+          if (distance < bestDistance) {
+            bestDistance = distance;
+            bestTargetId = node.dataset.orderPlayerId || "";
+          }
+        });
+        return bestTargetId;
       }
 
       async function persistLobbyPlayerOrder(playerOrder) {
@@ -7286,6 +7592,55 @@
           state.selectedStartPlayerId = playerOrder[0] || "";
           setRoom(payload.data.room);
         }, { pendingMode: "refresh" });
+      }
+
+      function canStartLobbyDrag(target) {
+        if (!target.closest?.(".order-grab")) {
+          return false;
+        }
+        return Boolean(target.closest?.("[data-order-player-id]"));
+      }
+
+      function startLobbyDrag(card, pointerId, clientY) {
+        if (!card || deriveView() !== "lobby" || !state.room?.me?.isHost) {
+          return false;
+        }
+        state.draggingLobbyPlayerId = card.dataset.orderPlayerId || "";
+        state.dragPointerId = pointerId;
+        state.dragPointerStartY = clientY;
+        card.classList.add("is-dragging");
+        card.style.setProperty("--drag-offset-y", "0px");
+        return true;
+      }
+
+      function moveLobbyDrag(clientY) {
+        if (!state.draggingLobbyPlayerId || deriveView() !== "lobby" || !state.room?.me?.isHost) {
+          return;
+        }
+        const draggedCard = document.querySelector(`[data-order-player-id="${CSS.escape(state.draggingLobbyPlayerId)}"]`);
+        if (draggedCard) {
+          draggedCard.style.setProperty("--drag-offset-y", `${clientY - state.dragPointerStartY}px`);
+        }
+        const targetId = getNearestLobbyDropTarget(clientY);
+        updateLobbyDropTarget(targetId && targetId !== state.draggingLobbyPlayerId ? targetId : "");
+      }
+
+      async function finishLobbyDrag(clientY) {
+        if (!state.draggingLobbyPlayerId || deriveView() !== "lobby" || !state.room?.me?.isHost) {
+          return;
+        }
+        const draggedId = state.draggingLobbyPlayerId;
+        const targetId = getNearestLobbyDropTarget(clientY) || state.dragTargetLobbyPlayerId || "";
+        clearLobbyDragUi();
+        if (!targetId || draggedId === targetId) {
+          return;
+        }
+        const nextOrder = reorderLobbyPlayerIds(
+          getLobbyPlayerOrder(state.room).map((player) => player.playerId),
+          draggedId,
+          targetId
+        );
+        await persistLobbyPlayerOrder(nextOrder);
       }
 
       const selectionClickHandlers = [
@@ -7695,101 +8050,78 @@
         }
       });
 
-      document.addEventListener("dragstart", (event) => {
-        if (event.target.closest?.(".player-role-actions, .player-card-side, button, .chip")) {
-          return;
-        }
-        const card = event.target.closest?.("[data-order-player-id]");
-        if (!card || deriveView() !== "lobby" || !state.room?.me?.isHost) {
-          return;
-        }
-        state.draggingLobbyPlayerId = card.dataset.orderPlayerId || "";
-        event.dataTransfer?.setData("text/plain", state.draggingLobbyPlayerId);
-        event.dataTransfer.effectAllowed = "move";
-        card.classList.add("is-dragging");
-      });
-
-      document.addEventListener("dragover", (event) => {
-        const card = event.target.closest?.("[data-order-player-id]");
-        if (!card || !state.draggingLobbyPlayerId || deriveView() !== "lobby" || !state.room?.me?.isHost) {
-          return;
-        }
-        event.preventDefault();
-        event.dataTransfer.dropEffect = "move";
-        updateLobbyDropTarget(card.dataset.orderPlayerId || "");
-      });
-
-      document.addEventListener("drop", async (event) => {
-        const card = event.target.closest?.("[data-order-player-id]");
-        if (!card || !state.draggingLobbyPlayerId || deriveView() !== "lobby" || !state.room?.me?.isHost) {
-          return;
-        }
-        event.preventDefault();
-        const draggedId = state.draggingLobbyPlayerId;
-        const targetId = card.dataset.orderPlayerId || "";
-        clearLobbyDragUi();
-        if (!targetId || draggedId === targetId) {
-          return;
-        }
-        const nextOrder = reorderLobbyPlayerIds(
-          getLobbyPlayerOrder(state.room).map((player) => player.playerId),
-          draggedId,
-          targetId
-        );
-        await persistLobbyPlayerOrder(nextOrder);
-      });
-
-      document.addEventListener("dragend", () => {
-        clearLobbyDragUi();
-      });
-
       document.addEventListener("pointerdown", (event) => {
+        if (event.pointerType === "mouse") {
+          return;
+        }
         if (event.button !== undefined && event.button !== 0) {
           return;
         }
-        if (event.target.closest?.(".player-role-actions, .player-card-side, button, .chip")) {
+        if (!canStartLobbyDrag(event.target)) {
           return;
         }
         const card = event.target.closest?.("[data-order-player-id]");
-        if (!card || deriveView() !== "lobby" || !state.room?.me?.isHost) {
+        if (!startLobbyDrag(card, event.pointerId, event.clientY)) {
           return;
         }
-        state.draggingLobbyPlayerId = card.dataset.orderPlayerId || "";
-        card?.classList.add("is-dragging");
         card?.setPointerCapture?.(event.pointerId);
         event.preventDefault();
       });
 
       document.addEventListener("pointermove", (event) => {
-        if (!state.draggingLobbyPlayerId || deriveView() !== "lobby" || !state.room?.me?.isHost) {
+        if (event.pointerType === "mouse") {
           return;
         }
-        const target = document.elementFromPoint(event.clientX, event.clientY)?.closest?.("[data-order-player-id]");
-        updateLobbyDropTarget(target?.dataset.orderPlayerId || "");
+        if (!state.draggingLobbyPlayerId || state.dragPointerId !== event.pointerId || deriveView() !== "lobby" || !state.room?.me?.isHost) {
+          return;
+        }
+        moveLobbyDrag(event.clientY);
         event.preventDefault();
       });
 
       document.addEventListener("pointerup", async (event) => {
-        if (!state.draggingLobbyPlayerId || deriveView() !== "lobby" || !state.room?.me?.isHost) {
+        if (event.pointerType === "mouse") {
           return;
         }
-        const draggedId = state.draggingLobbyPlayerId;
-        const target = document.elementFromPoint(event.clientX, event.clientY)?.closest?.("[data-order-player-id]");
-        const targetId = target?.dataset.orderPlayerId || state.dragTargetLobbyPlayerId || "";
-        clearLobbyDragUi();
-        if (!targetId || draggedId === targetId) {
+        if (!state.draggingLobbyPlayerId || state.dragPointerId !== event.pointerId || deriveView() !== "lobby" || !state.room?.me?.isHost) {
           return;
         }
-        const nextOrder = reorderLobbyPlayerIds(
-          getLobbyPlayerOrder(state.room).map((player) => player.playerId),
-          draggedId,
-          targetId
-        );
-        await persistLobbyPlayerOrder(nextOrder);
+        await finishLobbyDrag(event.clientY);
       });
 
-      document.addEventListener("pointercancel", () => {
+      document.addEventListener("pointercancel", (event) => {
+        if (state.dragPointerId && state.dragPointerId !== event.pointerId) {
+          return;
+        }
         clearLobbyDragUi();
+      });
+
+      document.addEventListener("mousedown", (event) => {
+        if (event.button !== 0) {
+          return;
+        }
+        if (!canStartLobbyDrag(event.target)) {
+          return;
+        }
+        const card = event.target.closest?.("[data-order-player-id]");
+        if (!startLobbyDrag(card, -1, event.clientY)) {
+          return;
+        }
+        event.preventDefault();
+      });
+
+      document.addEventListener("mousemove", (event) => {
+        if (state.dragPointerId !== -1) {
+          return;
+        }
+        moveLobbyDrag(event.clientY);
+      });
+
+      document.addEventListener("mouseup", async (event) => {
+        if (state.dragPointerId !== -1) {
+          return;
+        }
+        await finishLobbyDrag(event.clientY);
       });
 
       els.closeRevealBtn.addEventListener("click", () => {

@@ -32,7 +32,7 @@ function waitForPort(port, host = "127.0.0.1", timeoutMs = 15000) {
 }
 
 async function startServers() {
-  staticServer = spawn("python3", ["-m", "http.server", "8000"], {
+  staticServer = spawn("python3", ["-m", "http.server", "8000", "--bind", "127.0.0.1"], {
     cwd: ROOT,
     stdio: "ignore"
   });
@@ -169,9 +169,10 @@ async function createTwoPlayerRoom(browser) {
     window.localStorage.setItem("omojan-app-last-display-name", "GuestFlowTest");
   });
   await guest.goto(`${STATIC_URL}&invite=${encodeURIComponent(inviteCode)}`);
-  await expect(guest.getByRole("heading", { name: "招待 URL から参加" })).toBeVisible();
-  await expect(guest.locator("#inviteCode")).toHaveValue(inviteCode);
-  await guest.getByRole("button", { name: "参加する" }).click();
+  await expect(guest.getByRole("heading", { name: "このルームに参加" })).toBeVisible();
+  await expect(guest.locator("#joinDisplayNameInvite")).toHaveValue("GuestFlowTest");
+  await expect(guest.locator("#inviteCode")).toHaveCount(0);
+  await guest.getByRole("button", { name: "この表示名で参加" }).click();
   await expect(guest.getByRole("heading", { name: "ルーム待機中" })).toBeVisible();
   await expect(guest.locator("body")).toContainText("GuestFlowTest");
 
@@ -455,8 +456,9 @@ test("mobile submit view keeps a floating preview and uses unified reveal labels
     window.localStorage.setItem("omojan-app-last-display-name", "GuestMobileTest");
   });
   await guest.goto(`${STATIC_URL}&invite=${encodeURIComponent(inviteCode)}`);
-  await expect(guest.getByRole("heading", { name: "招待 URL から参加" })).toBeVisible();
-  await guest.getByRole("button", { name: "参加する" }).click();
+  await expect(guest.getByRole("heading", { name: "このルームに参加" })).toBeVisible();
+  await expect(guest.locator("#joinDisplayNameInvite")).toHaveValue("GuestMobileTest");
+  await guest.getByRole("button", { name: "この表示名で参加" }).click();
   await expect(guest.getByRole("heading", { name: "ルーム待機中" })).toBeVisible();
 
   await host.getByRole("button", { name: "この順で開始" }).click();
@@ -493,6 +495,130 @@ test("mobile submit view keeps a floating preview and uses unified reveal labels
 
   await hostContext.close();
   await guestContext.close();
+});
+
+test("desktop submit view applies a clear difference between large, medium, and small text sizes", async ({ browser }) => {
+  const created = await api("/rooms", {
+    method: "POST",
+    body: JSON.stringify({ displayName: "SizeDesktopHost", playerCount: 2 })
+  });
+  await api("/rooms/join", {
+    method: "POST",
+    body: JSON.stringify({ inviteCode: created.room.inviteCode, displayName: "SizeDesktopGuest" })
+  });
+  await api(
+    `/rooms/${encodeURIComponent(created.room.roomId)}/start-player`,
+    {
+      method: "POST",
+      body: JSON.stringify({ startPlayerId: created.room.me.playerId })
+    },
+    created.playerToken
+  );
+  await api(
+    `/rooms/${encodeURIComponent(created.room.roomId)}/start`,
+    {
+      method: "POST",
+      body: JSON.stringify({ deckId: "default" })
+    },
+    created.playerToken
+  );
+
+  const context = await browser.newContext({ viewport: { width: 1365, height: 900 } });
+  const page = await context.newPage();
+  await page.goto(STATIC_URL);
+  await page.evaluate(({ roomId, playerToken }) => {
+    window.localStorage.setItem("omojan-app-room-id", roomId);
+    window.localStorage.setItem("omojan-app-player-token", playerToken);
+  }, { roomId: created.room.roomId, playerToken: created.playerToken });
+  await page.reload();
+  await expect(page.locator('button[data-action="submit-word"]')).toBeVisible({ timeout: 10000 });
+
+  const getPreviewFontSize = async () =>
+    page.locator("#previewWord .word-line").first().evaluate((node) => Number.parseFloat(getComputedStyle(node).fontSize));
+
+  await page.getByRole("button", { name: "大", exact: true }).click();
+  await page.waitForTimeout(200);
+  const largeSize = await getPreviewFontSize();
+
+  await page.getByRole("button", { name: "中", exact: true }).click();
+  await page.waitForTimeout(200);
+  const mediumSize = await getPreviewFontSize();
+
+  await page.getByRole("button", { name: "小", exact: true }).click();
+  await page.waitForTimeout(200);
+  const smallSize = await getPreviewFontSize();
+
+  expect(largeSize - mediumSize).toBeGreaterThanOrEqual(20);
+  expect(mediumSize - smallSize).toBeGreaterThanOrEqual(20);
+
+  await page.getByRole("button", { name: "1行で固定" }).click();
+  await page.waitForTimeout(200);
+  await page.getByRole("button", { name: "大", exact: true }).click();
+  await page.waitForTimeout(200);
+  const largeSingle = await getPreviewFontSize();
+  await page.getByRole("button", { name: "中", exact: true }).click();
+  await page.waitForTimeout(200);
+  const mediumSingle = await getPreviewFontSize();
+  await page.getByRole("button", { name: "小", exact: true }).click();
+  await page.waitForTimeout(200);
+  const smallSingle = await getPreviewFontSize();
+
+  expect(largeSingle - mediumSingle).toBeGreaterThanOrEqual(20);
+  expect(mediumSingle - smallSingle).toBeGreaterThanOrEqual(16);
+
+  await context.close();
+});
+
+test("spectators do not receive turns and do not block reveal progression", async ({ browser }) => {
+  test.setTimeout(60000);
+  const hostContext = await browser.newContext();
+  const guestContext = await browser.newContext();
+  const spectatorContext = await browser.newContext();
+  const host = await hostContext.newPage();
+  const guest = await guestContext.newPage();
+  const spectator = await spectatorContext.newPage();
+
+  await host.goto(STATIC_URL);
+  await host.fill("#createDisplayName", "SpectatorHost");
+  await host.getByRole("button", { name: "2人" }).click();
+  await host.getByRole("button", { name: "ルームを作る" }).click();
+  await expect(host.getByRole("heading", { name: "ルーム待機中" })).toBeVisible();
+  const inviteCode = ((await host.locator(".room-code").textContent()) || "").trim();
+
+  await guest.goto(`${STATIC_URL}&invite=${encodeURIComponent(inviteCode)}`);
+  await guest.fill("#joinDisplayNameInvite", "SpectatorGuest");
+  await guest.getByRole("button", { name: "この表示名で参加" }).click();
+  await expect(guest.getByRole("heading", { name: "ルーム待機中" })).toBeVisible();
+
+  await spectator.goto(`${STATIC_URL}&invite=${encodeURIComponent(inviteCode)}`);
+  await spectator.fill("#joinDisplayNameInvite", "JustWatcher");
+  await spectator.getByRole("button", { name: "この表示名で参加" }).click();
+  await expect(spectator.locator("#feedbackDock")).toContainText("観戦として参加しました。");
+  await expect(spectator.getByRole("heading", { name: "ルーム待機中" })).toBeVisible();
+  await expect(spectator.locator("body")).toContainText("観戦");
+
+  await host.reload();
+  await host.getByRole("button", { name: "この順で開始" }).click();
+  await expect(host.locator('button[data-action="submit-word"]')).toBeVisible({ timeout: 10000 });
+  await expect(spectator.locator('button[data-action="submit-word"]')).toHaveCount(0);
+  await expect(spectator.locator("body")).toContainText("観戦中");
+
+  await submitCurrentDraft(host);
+  await acknowledgeRevealOn(host);
+  await acknowledgeRevealOn(guest);
+  await reconnect(host);
+  await reconnect(guest);
+  await reconnect(spectator);
+
+  await expect(host.locator('button[data-action="submit-word"]')).toHaveCount(0);
+  await expect(guest.locator('button[data-action="submit-word"]')).toBeVisible({ timeout: 10000 });
+  await expect(spectator.locator('button[data-action="submit-word"]')).toHaveCount(0);
+  await expect(spectator.locator("#revealOverlay")).toBeHidden();
+  await expect(spectator.locator("body")).toContainText("観戦中");
+
+  await hostContext.close();
+  await guestContext.close();
+  await spectatorContext.close();
 });
 
 test("app restores session after reopening the browser context", async ({ browser }) => {
@@ -558,14 +684,18 @@ test("host can transfer host role in the lobby", async ({ browser }) => {
     window.localStorage.setItem("omojan-app-last-display-name", "GuestShift");
   });
   await guest.goto(`${STATIC_URL}&invite=${encodeURIComponent(inviteCode)}`);
-  await guest.getByRole("button", { name: "参加する" }).click();
+  await expect(guest.getByRole("heading", { name: "このルームに参加" })).toBeVisible();
+  await expect(guest.locator("#joinDisplayNameInvite")).toHaveValue("GuestShift");
+  await guest.getByRole("button", { name: "この表示名で参加" }).click();
   await expect(guest.getByRole("heading", { name: "ルーム待機中" })).toBeVisible();
   await third.goto(STATIC_URL);
   await third.evaluate(() => {
     window.localStorage.setItem("omojan-app-last-display-name", "ThirdShift");
   });
   await third.goto(`${STATIC_URL}&invite=${encodeURIComponent(inviteCode)}`);
-  await third.getByRole("button", { name: "参加する" }).click();
+  await expect(third.getByRole("heading", { name: "このルームに参加" })).toBeVisible();
+  await expect(third.locator("#joinDisplayNameInvite")).toHaveValue("ThirdShift");
+  await third.getByRole("button", { name: "この表示名で参加" }).click();
   await expect(third.getByRole("heading", { name: "ルーム待機中" })).toBeVisible();
 
   await expect(host.locator("body")).toContainText("ホスト HostShift");
@@ -579,12 +709,51 @@ test("host can transfer host role in the lobby", async ({ browser }) => {
   await thirdContext.close();
 });
 
+test("host can reorder lobby player order directly inside the participant list", async ({ browser }) => {
+  const hostContext = await browser.newContext();
+  const guestContext = await browser.newContext();
+  const thirdContext = await browser.newContext();
+  const host = await hostContext.newPage();
+  const guest = await guestContext.newPage();
+  const third = await thirdContext.newPage();
+
+  await host.goto(STATIC_URL);
+  await host.fill("#createDisplayName", "OrderHost");
+  await host.getByRole("button", { name: "3人" }).click();
+  await host.getByRole("button", { name: "ルームを作る" }).click();
+  const inviteCode = ((await host.locator(".room-code").textContent()) || "").trim();
+
+  await guest.goto(STATIC_URL);
+  await guest.evaluate(() => {
+    window.localStorage.setItem("omojan-app-last-display-name", "OrderGuest");
+  });
+  await guest.goto(`${STATIC_URL}&invite=${encodeURIComponent(inviteCode)}`);
+  await guest.getByRole("button", { name: "この表示名で参加" }).click();
+
+  await third.goto(STATIC_URL);
+  await third.evaluate(() => {
+    window.localStorage.setItem("omojan-app-last-display-name", "OrderThird");
+  });
+  await third.goto(`${STATIC_URL}&invite=${encodeURIComponent(inviteCode)}`);
+  await third.getByRole("button", { name: "この表示名で参加" }).click();
+
+  await host.reload();
+  await host.getByRole("button", { name: "OrderGuestを上へ移動" }).click();
+  await expect(host.locator(".player-card[data-order-player-id]").first()).toContainText("OrderGuest");
+  await expect(host.locator("body")).toContainText("あなたの席 2番手 OrderHost");
+
+  await hostContext.close();
+  await guestContext.close();
+  await thirdContext.close();
+});
+
 test("app shows a friendly message for an invalid invite code", async ({ page }) => {
   await page.goto(`${STATIC_URL}&invite=${encodeURIComponent("OMO-9999")}`);
-  await page.fill("#joinDisplayName", "InvalidGuest");
-  await page.getByRole("button", { name: "参加する" }).click();
+  await page.fill("#joinDisplayNameInvite", "InvalidGuest");
+  await page.getByRole("button", { name: "この表示名で参加" }).click();
   await expect(page.locator("#feedbackDock")).toContainText("招待コードが見つかりません。招待URLかコードをもう一度確認してください。");
-  await expect(page.locator("#inviteCode")).toHaveValue("OMO-9999");
+  await expect(page.getByRole("heading", { name: "このルームに参加" })).toBeVisible();
+  await expect(page.locator("body")).toContainText("OMO-9999");
 });
 
 test("app shows a friendly message when the room is full", async ({ page }) => {
@@ -602,7 +771,7 @@ test("app shows a friendly message when the room is full", async ({ page }) => {
     window.localStorage.setItem("omojan-app-last-display-name", "LateGuest");
   });
   await page.goto(`${STATIC_URL}&invite=${encodeURIComponent(created.room.inviteCode)}`);
-  await page.getByRole("button", { name: "参加する" }).click();
+  await page.getByRole("button", { name: "この表示名で参加" }).click();
   await expect(page.locator("#feedbackDock")).toContainText("観戦として参加しました。");
   await expect(page.getByRole("heading", { name: "ルーム待機中" })).toBeVisible();
   await expect(page.locator("body")).toContainText("観戦");
@@ -620,9 +789,10 @@ test("app opens invite join screen and joins after confirming the display name",
   });
   await page.goto(`${STATIC_URL}&invite=${encodeURIComponent(created.room.inviteCode)}`);
 
-  await expect(page.getByRole("heading", { name: "招待 URL から参加" })).toBeVisible();
-  await expect(page.locator("#inviteCode")).toHaveValue(created.room.inviteCode);
-  await page.getByRole("button", { name: "参加する" }).click();
+  await expect(page.getByRole("heading", { name: "このルームに参加" })).toBeVisible();
+  await expect(page.locator("#joinDisplayNameInvite")).toHaveValue("InviteDirect");
+  await expect(page.locator("#inviteCode")).toHaveCount(0);
+  await page.getByRole("button", { name: "この表示名で参加" }).click();
   await expect(page.getByRole("heading", { name: "ルーム待機中" })).toBeVisible();
   await expect(page.locator("body")).toContainText("InviteDirect");
 });

@@ -99,6 +99,7 @@ function parseRoute(method, pathname) {
     { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/edit-vote$/, route: "editCurrentVote" },
     { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/reveal-close$/, route: "closeReveal" },
     { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/start-player$/, route: "startPlayer" },
+    { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/player-order$/, route: "setPlayerOrder" },
     { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/player-role$/, route: "setPlayerRole" },
     { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/host-transfer$/, route: "transferHost" },
     { method: "POST", pattern: /^\/v1\/rooms\/([^/]+)\/start$/, route: "startGame" },
@@ -164,6 +165,7 @@ function handleHealth() {
       "rooms:edit-vote",
       "rooms:reveal-close",
       "rooms:start-player",
+      "rooms:player-order",
       "rooms:player-role",
       "rooms:host-transfer",
       "rooms:start",
@@ -1257,6 +1259,42 @@ function buildRestartedRoom(room, mePlayer) {
   return updatedRoom;
 }
 
+function normalizeRequestedPlayerOrder(room, playerOrder) {
+  const activePlayerIds = getActivePlayers(room)
+    .slice()
+    .sort((left, right) => left.seatOrder - right.seatOrder)
+    .map((player) => player.playerId);
+
+  const normalized = sanitizePlayerOrder(room, Array.isArray(playerOrder) ? playerOrder : []);
+  if (normalized.length !== activePlayerIds.length) {
+    throw domainError(400, "INVALID_TARGET", "開始順が不正です。");
+  }
+  if (!activePlayerIds.every((playerId) => normalized.includes(playerId))) {
+    throw domainError(400, "INVALID_TARGET", "開始順が不正です。");
+  }
+  return normalized;
+}
+
+function buildLobbyPlayerOrderRoom(room, mePlayer, playerOrder) {
+  if (normalizePlayerRole(mePlayer.role) !== "player") {
+    throw domainError(403, "SPECTATOR_FORBIDDEN", "観戦中は開始順を変更できません。");
+  }
+  if (!mePlayer.isHost) {
+    throw domainError(403, "NOT_HOST", "ホストのみ実行できます。");
+  }
+  if (room.game?.phase !== "lobby") {
+    throw domainError(409, "INVALID_PHASE", "lobby でのみ開始順を変更できます。");
+  }
+
+  const updatedRoom = clone(room);
+  updatedRoom.playerOrder = normalizeRequestedPlayerOrder(updatedRoom, playerOrder);
+  updatedRoom.startPlayerId = updatedRoom.playerOrder[0] || updatedRoom.hostPlayerId;
+  updatedRoom.updatedAt = nowIso();
+  updatedRoom.expiresAt = Math.floor(Date.now() / 1000) + ROOM_TTL_SECONDS;
+  updatedRoom.revision += 1;
+  return updatedRoom;
+}
+
 function buildProceedRoom(room, mePlayer, roundIndex) {
   requireNoActiveReveal(room);
   if (normalizePlayerRole(mePlayer.role) !== "player") {
@@ -2244,6 +2282,33 @@ async function createDynamoRoomRepository(options = {}) {
       throw domainError(409, "CONFLICT_RETRY", "開始順の更新が競合しました。もう一度お試しください。", true);
     },
 
+    async setPlayerOrder(roomId, playerToken, playerOrder) {
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        const room = await getRoomItem(roomId);
+        if (!room) {
+          throw domainError(404, "ROOM_NOT_FOUND", "指定された room は存在しません。");
+        }
+        const mePlayer = getPlayerByToken(room, playerToken);
+        if (!mePlayer) {
+          throw domainError(401, "PLAYER_TOKEN_INVALID", "playerToken が必要です。");
+        }
+
+        const updatedRoom = buildLobbyPlayerOrderRoom(room, mePlayer, playerOrder);
+        try {
+          await putRoomItem(updatedRoom, room.revision);
+          const updatedMePlayer = updatedRoom.players.find((player) => player.playerId === mePlayer.playerId);
+          return { room: updatedRoom, mePlayer: updatedMePlayer };
+        } catch (error) {
+          if (toConditionalFailure(error)) {
+            continue;
+          }
+          throw error;
+        }
+      }
+
+      throw domainError(409, "CONFLICT_RETRY", "開始順の更新が競合しました。もう一度お試しください。", true);
+    },
+
     async setPlayerRole(roomId, playerToken, targetPlayerId, nextRole) {
       for (let attempt = 0; attempt < 5; attempt += 1) {
         const room = await getRoomItem(roomId);
@@ -2925,6 +2990,22 @@ function createMemoryRoomRepository() {
       return { room: clone(updatedRoom), mePlayer: clone(updatedMePlayer) };
     },
 
+    async setPlayerOrder(roomId, playerToken, playerOrder) {
+      const room = rooms.get(roomId);
+      if (!room) {
+        throw domainError(404, "ROOM_NOT_FOUND", "指定された room は存在しません。");
+      }
+      const mePlayer = getPlayerByToken(room, playerToken);
+      if (!mePlayer) {
+        throw domainError(401, "PLAYER_TOKEN_INVALID", "playerToken が必要です。");
+      }
+
+      const updatedRoom = buildLobbyPlayerOrderRoom(room, mePlayer, playerOrder);
+      saveRoom(updatedRoom);
+      const updatedMePlayer = updatedRoom.players.find((player) => player.playerId === mePlayer.playerId);
+      return { room: clone(updatedRoom), mePlayer: clone(updatedMePlayer) };
+    },
+
     async setPlayerRole(roomId, playerToken, targetPlayerId, nextRole) {
       const room = rooms.get(roomId);
       if (!room) {
@@ -3382,6 +3463,23 @@ function createHandler(options = {}) {
           }
           const repository = await roomRepositoryPromise;
           const result = await repository.setStartPlayer(matched.params[0], playerToken, startPlayerId);
+          return ok(toRoomPayload(result.room, result.mePlayer));
+        }
+        case "setPlayerOrder": {
+          const body = parseBody(event);
+          if (!body) {
+            return fail(400, "INVALID_JSON", "JSON の形式が不正です。");
+          }
+          const playerToken = getHeader(event, "X-Omojan-Player-Token");
+          if (!playerToken) {
+            return fail(401, "PLAYER_TOKEN_INVALID", "playerToken が必要です。");
+          }
+          const playerOrder = Array.isArray(body.playerOrder) ? body.playerOrder.map((value) => String(value || "").trim()).filter(Boolean) : [];
+          if (!playerOrder.length) {
+            return fail(400, "INVALID_TARGET", "開始順が不正です。");
+          }
+          const repository = await roomRepositoryPromise;
+          const result = await repository.setPlayerOrder(matched.params[0], playerToken, playerOrder);
           return ok(toRoomPayload(result.room, result.mePlayer));
         }
         case "setPlayerRole": {

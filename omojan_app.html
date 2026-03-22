@@ -654,6 +654,148 @@
         justify-content: flex-end;
       }
 
+      .player-section {
+        display: grid;
+        gap: 10px;
+      }
+
+      .player-section + .player-section {
+        margin-top: 2px;
+        padding-top: 12px;
+        border-top: 1px solid rgba(184, 138, 50, 0.14);
+      }
+
+      .player-section-label {
+        color: var(--green);
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .player-card-main {
+        display: grid;
+        gap: 4px;
+        min-width: 0;
+      }
+
+      .player-card-heading {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .player-order-tools {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-left: auto;
+      }
+
+      .order-tool {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 28px;
+        min-height: 28px;
+        padding: 0 8px;
+        border-radius: 999px;
+        border: 1px solid rgba(184, 138, 50, 0.2);
+        background: rgba(255, 252, 245, 0.92);
+        color: #5f4c25;
+        font-size: 12px;
+        font-weight: 900;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.84);
+      }
+
+      .order-tool:disabled {
+        opacity: 0.32;
+        cursor: default;
+      }
+
+      .order-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 28px;
+        padding: 0 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(184, 138, 50, 0.2);
+        background: rgba(255, 249, 232, 0.96);
+        color: #735d31;
+        font-size: 11px;
+        font-weight: 900;
+        white-space: nowrap;
+      }
+
+      .order-badge--spectator {
+        border-color: rgba(112, 119, 132, 0.22);
+        background: rgba(242, 243, 246, 0.96);
+        color: #646a75;
+      }
+
+      .badge--you {
+        background: linear-gradient(180deg, rgba(246, 249, 255, 0.98), rgba(223, 234, 251, 0.95));
+        border-color: rgba(92, 126, 183, 0.2);
+        color: #33517d;
+      }
+
+      .player-card--order.is-ordering {
+        transition:
+          transform 150ms ease,
+          box-shadow 150ms ease,
+          border-color 150ms ease;
+      }
+
+      .player-card--order.is-ordering:not(.is-dragging) {
+        cursor: grab;
+      }
+
+      .player-card--order.is-ordering:not(.is-dragging):hover {
+        transform: translateY(-1px);
+        border-color: rgba(184, 138, 50, 0.28);
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.86),
+          0 16px 26px rgba(31, 24, 18, 0.1);
+      }
+
+      .player-card--order.is-dragging {
+        opacity: 0.72;
+        transform: scale(0.985);
+        border-color: rgba(184, 68, 49, 0.32);
+      }
+
+      .player-card--spectator {
+        background:
+          linear-gradient(180deg, rgba(252, 252, 252, 0.9), rgba(243, 244, 246, 0.84)),
+          rgba(255, 255, 255, 0.72);
+      }
+
+      .player-card--me {
+        border-color: rgba(35, 68, 47, 0.28);
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.88),
+          0 16px 26px rgba(24, 47, 34, 0.1);
+      }
+
+      .player-card--me .order-badge {
+        border-color: rgba(35, 68, 47, 0.28);
+        background: linear-gradient(180deg, rgba(236, 248, 239, 0.98), rgba(214, 236, 221, 0.94));
+        color: #29573d;
+      }
+
+      .lobby-control-row {
+        align-items: center;
+      }
+
+      .screen-grid--invite-entry {
+        grid-template-columns: minmax(0, 1fr);
+        max-width: min(100%, 620px);
+        width: 100%;
+        margin-inline: auto;
+      }
+
       .badge {
         display: inline-flex;
         align-items: center;
@@ -737,9 +879,9 @@
 
       .preview-card.is-live-preview .word-board {
         width: min(100%, 520px);
-        min-height: min(52vh, 340px);
-        margin-top: 16px;
-        padding: 12px 10px 4px;
+        min-height: min(32vh, 220px);
+        margin-top: 14px;
+        padding: 10px 8px 2px;
       }
 
       .preview-card.is-live-preview .preview-caption {
@@ -750,8 +892,8 @@
       }
 
       .lobby-actions {
-        margin-top: 16px;
-        padding-top: 14px;
+        margin-top: 18px;
+        padding-top: 16px;
         border-top: 1px solid rgba(184, 138, 50, 0.16);
       }
 
@@ -1390,6 +1532,10 @@
         gap: 14px;
       }
 
+      .champion-overview--stack {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
       .champion-overview > .panel {
         display: grid;
         grid-template-rows: auto 1fr;
@@ -1550,7 +1696,7 @@
       }
 
       .history-dialog {
-        width: min(100%, 760px);
+        width: min(100%, 880px);
         max-height: min(88vh, 760px);
         padding: 18px 16px 16px;
         border-radius: 28px;
@@ -1576,13 +1722,13 @@
       }
 
       .history-dialog-body {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr);
+        display: flex;
+        flex-direction: column;
         gap: 14px;
-        margin-top: 14px;
-        max-height: min(64vh, 520px);
+        margin-top: 16px;
+        max-height: min(68vh, 560px);
         overflow: auto;
-        padding-right: 2px;
+        padding-right: 4px;
       }
 
       .history-dialog-item {
@@ -1615,7 +1761,7 @@
       .history-dialog-footer {
         display: flex;
         align-items: flex-end;
-        justify-content: space-between;
+        justify-content: flex-end;
         gap: 12px;
         margin-top: 10px;
       }
@@ -1637,7 +1783,6 @@
       .history-ranking-list {
         display: grid;
         gap: 10px;
-        margin-top: 14px;
         align-content: start;
         grid-auto-rows: minmax(96px, auto);
       }
@@ -1675,10 +1820,21 @@
 
       .history-ranking-main {
         min-width: 0;
+        padding-right: 6px;
+      }
+
+      .history-ranking-main--wide strong {
+        font-size: 22px;
+        line-height: 1.18;
+      }
+
+      .history-ranking-main--wide span {
+        font-size: 13px;
       }
 
       .history-ranking-main strong {
         display: block;
+        font-size: 18px;
         overflow: hidden;
         text-overflow: ellipsis;
         display: -webkit-box;
@@ -1709,18 +1865,6 @@
       .history-ranking-card--history {
         min-height: 104px;
         height: auto;
-        padding-block: 16px;
-      }
-
-      .history-ranking-card--history .history-ranking-main strong,
-      .history-ranking-card--history .history-ranking-main span {
-        white-space: normal;
-        overflow: visible;
-        text-overflow: clip;
-      }
-
-      .history-ranking-card--history .history-ranking-main strong {
-        line-height: 1.28;
       }
 
       .history-ranking-rank--date {
@@ -1773,18 +1917,17 @@
       }
 
       .section-heading.stack {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr);
-        align-items: flex-start;
-        gap: 10px;
-        margin-bottom: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 16px;
       }
 
       .section-heading-spacer {
         display: inline-flex;
         min-height: 44px;
         min-width: 118px;
-        justify-self: flex-end;
         visibility: hidden;
       }
 
@@ -2300,7 +2443,19 @@
         }
 
         .preview-card .word-board {
-          min-height: 150px;
+          min-height: 126px;
+        }
+
+        .preview-card.is-live-preview .word-board {
+          width: 100%;
+          min-height: 118px;
+          margin-top: 12px;
+          padding: 8px 6px 4px;
+        }
+
+        .preview-card.is-live-preview .preview-caption {
+          margin-top: 8px;
+          font-size: 16px;
         }
 
         .submit-actions {
@@ -2372,12 +2527,17 @@
         }
 
         .screen-grid--lobby {
-          grid-template-columns: repeat(2, minmax(0, 1fr));
+          grid-template-columns: minmax(0, 1.12fr) minmax(420px, 0.88fr);
           align-items: start;
         }
 
-        .screen-grid--lobby .screen-wide {
-          grid-column: 1 / -1;
+        .screen-grid--invite-entry {
+          grid-template-columns: minmax(0, 1fr);
+        }
+
+        .screen-grid--lobby > .screen-primary,
+        .screen-grid--lobby > .screen-secondary {
+          min-height: 0;
         }
 
         .screen-grid--submit {
@@ -2385,13 +2545,15 @@
           align-items: start;
         }
 
-        .screen-grid--wait {
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-          align-items: start;
+        .preview-card.is-live-preview .word-board {
+          min-height: min(48vh, 320px);
+          padding: 12px 10px 4px;
         }
 
+        .screen-grid--wait,
         .screen-grid--wait.is-complete {
           grid-template-columns: minmax(0, 1fr);
+          align-items: start;
         }
 
         .decision-layout {
@@ -2412,6 +2574,10 @@
           align-items: start;
         }
 
+        .champion-overview--stack {
+          grid-template-columns: minmax(0, 1fr);
+        }
+
         .action-grid {
           grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
           gap: 16px;
@@ -2426,7 +2592,7 @@
         }
 
         .history-dialog {
-          width: min(92vw, 760px);
+          width: min(92vw, 880px);
         }
 
         .preview-card.is-sticky {
@@ -2582,9 +2748,9 @@
       ];
 
       const sizePresets = [
-        { id: "large", label: "大", singleMax: 182, multiMax: 130, singleMin: 22, multiMin: 18, renderScale: 1.48, previewScale: 1 },
-        { id: "medium", label: "中", singleMax: 132, multiMax: 94, singleMin: 10, multiMin: 9, renderScale: 0.8, previewScale: 0.5 },
-        { id: "tiny", label: "小", singleMax: 76, multiMax: 52, singleMin: 5, multiMin: 5, renderScale: 0.34, previewScale: 0.2 }
+        { id: "large", label: "大", singleMax: 188, multiMax: 142, singleMin: 28, multiMin: 22, renderScale: 1.02 },
+        { id: "medium", label: "中", singleMax: 92, multiMax: 66, singleMin: 14, multiMin: 11, renderScale: 0.52 },
+        { id: "tiny", label: "小", singleMax: 42, multiMax: 30, singleMin: 7, multiMin: 6, renderScale: 0.24 }
       ];
 
       const lineGapPresets = [
@@ -2617,8 +2783,10 @@
         createDisplayName: "",
         joinDisplayName: "",
         inviteCode: DEFAULT_INVITE_CODE_PREFIX,
+        inviteEntryMode: false,
         playerCount: 4,
         selectedStartPlayerId: "",
+        draggingLobbyPlayerId: "",
         draftSelectedTileIds: [],
         draftFontId: "broadcast",
         draftSizePreset: "medium",
@@ -3002,6 +3170,17 @@
         return sizePresets.find((preset) => preset.id === normalizedId) || sizePresets[0];
       }
 
+      function getSizePresetScale(sizePresetId) {
+        const normalizedId = normalizeSizePresetId(sizePresetId);
+        if (normalizedId === "medium") {
+          return 0.5;
+        }
+        if (normalizedId === "tiny") {
+          return 0.24;
+        }
+        return 1;
+      }
+
       function getLineGapPreset(lineGapPresetId) {
         return lineGapPresets.find((preset) => preset.id === lineGapPresetId) || lineGapPresets[0];
       }
@@ -3267,8 +3446,8 @@
         if (!text) {
           const emptySizeMap = {
             large: 40,
-            medium: 26,
-            tiny: 12
+            medium: 22,
+            tiny: 9
           };
           return {
             lines: ["牌を2つ選ぶ"],
@@ -3283,8 +3462,9 @@
         const height = previewBox?.clientHeight || 148;
         const chars = Array.from(text);
         const fontClass = getFontClass(state.draftFontId);
-        const largestPreset = sizePresets[0];
-        const universalMax = state.draftLineMode === "single" ? largestPreset.singleMax : largestPreset.multiMax;
+        const universalMax = Math.max(
+          ...sizePresets.map((preset) => (state.draftLineMode === "single" ? preset.singleMax : preset.multiMax))
+        );
         const minFontSize = getMinimumFontSize(chars.length, state.draftLineMode, state.draftSizePreset);
         const manualBreaks = normalizeBreaks(state.draftManualBreaks, chars.length);
 
@@ -3319,15 +3499,20 @@
           };
         }
 
-        const desiredFontSize = Math.max(
+        const presetScale = getSizePresetScale(sizePreset.id);
+        const scaledFont = Math.round(bestFitLayout.fontSize * presetScale);
+        const targetFontSize = Math.max(
           minFontSize,
-          Math.min(bestFitLayout.fontSize, Math.round(bestFitLayout.fontSize * (sizePreset.previewScale || 1)))
+          Math.min(bestFitLayout.fontSize, scaledFont || bestFitLayout.fontSize)
         );
 
-        for (let fontSize = desiredFontSize; fontSize >= minFontSize; fontSize -= 1) {
+        for (let fontSize = targetFontSize; fontSize >= minFontSize; fontSize -= 1) {
           const layout = buildLayoutForFont(fontSize, fontSize !== bestFitLayout.fontSize);
           if (doesWordFit(layout.lines, fontClass, state.draftLineMode, fontSize, width, height, state.draftLineGapPreset)) {
-            return layout;
+            return {
+              ...layout,
+              fontSize
+            };
           }
         }
 
@@ -3507,6 +3692,9 @@
 
       function deriveView(room = state.room) {
         if (!room) {
+          if (state.inviteEntryMode && hasUsableInviteCode(state.inviteCode)) {
+            return "inviteJoin";
+          }
           return "welcome";
         }
         if (isSpectator(room)) {
@@ -3620,7 +3808,7 @@
         const base = [view, state.pendingAction ? "pending" : "idle"];
         if (!room) {
           return base.concat([
-            "landing"
+            view === "inviteJoin" ? "inviteJoin" : "landing"
           ]).join("|");
         }
 
@@ -3631,6 +3819,12 @@
           case "welcome":
             return base.concat([
               "landing"
+            ]).join("|");
+          case "inviteJoin":
+            return base.concat([
+              "inviteJoin",
+              state.inviteCode || "",
+              state.joinDisplayName || ""
             ]).join("|");
           case "lobby":
             return base.concat([
@@ -3691,7 +3885,7 @@
 
       function setBanner() {
         const currentView = deriveView();
-        els.pageHeader?.classList.toggle("is-hidden", !["welcome", "lobby"].includes(currentView));
+        els.pageHeader?.classList.toggle("is-hidden", !["welcome", "inviteJoin", "lobby"].includes(currentView));
         const bannerKey = [
           getStatusText(),
           getStatusContext(),
@@ -3766,6 +3960,7 @@
         state.playerToken = "";
         state.pendingMode = "";
         state.inviteCode = inviteCode;
+        state.inviteEntryMode = options.inviteEntryMode !== undefined ? Boolean(options.inviteEntryMode) : hasUsableInviteCode(inviteCode);
         clearBackgroundSyncIssue();
         setFeedback(options.errorMessage || options.copyMessage || "", Boolean(options.errorMessage), options.copyMessage ? 2800 : 0);
 
@@ -3993,6 +4188,7 @@
       function setRoom(room, options = {}) {
         state.room = clone(room);
         state.roomId = room.roomId;
+        state.inviteEntryMode = false;
         state.selectedStartPlayerId = room.startPlayerId || room.game?.activePlayerIds?.[0] || room.me.playerId;
         state.lastSyncAt = new Date().toISOString();
         clearBackgroundSyncIssue();
@@ -4198,7 +4394,7 @@
             ${state.syncIssueMessage ? `<div class="info-box">${escapeHtml(`${state.syncIssueMessage} 自動で再試行しています。`)}</div>` : ""}
             <div class="utility-actions">
               ${showRefresh ? `<button class="btn secondary compact" type="button" data-action="refresh-latest" ${state.pendingAction ? "disabled" : ""}>${syncPending ? "更新中..." : "更新"}</button>` : ""}
-              ${showLeave ? `<button class="btn danger compact" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>` : ""}
+              ${showLeave ? `<button class="btn ghost compact" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>` : ""}
             </div>
           </section>
         `;
@@ -4340,35 +4536,43 @@
       }
 
       function renderRecentChampions() {
-        return renderHistoryList(
-          state.recentChampions,
-          (item) => `
-            <article class="history-ranking-card history-ranking-card--recent">
-              <div class="history-ranking-rank history-ranking-rank--date">${escapeHtml(formatChampionHistoryWonAtCompact(item.wonAt))}</div>
-              <div class="history-ranking-main">
-                <strong>${escapeHtml(item.phrase)}</strong>
-                <span>${escapeHtml(item.displayName)}</span>
-              </div>
-              ${renderChampionLikeButton(item)}
-            </article>
-          `,
-          "最近の総合優勝ワードはまだありません。"
-        );
+        const recentItems = state.recentChampions.slice(0, 10);
+        if (!recentItems.length) {
+          return `<div class="empty-state">最近の総合優勝ワードはまだありません。</div>`;
+        }
+        return `
+          <div class="history-ranking-list">
+            ${recentItems
+              .map(
+                (item) => `
+                  <article class="history-ranking-card history-ranking-card--recent">
+                    <div class="history-ranking-rank history-ranking-rank--date">${escapeHtml(formatChampionHistoryWonAtCompact(item.wonAt))}</div>
+                    <div class="history-ranking-main">
+                      <strong>${escapeHtml(item.phrase)}</strong>
+                      <span>${escapeHtml(item.displayName)}</span>
+                    </div>
+                    ${renderChampionLikeButton(item)}
+                  </article>
+                `
+              )
+              .join("")}
+          </div>
+        `;
       }
 
       function renderChampionRankingSection() {
-        if (!state.championRankingItems.length) {
+        const rankingItems = state.championRankingItems.slice(0, 10);
+        if (!rankingItems.length) {
           return "";
         }
 
         return `
           <section class="panel">
-            <div class="section-heading stack">
+            <div class="section-heading">
               <h3>いいね数ランキング</h3>
-              <span class="section-heading-spacer" aria-hidden="true"></span>
             </div>
             <div class="history-ranking-list">
-              ${state.championRankingItems
+              ${rankingItems
                 .map(
                   (item, index) => `
                     <article class="history-ranking-card${index < 3 ? ` is-rank-${index + 1}` : ""}">
@@ -4391,12 +4595,21 @@
         return `
           <div class="champion-overview">
             <section class="panel">
-              <div class="section-heading stack">
+              <div class="section-heading">
                 <h3>${escapeHtml(title)}</h3>
                 <button class="btn secondary compact" type="button" data-action="open-champion-history">一覧を見る</button>
               </div>
               ${renderRecentChampions()}
             </section>
+            ${renderChampionRankingSection()}
+          </div>
+        `;
+      }
+
+      function renderLobbyChampionPanels() {
+        return `
+          <div class="champion-overview champion-overview--stack">
+            ${renderRecentChampionsSection("最近の総合優勝ワード")}
             ${renderChampionRankingSection()}
           </div>
         `;
@@ -4490,10 +4703,10 @@
               .map(
                 (item) => `
                   <article class="history-ranking-card history-ranking-card--recent history-ranking-card--history">
-                    <div class="history-ranking-rank history-ranking-rank--date">${escapeHtml(formatChampionHistoryWonAtCompact(item.wonAt))}</div>
-                    <div class="history-ranking-main">
+                    <div class="history-ranking-rank history-ranking-rank--date">${escapeHtml(formatChampionHistoryWonDate(item.wonAt))}</div>
+                    <div class="history-ranking-main history-ranking-main--wide">
                       <strong>${escapeHtml(item.phrase)}</strong>
-                      <span>${escapeHtml(item.displayName)} ・ ${escapeHtml(formatChampionHistoryWonDate(item.wonAt))}</span>
+                      <span>${escapeHtml(item.displayName)}</span>
                     </div>
                     ${renderChampionLikeButton(item)}
                   </article>
@@ -4786,30 +4999,27 @@
       }
 
       function getLobbyPlayerOrder(room) {
-        const players = [...room.game.players].filter((player) => player.role !== "spectator").sort((left, right) => left.seatOrder - right.seatOrder);
-        const startPlayerId = state.selectedStartPlayerId || room.startPlayerId || players[0]?.playerId;
-        const startIndex = players.findIndex((player) => player.playerId === startPlayerId);
-        if (startIndex <= 0) {
-          return players;
-        }
-        return [...players.slice(startIndex), ...players.slice(0, startIndex)];
+        const players = [...room.game.players]
+          .filter((player) => player.role !== "spectator")
+          .sort((left, right) => left.seatOrder - right.seatOrder);
+        const playerMap = new Map(players.map((player) => [player.playerId, player]));
+        const orderedIds = Array.isArray(room.playerOrder) && room.playerOrder.length
+          ? room.playerOrder
+          : players.map((player) => player.playerId);
+        const orderedPlayers = orderedIds.map((playerId) => playerMap.get(playerId)).filter(Boolean);
+        return orderedPlayers.length ? orderedPlayers : players;
       }
 
-      function renderPlayerOrderPreview(room) {
-        return `
-          <div class="order-preview">
-            ${getLobbyPlayerOrder(room)
-              .map(
-                (player, index) => `
-                  <div class="order-item${index === 0 ? " is-first" : ""}">
-                    <strong>${index === 0 ? "1番手" : `${index + 1}番手`}</strong>
-                    <span>${escapeHtml(player.displayName)}</span>
-                  </div>
-                `
-              )
-              .join("")}
-          </div>
-        `;
+      function getLobbySeatLabel(room, playerId) {
+        const player = room?.game?.players?.find((item) => item.playerId === playerId);
+        if (!player) {
+          return "";
+        }
+        if (player.role === "spectator") {
+          return "観戦";
+        }
+        const order = getLobbyPlayerOrder(room).findIndex((item) => item.playerId === playerId);
+        return order >= 0 ? `${order + 1}番手` : `席順 ${player.seatOrder}`;
       }
 
       function renderSubmitHero(room, layout) {
@@ -4927,6 +5137,32 @@
         `;
       }
 
+      function renderInviteJoin() {
+        return `
+          ${renderScreenAlerts({ includeCopy: true })}
+          <div class="screen-grid screen-grid--invite-entry">
+            <section class="card card--form">
+              <h2>このルームに参加</h2>
+              ${renderFocusCallout({
+                label: "招待コード",
+                title: state.inviteCode,
+                description: "表示名だけ決めたら、そのままロビーに入れます。"
+              })}
+              <div class="field-stack">
+                <div class="field">
+                  <label for="joinDisplayNameInvite">表示名</label>
+                  <input id="joinDisplayNameInvite" class="input" type="text" maxlength="20" placeholder="例: たなか" value="${escapeHtml(state.joinDisplayName)}" data-field="joinDisplayName" />
+                </div>
+              </div>
+              <div class="button-row split-actions">
+                <button class="btn ghost" type="button" data-action="cancel-invite-entry" ${state.pendingAction ? "disabled" : ""}>トップへ戻る</button>
+                <button class="btn primary" type="button" data-action="join-room" ${state.pendingAction ? "disabled" : ""}>この表示名で参加</button>
+              </div>
+            </section>
+          </div>
+        `;
+      }
+
       function renderLandingChampions() {
         return renderRecentChampionsSection("最近の総合優勝ワード");
       }
@@ -4968,10 +5204,7 @@
                 <div id="lobbyUtilitySlot" class="lobby-actions"></div>
               </section>
             </div>
-            <div class="screen-secondary">
-              <div id="lobbyOrderSlot"></div>
-            </div>
-            <div class="screen-wide" id="lobbyChampionsSlot"></div>
+            <div class="screen-secondary" id="lobbyChampionsSlot"></div>
           </div>
         `;
       }
@@ -4980,12 +5213,14 @@
         const hostPlayer = getHostPlayer(room);
         const activePlayerCount = getActivePlayerCount(room);
         const spectatorCount = Number(room.spectatorCount || room.game?.spectatorPlayerIds?.length || 0);
+        const mySeatLabel = getLobbySeatLabel(room, room.me.playerId);
+        const mySeatValue = room.me.role === "spectator" ? `観戦 ${room.me.displayName}` : `${mySeatLabel} ${room.me.displayName}`;
         return `
           ${renderSummaryPills([
             { label: "ROOM", value: room.inviteCode },
             { label: "参加", value: `${activePlayerCount}/${room.playerCount}人` },
             ...(spectatorCount ? [{ label: "観戦", value: `${spectatorCount}人` }] : []),
-            { label: "あなた", value: room.me.displayName },
+            { label: "あなたの席", value: mySeatValue },
             ...(hostPlayer ? [{ label: "ホスト", value: hostPlayer.displayName }] : [])
           ])}
             <div class="button-row align-left">
@@ -5006,25 +5241,44 @@
       }
 
       function renderLobbyPlayers(room) {
+        const orderedPlayers = getLobbyPlayerOrder(room);
+        const orderedPlayerIds = orderedPlayers.map((player) => player.playerId);
+        const canReorder = room.me.isHost && orderedPlayers.length > 1;
+        const spectatorPlayers = [...room.game.players]
+          .filter((player) => player.role === "spectator")
+          .sort((left, right) => left.seatOrder - right.seatOrder);
         return `
           <div class="player-list">
-            ${room.game.players
+            <div class="player-section">
+              <div class="player-section-label">参加プレイヤー</div>
+              ${orderedPlayers
               .map(
-                (player) => {
+                (player, index) => {
                   const isMe = player.playerId === room.me.playerId;
-                  const metaLabel =
-                    player.role === "spectator"
-                      ? isMe
-                        ? "観戦 ・ あなた"
-                        : "観戦"
-                      : isMe
-                        ? `席順 ${player.seatOrder} ・ あなた`
-                        : `席順 ${player.seatOrder}`;
+                  const seatLabel = `${index + 1}番手`;
                   return `
-                  <div class="player-card">
-                    <div>
+                  <div
+                    class="player-card player-card--order${isMe ? " player-card--me" : ""}${room.me.isHost ? " is-ordering" : ""}${state.draggingLobbyPlayerId === player.playerId ? " is-dragging" : ""}"
+                    data-order-player-id="${player.playerId}"
+                    draggable="${room.me.isHost && orderedPlayerIds.length > 1 ? "true" : "false"}"
+                  >
+                    <div class="player-card-main">
+                      <div class="player-card-heading">
+                        <span class="order-badge">${escapeHtml(seatLabel)}</span>
+                        ${isMe ? `<span class="badge badge--you">あなたの席</span>` : ""}
+                        ${
+                          canReorder
+                            ? `
+                              <span class="player-order-tools">
+                                <button class="order-tool" type="button" draggable="false" data-action="move-player-order" data-target-player-id="${player.playerId}" data-direction="up" ${index === 0 || state.pendingAction ? "disabled" : ""} aria-label="${escapeHtml(player.displayName)}を上へ移動">↑</button>
+                                <button class="order-tool" type="button" draggable="false" data-action="move-player-order" data-target-player-id="${player.playerId}" data-direction="down" ${index === orderedPlayers.length - 1 || state.pendingAction ? "disabled" : ""} aria-label="${escapeHtml(player.displayName)}を下へ移動">↓</button>
+                              </span>
+                            `
+                            : ""
+                        }
+                      </div>
                       <strong>${escapeHtml(player.displayName)}</strong>
-                      <span>${escapeHtml(metaLabel)}</span>
+                      <span>${escapeHtml(isMe ? `あなたは ${seatLabel}` : seatLabel)}</span>
                     </div>
                     <div class="player-role-actions">
                       <span class="${getPlayerRoleBadge(player).className}">${getPlayerRoleBadge(player).label}</span>
@@ -5045,59 +5299,77 @@
                 }
               )
               .join("")}
+            </div>
+            ${
+              spectatorPlayers.length
+                ? `
+                  <div class="player-section">
+                    <div class="player-section-label">観戦</div>
+                    ${spectatorPlayers
+                      .map((player) => {
+                        const isMe = player.playerId === room.me.playerId;
+                        return `
+                          <div class="player-card player-card--spectator${isMe ? " player-card--me" : ""}">
+                            <div class="player-card-main">
+                              <div class="player-card-heading">
+                                <span class="order-badge order-badge--spectator">観戦</span>
+                                ${isMe ? `<span class="badge badge--you">あなた</span>` : ""}
+                              </div>
+                              <strong>${escapeHtml(player.displayName)}</strong>
+                              <span>${escapeHtml(isMe ? "この端末は観戦" : "観戦中")}</span>
+                            </div>
+                            <div class="player-role-actions">
+                              <span class="${getPlayerRoleBadge(player).className}">${getPlayerRoleBadge(player).label}</span>
+                              ${
+                                room.me.isHost && !player.isHost
+                                  ? `
+                                    <div class="chip-row compact">
+                                      <button class="chip" type="button" data-action="set-player-role" data-target-player-id="${player.playerId}" data-role="player" ${state.pendingAction ? "disabled" : ""}>参加</button>
+                                    </div>
+                                  `
+                                  : ""
+                              }
+                            </div>
+                          </div>
+                        `;
+                      })
+                      .join("")}
+                  </div>
+                `
+                : ""
+            }
           </div>
         `;
       }
 
       function renderLobbyUtility(room) {
+        const activePlayers = getLobbyPlayerOrder(room);
+        const ready = activePlayers.length === room.playerCount;
         return `
-          <div class="button-row align-left">
-            <button class="btn danger compact" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
+          <div class="button-stack">
+            ${
+              room.me.isHost
+                ? `
+                  <div class="button-row align-left lobby-control-row">
+                    <button class="btn neutral compact" type="button" data-action="randomize-player-order" ${activePlayers.length > 1 && !state.pendingAction ? "" : "disabled"}>ランダムに並び替え</button>
+                    <button class="btn primary compact" type="button" data-action="start-game" ${ready && !state.pendingAction ? "" : "disabled"}>この順で開始</button>
+                  </div>
+                  ${ready ? "" : `<div class="info-box">参加プレイヤーが ${room.playerCount} 人そろうと開始できます。</div>`}
+                `
+                : `<div class="info-box">${room.me.role === "spectator" ? "観戦として待機中です。" : "ホストの開始待ちです。"}</div>`
+            }
+            <button class="btn ghost compact" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
           </div>
         `;
       }
 
-      function renderLobbyOrder(room) {
-        const activePlayers = room.game.players.filter((player) => player.role !== "spectator");
-        const ready = activePlayers.length === room.playerCount;
-        return `
-          <section class="panel">
-            <h3>開始順</h3>
-            ${
-              room.me.isHost
-                ? `
-                  <div class="chip-row">
-                    ${activePlayers
-                      .map(
-                        (player) => `
-                          <button class="chip${state.selectedStartPlayerId === player.playerId ? " active" : ""}" type="button" data-start-player-id="${player.playerId}">
-                            ${escapeHtml(player.displayName)}
-                          </button>
-                        `
-                      )
-                      .join("")}
-                  </div>
-                  ${renderPlayerOrderPreview(room)}
-                  <div class="button-row align-right">
-                    <button class="btn primary" type="button" data-action="start-game" ${ready && !state.pendingAction ? "" : "disabled"}>この順で開始</button>
-                  </div>
-                  ${ready ? "" : `<div class="info-box">参加プレイヤーが ${room.playerCount} 人そろうと開始できます。</div>`}
-                `
-                : `
-                    <div class="info-box">${room.me.role === "spectator" ? "観戦として待機中です。" : "ホストの開始待ちです。"}</div>
-                    ${renderPlayerOrderPreview(room)}
-                  `
-            }
-          </section>
-        `;
-      }
-
       function renderLobbyChampions() {
-        return renderChampionHistoryTrigger("最近の総合優勝ワード");
+        return renderLobbyChampionPanels();
       }
 
       function updateLobbyView(room) {
         const activePlayers = room.game.players.filter((player) => player.role !== "spectator");
+        const mySeatLabel = getLobbySeatLabel(room, room.me.playerId);
         if (activePlayers.length && !activePlayers.some((player) => player.playerId === state.selectedStartPlayerId)) {
           state.selectedStartPlayerId = room.startPlayerId || activePlayers[0].playerId;
         }
@@ -5112,18 +5384,19 @@
           els.app.innerHTML = renderLobbyShell();
         }
 
-        const playersKey = room.game.players
-          .map((player) => `${player.playerId}:${player.displayName}:${player.seatOrder}:${player.isHost ? 1 : 0}:${player.role || "player"}`)
-          .join("|");
-        const topKey = `${room.inviteCode}|${room.playerCount}|${room.activePlayerCount || 0}|${room.spectatorCount || 0}|${room.me.playerId}|${room.me.displayName}|${room.me.isHost ? 1 : 0}|${room.me.role || "player"}|${getHostPlayer(room)?.playerId || ""}|${getHostPlayer(room)?.displayName || ""}`;
-        const utilityKey = `${room.me.isHost ? "host" : "guest"}|${room.me.role || "player"}|${state.pendingAction ? "pending" : "idle"}`;
-        const orderKey = `${playersKey}|${state.selectedStartPlayerId}|${room.startPlayerId || ""}|${state.pendingAction ? "pending" : "idle"}|${room.me.isHost ? "host" : "guest"}`;
+        const playersKey = [
+          room.playerOrder?.join(",") || "",
+          room.game.players
+            .map((player) => `${player.playerId}:${player.displayName}:${player.seatOrder}:${player.isHost ? 1 : 0}:${player.role || "player"}`)
+            .join("|")
+        ].join("|");
+        const topKey = `${room.inviteCode}|${room.playerCount}|${room.activePlayerCount || 0}|${room.spectatorCount || 0}|${room.me.playerId}|${room.me.displayName}|${room.me.isHost ? 1 : 0}|${room.me.role || "player"}|${getHostPlayer(room)?.playerId || ""}|${getHostPlayer(room)?.displayName || ""}|${room.playerOrder?.join(",") || ""}|${mySeatLabel}`;
+        const utilityKey = `${room.me.isHost ? "host" : "guest"}|${room.me.role || "player"}|${room.playerOrder?.join(",") || ""}|${state.pendingAction ? "pending" : "idle"}`;
         const championsKey = `${getRecentChampionsStamp()}|${getChampionRankingStamp()}`;
 
         patchSlot(els.app, "#lobbyTopSlot", "lobbyTopKey", topKey, renderLobbyTop(room));
         patchSlot(els.app, "#lobbyPlayersSlot", "lobbyPlayersKey", playersKey, renderLobbyPlayers(room));
         patchSlot(els.app, "#lobbyUtilitySlot", "lobbyUtilityKey", utilityKey, renderLobbyUtility(room));
-        patchSlot(els.app, "#lobbyOrderSlot", "lobbyOrderKey", orderKey, renderLobbyOrder(room));
         patchSlot(els.app, "#lobbyChampionsSlot", "lobbyChampionsKey", championsKey, renderLobbyChampions());
       }
 
@@ -5271,7 +5544,7 @@
               </section>
             </div>
             <div class="appearance-footer">
-              <button class="btn danger compact" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
+              <button class="btn ghost compact" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
             </div>
           </section>
         `;
@@ -5662,7 +5935,7 @@
       function renderDecisionActions(config) {
         return `
           <div class="button-row split-actions">
-            <button class="btn danger" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
+            <button class="btn ghost" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
             <button class="btn primary" type="button" data-action="${config.action}" ${config.selectedId && !state.pendingAction ? "" : "disabled"}>
               ${escapeHtml(config.buttonLabel)}
             </button>
@@ -5738,7 +6011,7 @@
             actionsHtml: room.me.isHost
               ? `
                   <div class="button-row split-actions">
-                    <button class="btn danger" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
+                    <button class="btn ghost" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
                     <button class="btn primary" type="button" data-action="proceed-round" ${state.pendingAction ? "disabled" : ""}>
                       ${room.game.roundIndex === room.game.rounds.length - 1 ? "最終投票へ進む" : "次のラウンドへ"}
                     </button>
@@ -5747,7 +6020,7 @@
               : `
                   <div class="info-box">ホストの進行待ちです。</div>
                   <div class="button-row align-left">
-                    <button class="btn danger" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
+                    <button class="btn ghost" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
                   </div>
                 `
           };
@@ -5775,14 +6048,14 @@
           actionsHtml: room.me.isHost
             ? `
                 <div class="button-row split-actions">
-                  <button class="btn danger" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
+                  <button class="btn ghost" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
                   <button class="btn primary" type="button" data-action="restart-game" ${state.pendingAction ? "disabled" : ""}>もう一度最初から</button>
                 </div>
               `
             : `
                 <div class="info-box">ホストの再開待ちです。</div>
                 <div class="button-row align-left">
-                  <button class="btn danger" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
+                  <button class="btn ghost" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
                 </div>
               `
         };
@@ -5930,13 +6203,13 @@
                     <button class="btn primary" type="button" data-action="proceed-round" ${state.pendingAction ? "disabled" : ""}>
                       ${room.game.roundIndex === room.game.rounds.length - 1 ? "最終投票へ進む" : "次のラウンドへ"}
                     </button>
-                    <button class="btn danger" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
+                    <button class="btn ghost" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
                   </div>
                 `
                 : `
                   <div class="button-row">
                     <div class="info-box">ホストの進行待ちです。</div>
-                    <button class="btn danger" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
+                    <button class="btn ghost" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
                   </div>
                 `
             }
@@ -6006,13 +6279,13 @@
                 ? `
                   <div class="button-row">
                     <button class="btn primary" type="button" data-action="restart-game" ${state.pendingAction ? "disabled" : ""}>もう一度最初から</button>
-                    <button class="btn danger" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
+                    <button class="btn ghost" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
                   </div>
                 `
                 : `
                   <div class="button-row">
                     <div class="info-box">ホストの再開待ちです。</div>
-                    <button class="btn danger" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
+                    <button class="btn ghost" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
                   </div>
                 `
             }
@@ -6030,6 +6303,7 @@
         ensureGoogleFontsLoaded(collectVisibleFontIds(room, view));
         const renderMap = {
           welcome: renderLanding,
+          inviteJoin: renderInviteJoin,
           lobby: () => renderLobby(room),
           submit: () => renderSubmit(room),
           wait: () => renderWait(room),
@@ -6072,6 +6346,11 @@
           state.renderCache.resultCountsKey = "";
           state.renderCache.resultActionsKey = "";
           updateLandingView();
+        } else if (view === "inviteJoin") {
+          state.renderCache.appKey = appKey;
+          resetIncrementalViewCaches();
+          els.app.innerHTML = renderInviteJoin();
+          hydrateWordBoards(els.app);
         } else if (isLobbyView(view)) {
           state.renderCache.appKey = appKey;
           state.renderCache.landingShellKey = "";
@@ -6322,6 +6601,9 @@
       function updateCurrentViewOnly(room = state.room, view = deriveView(room)) {
         ensureGoogleFontsLoaded(collectVisibleFontIds(room, view));
 
+        if (view === "inviteJoin") {
+          return false;
+        }
         if (isLandingView(view)) {
           updateLandingView();
           return true;
@@ -6696,6 +6978,44 @@
         renderCurrentView({ includeReveal: false });
       }
 
+      function reorderLobbyPlayerIds(playerIds, draggedId, targetId) {
+        const nextOrder = [...playerIds];
+        const draggedIndex = nextOrder.indexOf(draggedId);
+        const targetIndex = nextOrder.indexOf(targetId);
+        if (draggedIndex === -1 || targetIndex === -1 || draggedIndex === targetIndex) {
+          return nextOrder;
+        }
+        const [dragged] = nextOrder.splice(draggedIndex, 1);
+        nextOrder.splice(targetIndex, 0, dragged);
+        return nextOrder;
+      }
+
+      function shuffleLobbyPlayerIds(playerIds) {
+        const nextOrder = [...playerIds];
+        for (let index = nextOrder.length - 1; index > 0; index -= 1) {
+          const swapIndex = Math.floor(Math.random() * (index + 1));
+          [nextOrder[index], nextOrder[swapIndex]] = [nextOrder[swapIndex], nextOrder[index]];
+        }
+        return nextOrder;
+      }
+
+      async function persistLobbyPlayerOrder(playerOrder) {
+        if (!state.roomId || !state.playerToken || !Array.isArray(playerOrder) || !playerOrder.length) {
+          return;
+        }
+        const currentOrder = getLobbyPlayerOrder(state.room).map((player) => player.playerId);
+        if (currentOrder.join("|") === playerOrder.join("|")) {
+          return;
+        }
+        await runAction(async () => {
+          const payload = await postApi(`/rooms/${encodeURIComponent(state.roomId)}/player-order`, {
+            playerOrder
+          });
+          state.selectedStartPlayerId = playerOrder[0] || "";
+          setRoom(payload.data.room);
+        }, { pendingMode: "refresh" });
+      }
+
       const selectionClickHandlers = [
         {
           selector: "[data-player-count]",
@@ -6846,7 +7166,8 @@
             return;
           }
           exitToWelcome({
-            copyMessage: "退出しました。必要なら招待コードですぐ入り直せます。"
+            copyMessage: "退出しました。必要なら招待コードですぐ入り直せます。",
+            inviteEntryMode: false
           });
           render();
         },
@@ -6879,6 +7200,13 @@
             }
           });
         },
+        "cancel-invite-entry": async () => {
+          exitToWelcome({
+            preserveInviteCode: false,
+            inviteEntryMode: false
+          });
+          render();
+        },
         "set-player-role": async (button) => {
           await runAction(async () => {
             const payload = await postApi(`/rooms/${encodeURIComponent(state.roomId)}/player-role`, {
@@ -6895,6 +7223,30 @@
             });
             setRoom(payload.data.room);
           });
+        },
+        "randomize-player-order": async () => {
+          const playerOrder = shuffleLobbyPlayerIds(getLobbyPlayerOrder(state.room).map((player) => player.playerId));
+          await persistLobbyPlayerOrder(playerOrder);
+        },
+        "move-player-order": async (button) => {
+          const currentOrder = getLobbyPlayerOrder(state.room).map((player) => player.playerId);
+          const playerId = button.dataset.targetPlayerId || "";
+          const direction = button.dataset.direction || "";
+          const currentIndex = currentOrder.indexOf(playerId);
+          if (currentIndex === -1) {
+            return;
+          }
+          const nextIndex =
+            direction === "up"
+              ? Math.max(0, currentIndex - 1)
+              : Math.min(currentOrder.length - 1, currentIndex + 1);
+          if (nextIndex === currentIndex) {
+            return;
+          }
+          const nextOrder = [...currentOrder];
+          const [moved] = nextOrder.splice(currentIndex, 1);
+          nextOrder.splice(nextIndex, 0, moved);
+          await persistLobbyPlayerOrder(nextOrder);
         },
         "copy-invite-url": async () => {
           if (state.room?.inviteCode) {
@@ -6923,11 +7275,7 @@
         },
         "start-game": async () => {
           await runAction(async () => {
-            let payload = await postApi(`/rooms/${encodeURIComponent(state.roomId)}/start-player`, {
-              startPlayerId: state.selectedStartPlayerId
-            });
-            setRoom(payload.data.room);
-            payload = await postApi(`/rooms/${encodeURIComponent(state.roomId)}/start`, { deckId: "default" });
+            const payload = await postApi(`/rooms/${encodeURIComponent(state.roomId)}/start`, { deckId: "default" });
             clearDecisionState();
             setRoom(payload.data.room);
           });
@@ -7049,6 +7397,55 @@
         }
       });
 
+      document.addEventListener("dragstart", (event) => {
+        if (event.target.closest?.(".player-order-tools, .player-role-actions, button, .chip")) {
+          return;
+        }
+        const card = event.target.closest?.("[data-order-player-id]");
+        if (!card || deriveView() !== "lobby" || !state.room?.me?.isHost) {
+          return;
+        }
+        state.draggingLobbyPlayerId = card.dataset.orderPlayerId || "";
+        event.dataTransfer?.setData("text/plain", state.draggingLobbyPlayerId);
+        event.dataTransfer.effectAllowed = "move";
+        card.classList.add("is-dragging");
+      });
+
+      document.addEventListener("dragover", (event) => {
+        const card = event.target.closest?.("[data-order-player-id]");
+        if (!card || !state.draggingLobbyPlayerId || deriveView() !== "lobby" || !state.room?.me?.isHost) {
+          return;
+        }
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "move";
+      });
+
+      document.addEventListener("drop", async (event) => {
+        const card = event.target.closest?.("[data-order-player-id]");
+        if (!card || !state.draggingLobbyPlayerId || deriveView() !== "lobby" || !state.room?.me?.isHost) {
+          return;
+        }
+        event.preventDefault();
+        const draggedId = state.draggingLobbyPlayerId;
+        const targetId = card.dataset.orderPlayerId || "";
+        state.draggingLobbyPlayerId = "";
+        document.querySelectorAll("[data-order-player-id].is-dragging").forEach((node) => node.classList.remove("is-dragging"));
+        if (!targetId || draggedId === targetId) {
+          return;
+        }
+        const nextOrder = reorderLobbyPlayerIds(
+          getLobbyPlayerOrder(state.room).map((player) => player.playerId),
+          draggedId,
+          targetId
+        );
+        await persistLobbyPlayerOrder(nextOrder);
+      });
+
+      document.addEventListener("dragend", () => {
+        state.draggingLobbyPlayerId = "";
+        document.querySelectorAll("[data-order-player-id].is-dragging").forEach((node) => node.classList.remove("is-dragging"));
+      });
+
       els.closeRevealBtn.addEventListener("click", () => {
         actionHandlers["close-reveal"]();
       });
@@ -7118,6 +7515,7 @@
         }
         if (invite) {
           state.inviteCode = normalizeInviteCodeInput(invite);
+          state.inviteEntryMode = true;
         }
 
         ensureApiNetworkHints();
@@ -7140,6 +7538,7 @@
             render({ immediate: true });
           } else if (invite) {
             state.isLoading = false;
+            state.inviteEntryMode = true;
             render({ immediate: true });
           } else {
             state.isLoading = false;

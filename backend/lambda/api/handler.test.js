@@ -435,6 +435,7 @@ test("GET /v1/health returns lambda scaffold metadata", async () => {
     "rooms:edit-vote",
     "rooms:reveal-close",
     "rooms:start-player",
+    "rooms:player-order",
     "rooms:player-role",
     "rooms:host-transfer",
     "rooms:start",
@@ -981,6 +982,68 @@ test("start-player and start enter round_submit with dealt hands", async () => {
   assert.equal(room.game.players.every((player) => player.handCount === 10), true);
   assert.equal(room.game.rounds.length, 3);
   assert.equal(room.game.rounds[0].phaseStatus, "submit");
+});
+
+test("player-order updates lobby order and first turn", async () => {
+  const handler = createTestHandler();
+  const session = await createSession(handler, ["ホスト", "ゲストA", "ゲストB"]);
+  const host = session.players[0];
+  const guestA = findPlayer(session, "ゲストA");
+  const guestB = findPlayer(session, "ゲストB");
+
+  const response = await handler(
+    createEvent("POST", `/v1/rooms/${session.roomId}/player-order`, {
+      headers: {
+        "X-Omojan-Player-Token": host.playerToken
+      },
+      body: {
+        playerOrder: [guestB.playerId, host.playerId, guestA.playerId]
+      }
+    })
+  );
+  const body = await parseResponse(response);
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(body.ok, true);
+  assert.deepEqual(body.data.room.playerOrder, [guestB.playerId, host.playerId, guestA.playerId]);
+  assert.equal(body.data.room.startPlayerId, guestB.playerId);
+});
+
+test("player-order rejects spectator reordering", async () => {
+  const handler = createTestHandler();
+  const session = await createSession(handler, ["ホスト", "ゲストA", "ゲストB", "観戦"]);
+  const host = session.players[0];
+  const spectator = findPlayer(session, "観戦");
+  const guestA = findPlayer(session, "ゲストA");
+  const guestB = findPlayer(session, "ゲストB");
+
+  await handler(
+    createEvent("POST", `/v1/rooms/${session.roomId}/player-role`, {
+      headers: {
+        "X-Omojan-Player-Token": host.playerToken
+      },
+      body: {
+        targetPlayerId: spectator.playerId,
+        role: "spectator"
+      }
+    })
+  );
+
+  const response = await handler(
+    createEvent("POST", `/v1/rooms/${session.roomId}/player-order`, {
+      headers: {
+        "X-Omojan-Player-Token": spectator.playerToken
+      },
+      body: {
+        playerOrder: [guestA.playerId, guestB.playerId, host.playerId]
+      }
+    })
+  );
+  const body = await parseResponse(response);
+
+  assert.equal(response.statusCode, 403);
+  assert.equal(body.ok, false);
+  assert.equal(body.error.code, "SPECTATOR_FORBIDDEN");
 });
 
 test("start deals non-duplicate words across all players", async () => {

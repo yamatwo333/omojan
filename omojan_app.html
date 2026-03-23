@@ -1863,9 +1863,9 @@
 
       .history-ranking-list {
         display: grid;
-        gap: 18px;
+        gap: 16px;
         align-content: start;
-        grid-auto-rows: minmax(100px, auto);
+        grid-auto-rows: minmax(104px, auto);
       }
 
       .history-ranking-card {
@@ -1873,9 +1873,9 @@
         grid-template-columns: auto minmax(0, 1fr) auto;
         align-items: center;
         gap: 12px;
-        min-height: 100px;
-        height: 100px;
-        padding: 16px 18px;
+        min-height: 104px;
+        height: 104px;
+        padding: 18px 18px;
         border-radius: 16px;
         border: 1px solid rgba(118, 89, 63, 0.14);
         background: rgba(255, 255, 255, 0.84);
@@ -1901,7 +1901,7 @@
 
       .history-ranking-main {
         display: grid;
-        gap: 10px;
+        gap: 14px;
         min-width: 0;
         padding-right: 14px;
         align-content: center;
@@ -2057,7 +2057,7 @@
 
       .lobby-room-card,
       .lobby-players-panel {
-        padding: 22px;
+        padding: 26px;
         border-radius: 26px;
         border: 1px solid rgba(184, 138, 50, 0.16);
         background:
@@ -2105,10 +2105,10 @@
       .lobby-player-panel-header {
         display: flex;
         flex-wrap: wrap;
-        align-items: center;
+        align-items: flex-start;
         justify-content: space-between;
-        gap: 12px;
-        padding-bottom: 8px;
+        gap: 14px;
+        padding-bottom: 16px;
         border-bottom: 1px solid rgba(184, 138, 50, 0.14);
       }
 
@@ -2123,11 +2123,13 @@
         flex-wrap: wrap;
         gap: 12px;
         justify-content: flex-end;
+        align-items: center;
+        margin-left: auto;
       }
 
       .lobby-player-list {
         display: grid;
-        gap: 14px;
+        gap: 16px;
         align-content: start;
         min-height: 0;
       }
@@ -2145,24 +2147,31 @@
       }
 
       .lobby-player-footer-actions {
-        display: flex;
-        flex-wrap: wrap;
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
         align-items: center;
-        justify-content: flex-end;
         gap: 12px;
+        width: 100%;
       }
 
-      .lobby-player-footer-leave {
+      .lobby-player-footer-secondary {
         display: flex;
-        justify-content: flex-start;
+        align-items: center;
+        justify-self: flex-start;
+      }
+
+      .lobby-player-footer-primary {
+        display: flex;
+        justify-content: flex-end;
+        justify-self: flex-end;
       }
 
       .lobby-player-card {
         display: grid;
-        grid-template-columns: auto minmax(0, 1fr);
-        align-items: flex-start;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        align-items: stretch;
         gap: 16px;
-        padding: 18px 18px 18px;
+        padding: 18px 20px;
       }
 
       .lobby-player-card .player-card-handle {
@@ -2173,13 +2182,16 @@
       }
 
       .lobby-player-card .player-card-main {
-        gap: 12px;
+        display: grid;
+        gap: 10px;
         justify-content: start;
+        min-width: 0;
+        align-content: center;
       }
 
       .lobby-player-card .player-card-main strong {
         font-size: 20px;
-        line-height: 1.22;
+        line-height: 1.18;
       }
 
       .lobby-player-card .player-card-main span {
@@ -2191,12 +2203,26 @@
         display: flex;
         flex-wrap: wrap;
         align-items: center;
-        justify-content: space-between;
-        gap: 10px;
+        gap: 8px;
       }
 
       .lobby-player-card .player-card-heading {
         gap: 8px;
+      }
+
+      .lobby-player-card .player-card-side {
+        display: grid;
+        gap: 12px;
+        justify-items: end;
+        align-content: space-between;
+        min-width: 176px;
+        align-self: stretch;
+      }
+
+      .lobby-player-card .player-card-side-top {
+        display: flex;
+        justify-content: flex-end;
+        width: 100%;
       }
 
       .lobby-player-card .player-card-role {
@@ -2204,21 +2230,16 @@
         align-items: center;
       }
 
-      .lobby-player-card .player-card-subtitle {
-        color: var(--muted);
-        font-size: 13px;
-        line-height: 1.45;
-      }
-
       .lobby-player-card .player-card-actions {
         display: flex;
         flex-wrap: wrap;
+        justify-content: flex-end;
         gap: 8px;
-        margin-top: 4px;
+        margin-top: 0;
       }
 
       .lobby-player-card .player-card-actions .btn.compact {
-        min-width: 112px;
+        min-width: 122px;
       }
 
       .lobby-player-card .order-grab::before {
@@ -2241,29 +2262,39 @@
       .lobby-player-card .badge--player,
       .lobby-player-card .badge--spectator,
       .lobby-player-card .badge--host {
-        min-height: 34px;
+        min-height: 32px;
         padding-inline: 12px;
       }
 
       .lobby-player-panel .btn.primary {
-        min-width: 136px;
+        min-width: 150px;
       }
 
       .lobby-player-panel .btn.ghost.compact {
         border-color: rgba(185, 139, 47, 0.24);
         background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(251, 245, 230, 0.92));
         color: #73572a;
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.94),
+          0 10px 18px rgba(128, 92, 28, 0.08);
       }
 
       .lobby-player-panel .btn.secondary.compact {
         background: linear-gradient(180deg, #2f744f, #173f2c 88%);
         color: #fff8ef;
+        border-color: rgba(23, 63, 44, 0.46);
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.16),
+          0 12px 18px rgba(23, 63, 44, 0.14);
       }
 
       .lobby-player-panel .btn.neutral.compact {
         border-color: rgba(143, 152, 166, 0.28);
         background: linear-gradient(180deg, rgba(252, 252, 253, 0.98), rgba(239, 241, 244, 0.94));
         color: #495260;
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.96),
+          0 10px 18px rgba(87, 95, 108, 0.08);
       }
 
       .lobby-player-panel .btn.danger.compact {
@@ -2827,6 +2858,19 @@
           padding-top: 4px;
         }
 
+        .lobby-player-card .player-card-side {
+          grid-column: 2;
+          min-width: 0;
+          width: 100%;
+          justify-items: start;
+          gap: 10px;
+        }
+
+        .lobby-player-card .player-card-side-top,
+        .lobby-player-card .player-card-actions {
+          justify-content: flex-start;
+        }
+
         .lobby-player-card .player-card-actions {
           width: 100%;
         }
@@ -2834,6 +2878,17 @@
         .lobby-player-card .player-card-actions .btn.compact {
           width: 100%;
           min-width: 0;
+        }
+
+        .lobby-player-footer-secondary,
+        .lobby-player-footer-primary {
+          width: 100%;
+        }
+
+        .lobby-player-footer-secondary .btn,
+        .lobby-player-footer-primary .btn,
+        .lobby-player-footer-actions > .btn {
+          width: 100%;
         }
 
         .lobby-player-card .order-grab {
@@ -2876,6 +2931,21 @@
         .preview-card.is-live-preview .preview-caption {
           margin-top: 8px;
           font-size: 16px;
+        }
+
+        .preview-card.is-floating {
+          padding: 12px 12px 10px;
+        }
+
+        .preview-card.is-floating .word-board {
+          min-height: 56px;
+          max-height: 86px;
+          margin-top: 8px;
+          padding: 2px 2px 0;
+        }
+
+        .preview-card.is-floating .preview-caption {
+          display: none;
         }
 
         .submit-actions {
@@ -2952,7 +3022,7 @@
 
         .screen-grid--lobby {
           grid-template-columns: repeat(2, minmax(0, 1fr));
-          align-items: start;
+          align-items: stretch;
         }
 
         .lobby-stage-heading {
@@ -2969,6 +3039,7 @@
         #lobbyRankingSlot {
           min-height: 0;
           display: grid;
+          width: 100%;
         }
 
         #lobbyRoomSlot > *,
@@ -3186,9 +3257,9 @@
       ];
 
       const sizePresets = [
-        { id: "large", label: "大", singleMax: 196, multiMax: 148, singleMin: 30, multiMin: 24, renderScale: 1 },
-        { id: "medium", label: "中", singleMax: 120, multiMax: 84, singleMin: 16, multiMin: 12, renderScale: 0.54 },
-        { id: "tiny", label: "小", singleMax: 62, multiMax: 42, singleMin: 8, multiMin: 6, renderScale: 0.24 }
+        { id: "large", label: "大", singleMax: 208, multiMax: 156, singleMin: 32, multiMin: 24, renderScale: 1 },
+        { id: "medium", label: "中", singleMax: 164, multiMax: 118, singleMin: 20, multiMin: 14, renderScale: 0.76 },
+        { id: "tiny", label: "小", singleMax: 108, multiMax: 72, singleMin: 10, multiMin: 8, renderScale: 0.48 }
       ];
 
       const lineGapPresets = [
@@ -3611,14 +3682,7 @@
       }
 
       function getSizePresetScale(sizePresetId) {
-        const normalizedId = normalizeSizePresetId(sizePresetId);
-        if (normalizedId === "medium") {
-          return 0.54;
-        }
-        if (normalizedId === "tiny") {
-          return 0.24;
-        }
-        return 1;
+        return getSizePreset(sizePresetId).renderScale;
       }
 
       function getDraftReferenceBoardSize(previewNode) {
@@ -3641,7 +3705,13 @@
         const previewSize = getWordBoardInnerSize(previewNode, 280, 96);
         const referenceSize = getDraftReferenceBoardSize(previewNode);
         const widthScale = referenceSize.width ? previewSize.width / referenceSize.width : 0.76;
-        const scale = Math.max(0.9, Math.min(1.02, widthScale * 0.98));
+        const sizePreset = getSizePreset(state.draftSizePreset);
+        const previewScaleMap = {
+          large: 0.78,
+          medium: 0.64,
+          tiny: 0.48
+        };
+        const scale = Math.max(0.48, Math.min(0.9, widthScale * (previewScaleMap[sizePreset.id] || 0.64)));
         return Math.max(14, Math.min(128, Math.round(fontSize * scale)));
       }
 
@@ -5533,7 +5603,7 @@
           return "観戦";
         }
         const order = getLobbyPlayerOrder(room).findIndex((item) => item.playerId === playerId);
-        return order >= 0 ? `${order + 1}番手` : `席順 ${player.seatOrder}`;
+        return order >= 0 ? `座順 ${order + 1}` : `座順 ${player.seatOrder}`;
       }
 
       function renderSubmitHero(room, layout) {
@@ -5728,7 +5798,7 @@
         const activePlayerCount = getActivePlayerCount(room);
         const spectatorCount = Number(room.spectatorCount || room.game?.spectatorPlayerIds?.length || 0);
         const mySeatLabel = getLobbySeatLabel(room, room.me.playerId);
-        const mySeatValue = room.me.role === "spectator" ? `${room.me.displayName} / 観戦` : `${mySeatLabel} / ${room.me.displayName}`;
+        const mySeatValue = room.me.role === "spectator" ? `${room.me.displayName} / 観戦` : `${room.me.displayName} / ${mySeatLabel}`;
         return `
           <section class="lobby-room-card">
             <h3>ルーム情報</h3>
@@ -5756,7 +5826,7 @@
         if (player.role === "spectator") {
           return { label: "観戦", className: "badge badge--spectator" };
         }
-        return { label: "参加", className: "badge badge--player" };
+        return null;
       }
 
       function renderLobbyPlayers(room) {
@@ -5782,8 +5852,8 @@
               ${orderedPlayers
                 .map((player, index) => {
                   const isMe = player.playerId === room.me.playerId;
-                  const roleBadge = getPlayerRoleBadge(player);
                   const seatNumber = index + 1;
+                  const orderBadge = `<span class="order-badge${isMe ? " is-you" : ""}">座順 ${seatNumber}</span>`;
                   const roleToggle =
                     room.me.isHost && !player.isHost
                       ? player.role === "spectator"
@@ -5811,13 +5881,16 @@
                     <div class="player-card-main">
                       <div class="player-card-topline">
                         <div class="player-card-heading">
-                          <span class="order-badge badge--seat${isMe ? " is-you" : ""}">${escapeHtml(`${seatNumber}番手`)}</span>
+                          ${orderBadge}
                           ${isMe ? `<span class="badge badge--you">あなた</span>` : ""}
                         </div>
-                        <span class="${roleBadge.className} player-card-role">${escapeHtml(roleBadge.label)}</span>
                       </div>
                       <strong>${escapeHtml(player.displayName)}</strong>
-                      <span class="player-card-subtitle">${escapeHtml(`座順 ${seatNumber}`)}</span>
+                    </div>
+                    <div class="player-card-side">
+                      <div class="player-card-side-top">
+                        ${player.isHost ? `<span class="badge badge--host player-card-role">ホスト</span>` : ""}
+                      </div>
                       ${actionButtons ? `<div class="player-card-actions">${actionButtons}</div>` : ""}
                     </div>
                   </div>
@@ -5850,12 +5923,13 @@
                             <div class="player-card-main">
                               <div class="player-card-topline">
                                 <div class="player-card-heading">
-                                  <span class="order-badge order-badge--spectator">観戦席</span>
                                   ${isMe ? `<span class="badge badge--you">あなた</span>` : ""}
                                 </div>
                               </div>
                               <strong>${escapeHtml(player.displayName)}</strong>
-                              <span class="player-card-subtitle">${escapeHtml("観戦中")}</span>
+                            </div>
+                            <div class="player-card-side">
+                              <div class="player-card-side-top"></div>
                               ${actionButtons ? `<div class="player-card-actions">${actionButtons}</div>` : ""}
                             </div>
                           </div>
@@ -5870,22 +5944,22 @@
                 <div class="lobby-player-footer-main">
                   ${
                     room.me.isHost
-                      ? `
-                        <div class="lobby-player-footer-actions">
-                          <button class="btn primary compact" type="button" data-action="start-game" ${ready && !state.pendingAction ? "" : "disabled"}>この順で開始</button>
-                        </div>
-                      `
-                      : ""
-                  }
-                  ${
-                    room.me.isHost
-                      ? `
-                        ${ready ? "" : `<div class="info-box">参加プレイヤーが ${room.playerCount} 人そろうと開始できます。</div>`}
-                      `
+                      ? `${ready ? "" : `<div class="info-box">参加プレイヤーが ${room.playerCount} 人そろうと開始できます。</div>`}`
                       : `<div class="info-box">${room.me.role === "spectator" ? "観戦として待機中です。" : "ホストの開始待ちです。"}</div>`
                   }
-                  <div class="lobby-player-footer-leave">
-                    <button class="btn neutral compact" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
+                  <div class="lobby-player-footer-actions">
+                    <div class="lobby-player-footer-secondary">
+                      <button class="btn ghost compact" type="button" data-action="leave-room" ${state.pendingAction ? "disabled" : ""}>退出する</button>
+                    </div>
+                    ${
+                      room.me.isHost
+                        ? `
+                          <div class="lobby-player-footer-primary">
+                            <button class="btn primary compact" type="button" data-action="start-game" ${ready && !state.pendingAction ? "" : "disabled"}>この順で開始</button>
+                          </div>
+                        `
+                        : ""
+                    }
                   </div>
                 </div>
               </div>

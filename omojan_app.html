@@ -6190,6 +6190,10 @@
               <div id="waitSubmissionsSlot"></div>
             </div>
           </div>
+          <div class="info-grid">
+            <div id="waitRecentSlot"></div>
+            <div id="waitRankingSlot"></div>
+          </div>
         `;
       }
 
@@ -6261,6 +6265,8 @@
           state.renderCache.waitFocusKey = "";
           state.renderCache.waitSubmissionsKey = "";
           state.renderCache.waitSyncKey = "";
+          state.renderCache.waitRecentKey = "";
+          state.renderCache.waitRankingKey = "";
           els.app.innerHTML = renderWait(room);
         }
 
@@ -6285,6 +6291,8 @@
           [state.pendingAction ? "pending" : "idle", getDecisionCompletion(room)?.phase || ""].join("|"),
           renderWaitActions(room)
         );
+        patchSlot(els.app, "#waitRecentSlot", "waitRecentKey", getRecentChampionsStamp(), renderRecentChampionsSection("最近の総合優勝ワード"));
+        patchSlot(els.app, "#waitRankingSlot", "waitRankingKey", getChampionRankingStamp(), renderChampionRankingSection());
       }
 
       function renderPassiveSyncUi(room = state.room, view = deriveView(room)) {
